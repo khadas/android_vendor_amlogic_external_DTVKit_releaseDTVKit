@@ -100,6 +100,8 @@ public class DtvkitTvInput extends TvInputService {
         @Override
         public void onOverlayViewSizeChanged(int width, int height) {
             Log.i(TAG, "onOverlayViewSizeChanged " + width + ", " + height);
+            Platform platform = new Platform();
+            playerSetRectangle(platform.getSurfaceX(), platform.getSurfaceY(), width, height);
         }
 
         @Override

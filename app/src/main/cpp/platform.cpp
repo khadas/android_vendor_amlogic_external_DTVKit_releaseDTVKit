@@ -10,11 +10,20 @@
 static struct bcmsideband_ctx *context = NULL;
 #endif
 static jboolean set = JNI_FALSE;
+static int surface_x = 0;
+static int surface_y = 0;
+static int surface_width = 1920;
+static int surface_height = 1080;
+
 #ifdef PLATFORM_BROADCOM
 static void onRectangleUpdated(void *context, unsigned int x, unsigned int y, unsigned int width, unsigned int height)
 {
    __android_log_print(ANDROID_LOG_INFO, "DTVKitSource", "onRectangleUpdated: x %d, y %d, width %d, height %d\n",
       x, y, width, height);
+   surface_x = x;
+   surface_y = y;
+   surface_width = width;
+   surface_height = height;
 }
 #endif
 
@@ -34,11 +43,11 @@ extern "C" JNIEXPORT jboolean JNICALL Java_org_dtvkit_inputsource_Platform_setNa
       #else
       __android_log_print(ANDROID_LOG_WARN, "DTVKitSource", "setNativeSurface: no platform selected (width %d, height %d)\n",
          ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
-      ANativeWindow_setBuffersGeometry(window, 1920, 1080, WINDOW_FORMAT_RGBA_8888);
+      ANativeWindow_setBuffersGeometry(window, surface_width, surface_height, WINDOW_FORMAT_RGBA_8888);
       ANativeWindow_Buffer buffer;
       if (ANativeWindow_lock(window, &buffer, 0) == 0)
       {
-         memset(buffer.bits, 0x00, 1920 * 1080 * 4);
+         memset(buffer.bits, 0x00, surface_width * surface_height * 4);
          ANativeWindow_unlockAndPost(window);
       }
       set = JNI_TRUE;
@@ -57,4 +66,20 @@ extern "C" JNIEXPORT void JNICALL Java_org_dtvkit_inputsource_Platform_unsetNati
       #endif
       set = JNI_FALSE;
    }
+}
+
+extern "C" JNIEXPORT jint JNICALL Java_org_dtvkit_inputsource_Platform_getNativeSurfaceX(JNIEnv *env, jobject instance) {
+   return surface_x;
+}
+
+extern "C" JNIEXPORT jint JNICALL Java_org_dtvkit_inputsource_Platform_getNativeSurfaceY(JNIEnv *env, jobject instance) {
+   return surface_y;
+}
+
+extern "C" JNIEXPORT jint JNICALL Java_org_dtvkit_inputsource_Platform_getNativeSurfaceWidth(JNIEnv *env, jobject instance) {
+   return surface_width;
+}
+
+extern "C" JNIEXPORT jint JNICALL Java_org_dtvkit_inputsource_Platform_getNativeSurfaceHeight(JNIEnv *env, jobject instance) {
+   return surface_height;
 }
