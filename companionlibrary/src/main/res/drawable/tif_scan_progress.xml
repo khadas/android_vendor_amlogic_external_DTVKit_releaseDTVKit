@@ -14,11 +14,22 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<resources>
-    <!-- Title for channel scanning menu -->
-    <string name="tif_channel_scan">Channel Setup</string>
-    <!-- Message that says channel is not yet scanned during channel scanning process -->
-    <string name="tif_channel_scan_time">This may take several minutes.</string>
-    <!-- Button text that allows the user to manually stop scanning -->
-    <string name="tif_stop_channel_scan">Cancel Scan</string>
-</resources>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape>
+            <corners android:radius="5dip" />
+            <solid android:color="@color/tif_scan_progress_background" />
+        </shape>
+    </item>
+
+    <item
+        android:id="@android:id/progress">
+        <clip>
+            <shape>
+                <corners android:radius="5dip" />
+                <solid android:color="@color/tif_scan_progress" />
+            </shape>
+        </clip>
+    </item>
+
+</layer-list>

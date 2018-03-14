@@ -2,7 +2,7 @@
 
     package="org.dtvkit.companionlibrary">
 
-    <application android:allowBackup="true" android:label="@string/app_name"
+    <application android:allowBackup="true" android:label="Companion Library"
         android:supportsRtl="true">
 
     </application>

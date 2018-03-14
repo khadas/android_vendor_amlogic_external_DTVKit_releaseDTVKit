@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
   ~ Copyright (C) 2016 The Android Open Source Project
   ~
@@ -14,11 +14,13 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
+
 <resources>
-    <!-- Title for channel scanning menu -->
-    <string name="tif_channel_scan">Channel Setup</string>
-    <!-- Message that says channel is not yet scanned during channel scanning process -->
-    <string name="tif_channel_scan_time">This may take several minutes.</string>
-    <!-- Button text that allows the user to manually stop scanning -->
-    <string name="tif_stop_channel_scan">Cancel Scan</string>
+    <color name="tif_guidedactions_title_text">#EEEEEE</color>
+    <color name="tif_scan_title_text">#EEEEEE</color>
+    <color name="tif_scan_description_text">#B3EEEEEE</color>
+    <color name="tif_scan_progress">#EEEEEE</color>
+    <color name="tif_scan_progress_background">#26EEEEEE</color>
+    <color name="tif_scan_button_text">#EEEEEE</color>
+    <color name="tif_scan_channellist_background">#26EEEEEE</color>
 </resources>
