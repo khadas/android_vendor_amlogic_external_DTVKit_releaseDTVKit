@@ -42,11 +42,10 @@ import android.util.SparseArray;
 
 import org.dtvkit.companionlibrary.model.Advertisement;
 import org.dtvkit.companionlibrary.model.Channel;
+import org.dtvkit.companionlibrary.model.EventPeriod;
 import org.dtvkit.companionlibrary.model.InternalProviderData;
 import org.dtvkit.companionlibrary.model.Program;
 import org.dtvkit.companionlibrary.utils.TvContractUtils;
-
-import junit.framework.Assert;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -68,7 +67,7 @@ import java.util.List;
  * To start periodically syncing data, call
  * {@link #setUpPeriodicSync(Context, String, ComponentName, long, long)}.
  * <p />
- * To sync manually, call {@link #requestImmediateSync(Context, String, long, ComponentName)}.
+ * To sync manually, call {@link #requestImmediateSync(Context, String, long, boolean, ComponentName)}.
  */
 public abstract class EpgSyncJobService extends JobService {
     private static final String TAG = "EpgSyncJobService";
@@ -140,6 +139,8 @@ public abstract class EpgSyncJobService extends JobService {
     private static final int BATCH_OPERATION_COUNT = 100;
     private static final long OVERRIDE_DEADLINE_MILLIS = 1000;  // 1 second
     private static final String BUNDLE_KEY_SYNC_PERIOD = "bundle_key_sync_period";
+    private static final String BUNDLE_KEY_SYNC_FORCE_UPDATE = "BUNDLE_KEY_SYNC_FORCE_UPDATE";
+
 
     private final SparseArray<EpgSyncTask> mTaskArray = new SparseArray<>();
     private static final Object mContextLock = new Object();
@@ -166,6 +167,7 @@ public abstract class EpgSyncJobService extends JobService {
     public abstract List<Program> getProgramsForChannel(Uri channelUri, Channel channel,
             long startMs, long endMs);
 
+    public abstract List<EventPeriod> getListOfUpdatedEventPeriods();
 
     @Override
     public void onCreate() {
@@ -223,7 +225,8 @@ public abstract class EpgSyncJobService extends JobService {
         // new program. The test logic is just an example and you can modify this. E.g. check
         // whether the both programs have the same program ID if your EPG supports any ID for
         // the programs.
-        return oldProgram.getTitle().equals(newProgram.getTitle())
+        return oldProgram.getTitle() != null
+                && oldProgram.getTitle().equals(newProgram.getTitle())
                 && oldProgram.getStartTimeUtcMillis() <= newProgram.getEndTimeUtcMillis()
                 && newProgram.getStartTimeUtcMillis() <= oldProgram.getEndTimeUtcMillis();
     }
@@ -233,7 +236,6 @@ public abstract class EpgSyncJobService extends JobService {
         JobScheduler jobScheduler =
                 (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
         int result = jobScheduler.schedule(job);
-        Assert.assertEquals(result, JobScheduler.RESULT_SUCCESS);
         if (DEBUG) {
             Log.d(TAG, "Scheduling result is " + result);
         }
@@ -297,7 +299,7 @@ public abstract class EpgSyncJobService extends JobService {
      */
     public static void requestImmediateSync(Context context, String inputId,
             ComponentName jobServiceComponent) {
-        requestImmediateSync(context, inputId, DEFAULT_IMMEDIATE_EPG_DURATION_MILLIS,
+        requestImmediateSync(context, inputId, DEFAULT_IMMEDIATE_EPG_DURATION_MILLIS, false,
                 jobServiceComponent);
     }
 
@@ -323,7 +325,7 @@ public abstract class EpgSyncJobService extends JobService {
      * this should be relatively short. For a background sync this should be long.
      * @param jobServiceComponent The {@link EpgSyncJobService} class that will run.
      */
-    public static void requestImmediateSync(Context context, String inputId, long syncDuration,
+    public static void requestImmediateSync(Context context, String inputId, long syncDuration, boolean forceUpdate,
             ComponentName jobServiceComponent) {
         if (jobServiceComponent.getClass().isAssignableFrom(EpgSyncJobService.class)) {
             throw new IllegalArgumentException("This class does not extend EpgSyncJobService");
@@ -333,6 +335,7 @@ public abstract class EpgSyncJobService extends JobService {
         persistableBundle.putBoolean(ContentResolver.SYNC_EXTRAS_EXPEDITED, true);
         persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_INPUT_ID, inputId);
         persistableBundle.putLong(EpgSyncJobService.BUNDLE_KEY_SYNC_PERIOD, syncDuration);
+        persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_FORCE_UPDATE, forceUpdate);
         JobInfo.Builder builder = new JobInfo.Builder(REQUEST_SYNC_JOB_ID, jobServiceComponent);
         JobInfo jobInfo = builder
                 .setExtras(persistableBundle)
@@ -388,40 +391,67 @@ public abstract class EpgSyncJobService extends JobService {
                 broadcastError(ERROR_NO_CHANNELS);
                 return null;
             }
+
+            List<EventPeriod> eventPeriods = getListOfUpdatedEventPeriods();
+
             // Default to one hour sync
-            long durationMs = extras.getLong(
-                    BUNDLE_KEY_SYNC_PERIOD, DEFAULT_IMMEDIATE_EPG_DURATION_MILLIS);
+            long durationMs = extras.getLong(BUNDLE_KEY_SYNC_PERIOD, DEFAULT_IMMEDIATE_EPG_DURATION_MILLIS);
+            boolean forceUpdate = extras.getBoolean(BUNDLE_KEY_SYNC_FORCE_UPDATE, false);
+
+            boolean updatePrograms;
             long startMs = System.currentTimeMillis();
             long endMs = startMs + durationMs;
             for (int i = 0; i < channelMap.size(); ++i) {
                 Uri channelUri = TvContract.buildChannelUri(channelMap.keyAt(i));
+
                 if (isCancelled()) {
                     broadcastError(ERROR_EPG_SYNC_CANCELED);
                     return null;
                 }
-                List<Program> programs = getProgramsForChannel(channelUri, channelMap.valueAt(i),
-                        startMs, endMs);
-                if (DEBUG) {
-                    Log.d(TAG, programs.toString());
-                }
-                for (int index = 0; index < programs.size(); index++) {
-                    if (programs.get(index).getChannelId() == -1) {
-                        // Automatically set the channel id if not set
-                        programs.set(index,
-                                new Program.Builder(programs.get(index))
-                                        .setChannelId(channelMap.valueAt(i).getId())
-                                        .build());
+                if (forceUpdate) {
+                    updatePrograms = true;
+                } else {
+                    updatePrograms = false;
+                    try {
+                        String dvbUri = channelMap.valueAt(i).getInternalProviderData().get("dvbUri").toString();
+
+                        for (int j = 0; j < eventPeriods.size(); j++) {
+                            EventPeriod period = eventPeriods.get(j);
+                            if (period.getDvbUri().equals(dvbUri)) {
+                                updatePrograms = true;
+                                startMs = period.getStartUtc() * 1000;
+                                endMs = period.getEndUtc() * 1000;
+                            }
+                        }
+                    } catch (Exception e) {
                     }
                 }
 
-                // Double check if the job is cancelled, so that this task can be finished faster
-                // after cancel() is called.
-                if (isCancelled()) {
-                    broadcastError(ERROR_EPG_SYNC_CANCELED);
-                    return null;
+                if (updatePrograms) {
+                    List<Program> programs = getProgramsForChannel(channelUri, channelMap.valueAt(i),
+                            startMs, endMs);
+                    if (DEBUG) {
+                        Log.d(TAG, programs.toString());
+                    }
+                    for (int index = 0; index < programs.size(); index++) {
+                        if (programs.get(index).getChannelId() == -1) {
+                            // Automatically set the channel id if not set
+                            programs.set(index,
+                                    new Program.Builder(programs.get(index))
+                                            .setChannelId(channelMap.valueAt(i).getId())
+                                            .build());
+                        }
+                    }
+
+                    // Double check if the job is cancelled, so that this task can be finished faster
+                    // after cancel() is called.
+                    if (isCancelled()) {
+                        broadcastError(ERROR_EPG_SYNC_CANCELED);
+                        return null;
+                    }
+                    updatePrograms(channelUri, programs);
                 }
-                updatePrograms(channelUri,
-                        getPrograms(channelMap.valueAt(i), programs, startMs, endMs));
+
                 Intent intent = new Intent(ACTION_SYNC_STATUS_CHANGED);
                 intent.putExtra(EpgSyncJobService.BUNDLE_KEY_INPUT_ID, mInputId);
                 intent.putExtra(EpgSyncJobService.BUNDLE_KEY_CHANNELS_SCANNED, i);
@@ -433,6 +463,7 @@ public abstract class EpgSyncJobService extends JobService {
                 intent.putExtra(EpgSyncJobService.SYNC_STATUS, EpgSyncJobService.SYNC_SCANNED);
                 LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
             }
+
             return null;
         }
 
@@ -468,109 +499,6 @@ public abstract class EpgSyncJobService extends JobService {
             intent.putExtra(SYNC_STATUS, SYNC_ERROR);
             intent.putExtra(BUNDLE_KEY_ERROR_REASON, reason);
             LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
-        }
-
-        /**
-         * Returns a list of programs for the given time range.
-         *
-         * @param channel The {@link Channel} for the programs to return.
-         * @param programs The feed fetched from cloud.
-         * @param startTimeMs The start time of the range requested.
-         * @param endTimeMs The end time of the range requested.
-         * @return A list of programs for the channel within the specifed range. They may be
-         * repeated.
-         * @hide
-         */
-        @VisibleForTesting
-        public List<Program> getPrograms(Channel channel, List<Program> programs,
-                long startTimeMs, long endTimeMs) {
-            if (startTimeMs > endTimeMs) {
-                throw new IllegalArgumentException("Start time must be before end time");
-            }
-            List<Program> programForGivenTime = new ArrayList<>();
-            if (channel.getInternalProviderData() != null
-                    && !channel.getInternalProviderData().isRepeatable()) {
-                for (Program program : programs) {
-                    if (program.getStartTimeUtcMillis() <= endTimeMs
-                            && program.getEndTimeUtcMillis() >= startTimeMs) {
-                        programForGivenTime.add(new Program.Builder(program)
-                                .setChannelId(channel.getId())
-                                .build()
-                        );
-                    }
-                }
-                return programForGivenTime;
-            }
-
-            // If repeat-programs is on, schedule the programs sequentially in a loop. To make every
-            // device play the same program in a given channel and time, we assumes the loop started
-            // from the epoch time.
-            long totalDurationMs = 0;
-            for (Program program : programs) {
-                totalDurationMs +=
-                        (program.getEndTimeUtcMillis() - program.getStartTimeUtcMillis());
-            }
-            if (totalDurationMs <= 0) {
-                throw new IllegalArgumentException("The duration of all programs must be greater " +
-                        "than 0ms.");
-            }
-
-            long programStartTimeMs = startTimeMs - startTimeMs % totalDurationMs;
-            int i = 0;
-            final int programCount = programs.size();
-            while (programStartTimeMs < endTimeMs) {
-                Program programInfo = programs.get(i++ % programCount);
-                long programEndTimeMs = programStartTimeMs + totalDurationMs;
-                if (programInfo.getEndTimeUtcMillis() > -1
-                        && programInfo.getStartTimeUtcMillis() > -1) {
-                    programEndTimeMs = programStartTimeMs +
-                            (programInfo.getEndTimeUtcMillis()
-                                    - programInfo.getStartTimeUtcMillis());
-                }
-                if (programEndTimeMs < startTimeMs) {
-                    programStartTimeMs = programEndTimeMs;
-                    continue;
-                }
-                // Shift advertisement time to match current program time.
-                InternalProviderData updateInternalProviderData =
-                        programInfo.getInternalProviderData();
-                shiftAdsTimeWithProgram(updateInternalProviderData,
-                        programInfo.getStartTimeUtcMillis(),
-                        programStartTimeMs);
-                programForGivenTime.add(new Program.Builder(programInfo)
-                        .setChannelId(channel.getId())
-                        .setStartTimeUtcMillis(programStartTimeMs)
-                        .setEndTimeUtcMillis(programEndTimeMs)
-                        .setInternalProviderData(updateInternalProviderData)
-                        .build()
-                );
-                programStartTimeMs = programEndTimeMs;
-            }
-            return programForGivenTime;
-        }
-
-        /**
-         * Shift advertisement time to match program playback time. For channels with repeated program,
-         * the time for current program may vary from what it was defined previously.
-         *
-         * @param oldProgramStartTimeMs Outdated program start time.
-         * @param newProgramStartTimeMs Updated program start time.
-         */
-        private void shiftAdsTimeWithProgram(InternalProviderData internalProviderData,
-                    long oldProgramStartTimeMs, long newProgramStartTimeMs) {
-            if (internalProviderData == null) {
-                return;
-            }
-            long timeShift = newProgramStartTimeMs - oldProgramStartTimeMs;
-            List<Advertisement> oldAds = internalProviderData.getAds();
-            List<Advertisement> newAds = new ArrayList<>();
-            for (Advertisement oldAd : oldAds) {
-                newAds.add(new Advertisement.Builder(oldAd)
-                        .setStartTimeUtcMillis(oldAd.getStartTimeUtcMillis() + timeShift)
-                        .setStopTimeUtcMillis(oldAd.getStopTimeUtcMillis() + timeShift)
-                        .build());
-            }
-            internalProviderData.setAds(newAds);
         }
 
         /**

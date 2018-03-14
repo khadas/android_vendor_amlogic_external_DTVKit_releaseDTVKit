@@ -30,11 +30,11 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
+import android.util.ArrayMap;
 import android.util.Log;
 import android.util.LongSparseArray;
 import android.util.SparseArray;
 
-import org.dtvkit.companionlibrary.BaseTvInputService;
 import org.dtvkit.companionlibrary.model.Channel;
 import org.dtvkit.companionlibrary.model.Program;
 
@@ -53,6 +53,7 @@ import java.util.Map;
  * Static helper methods for working with {@link android.media.tv.TvContract}.
  */
 public class TvContractUtils {
+    public static final String PREFERENCES_FILE_KEY = "org.dtvkit.companionlibrary";
 
     /** Indicates that no source type has been defined for this video yet */
     public static final int SOURCE_TYPE_INVALID = -1;
@@ -90,9 +91,10 @@ public class TvContractUtils {
      */
     public static void updateChannels(Context context, String inputId, List<Channel> channels) {
         // Create a map from original network ID to channel row ID for existing channels.
-        SparseArray<Long> channelMap = new SparseArray<>();
+        ArrayMap<Long, Long> channelMap = new ArrayMap<>();
         Uri channelsUri = TvContract.buildChannelsUriForInput(inputId);
-        String[] projection = {Channels._ID, Channels.COLUMN_ORIGINAL_NETWORK_ID};
+        String[] projection = {Channels._ID, Channels.COLUMN_ORIGINAL_NETWORK_ID, Channels.COLUMN_TRANSPORT_STREAM_ID,
+                Channels.COLUMN_SERVICE_ID};
         ContentResolver resolver = context.getContentResolver();
         Cursor cursor = null;
         try {
@@ -101,7 +103,9 @@ public class TvContractUtils {
             while (cursor != null && cursor.moveToNext()) {
                 long rowId = cursor.getLong(0);
                 int originalNetworkId = cursor.getInt(1);
-                channelMap.put(originalNetworkId, rowId);
+                int transportStreamId = cursor.getInt(2);
+                int serviceId = cursor.getInt(3);
+                channelMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, rowId);
             }
         } finally {
             if (cursor != null) {
@@ -129,7 +133,14 @@ public class TvContractUtils {
                 values.put(Channels.COLUMN_TYPE, Channels.TYPE_OTHER);
             }
 
-            Long rowId = channelMap.get(channel.getOriginalNetworkId());
+            int originalNetworkId = channel.getOriginalNetworkId();
+            int transportStreamId = channel.getTransportStreamId();
+            int serviceId = channel.getServiceId();
+            long triplet = ((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId;
+            Long rowId = channelMap.get(triplet);
+            if (DEBUG) {
+                Log.d(TAG, String.format("Mapping %d to %d", triplet, rowId));
+            }
             Uri uri;
             if (rowId == null) {
                 uri = resolver.insert(TvContract.Channels.CONTENT_URI, values);
@@ -143,7 +154,7 @@ public class TvContractUtils {
                     Log.d(TAG, "Updating channel " + channel.getDisplayName() + " at " + uri);
                 }
                 resolver.update(uri, values, null, null);
-                channelMap.remove(channel.getOriginalNetworkId());
+                channelMap.remove(triplet);
             }
             if (channel.getChannelLogo() != null && !TextUtils.isEmpty(channel.getChannelLogo())) {
                 logos.put(TvContract.buildChannelLogoUri(uri), channel.getChannelLogo());
@@ -162,8 +173,7 @@ public class TvContractUtils {
             }
             resolver.delete(TvContract.buildChannelUri(rowId), null, null);
             SharedPreferences.Editor editor = context.getSharedPreferences(
-                    BaseTvInputService.PREFERENCES_FILE_KEY, Context.MODE_PRIVATE).edit();
-            editor.remove(BaseTvInputService.SHARED_PREFERENCES_KEY_LAST_CHANNEL_AD_PLAY + rowId);
+                    PREFERENCES_FILE_KEY, Context.MODE_PRIVATE).edit();
             editor.apply();
         }
     }
