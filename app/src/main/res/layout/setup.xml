@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_margin="50dp"
+    android:orientation="vertical">
+
+    <ImageView
+        android:id="@+id/imageView3"
+        android:layout_width="match_parent"
+        android:layout_height="67dp"
+        android:src="@drawable/dtvkit" />
+
+    <CheckBox
+        android:id="@+id/network"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/strNetworkSearch" />
+
+    <EditText
+        android:id="@+id/frequency"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:hint="Frequency"
+        android:inputType="number"
+        android:singleLine="false" />
+
+    <Spinner
+        android:id="@+id/satellite"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:entries="@array/satellites" />
+
+    <Spinner
+        android:id="@+id/polarity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:entries="@array/polarities" />
+
+    <EditText
+        android:id="@+id/symbolrate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:hint="Symbol rate"
+        android:inputType="number" />
+
+    <Spinner
+        android:id="@+id/fec"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:entries="@array/fecs" />
+
+    <CheckBox
+        android:id="@+id/dvbs2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/strDVBS2" />
+
+    <Spinner
+        android:id="@+id/modulation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:entries="@array/modulations" />
+
+    <TextView
+        android:id="@+id/searchstatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:layout_marginTop="10dp"
+        android:text="@string/strSearchNotStarted"
+        android:textAlignment="center"
+        android:textSize="20dp" />
+
+    <ProgressBar
+        android:id="@+id/searchprogress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp" />
+
+    <Button
+        android:id="@+id/startsearch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/strStartSearch" />
+
+</LinearLayout>
