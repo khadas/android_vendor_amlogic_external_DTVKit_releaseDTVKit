@@ -13,6 +13,8 @@ static jboolean set = JNI_FALSE;
 #ifdef PLATFORM_BROADCOM
 static void onRectangleUpdated(void *context, unsigned int x, unsigned int y, unsigned int width, unsigned int height)
 {
+   __android_log_print(ANDROID_LOG_INFO, "DTVKitSource", "onRectangleUpdated: x %d, y %d, width %d, height %d\n",
+      x, y, width, height);
 }
 #endif
 
@@ -56,4 +58,3 @@ extern "C" JNIEXPORT void JNICALL Java_org_dtvkit_inputsource_Platform_unsetNati
       set = JNI_FALSE;
    }
 }
-

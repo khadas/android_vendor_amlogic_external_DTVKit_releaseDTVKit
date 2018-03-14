@@ -29,9 +29,11 @@
         <item>16qam</item>
     </string-array>
     <string name="strSearchNotStarted">Search not started</string>
+    <string name="strSearchDescription">Press START SEARCH to start searching for DVB-T channels.</string>
     <string name="strStartSearch">Start Search</string>
     <string name="strTextview">TextView</string>
     <string name="strTestString">TEST BINDER CONNECTION!!</string>
     <string name="strNetworkSearch">Network Search</string>
     <string name="strDVBS2">DVBS-2</string>
+    <string name="strPlaceholder">Placeholder activity for product customisation.</string>
 </resources>

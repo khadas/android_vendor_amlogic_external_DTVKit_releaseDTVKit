@@ -73,6 +73,7 @@ public class DtvkitDvbtSetup extends Activity {
 
         findViewById(R.id.startsearch).setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                findViewById(R.id.startsearch).setEnabled(false);
                 startSearch();
             }
         });

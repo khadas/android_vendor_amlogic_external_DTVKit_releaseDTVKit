@@ -1,50 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.dtvkit.inputsource">
-
     <uses-feature
         android:name="android.software.live_tv"
         android:required="true" />
-
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="com.android.providers.tv.permission.READ_EPG_DATA" />
     <uses-permission android:name="com.android.providers.tv.permission.WRITE_EPG_DATA" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="DTVKit Source"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Leanback">
-
+        android:theme="@style/Theme.Leanback"
+        android:banner="@drawable/dtvkit">
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
-
         <activity android:name=".DtvkitDvbsSetup">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
-
         <activity android:name=".DtvkitDvbtSetup">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
-
         <service
             android:name=".DtvkitTvInput"
-            android:label="DTVKit"
+            android:label="DTVKit2"
             android:permission="android.permission.BIND_TV_INPUT">
             <intent-filter>
                 <action android:name="android.media.tv.TvInputService" />
             </intent-filter>
-
             <meta-data
                 android:name="android.media.tv.input"
                 android:resource="@xml/dtvkittvinput" />
@@ -52,8 +51,7 @@
         <service
             android:name=".DtvkitEpgSync"
             android:exported="true"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
-
+            android:permission="android.permission.BIND_JOB_SERVICE">
+        </service>
     </application>
-
 </manifest>

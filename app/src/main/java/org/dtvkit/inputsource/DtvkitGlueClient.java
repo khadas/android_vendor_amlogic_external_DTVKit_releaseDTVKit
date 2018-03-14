@@ -96,8 +96,7 @@ public class DtvkitGlueClient {
                     mDtvkit.registerSignalHandler(mSignalHandler);
                     mDtvkit.asBinder().linkToDeath(mDeathRecipient, 0);
                 } catch (Exception e) {
-                    Log.e("MainActivity", e.getMessage());
-                }
+                    Log.e(TAG, e.getMessage());}
             } else {
                 Log.e(TAG, "Failed to get service");
             }
