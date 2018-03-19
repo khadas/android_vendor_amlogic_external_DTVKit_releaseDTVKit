@@ -40,19 +40,7 @@ import java.util.List;
  * pre-defined values.
  */
 public class InternalProviderData {
-    private static final String TAG = "InternalProviderData";
-    private static final boolean DEBUG = true;
-
-    private static final String KEY_VIDEO_TYPE = "type";
-    private static final String KEY_VIDEO_URL = "url";
-    private static final String KEY_REPEATABLE = "repeatable";
     private static final String KEY_CUSTOM_DATA = "custom";
-    private static final String KEY_ADVERTISEMENTS = "advertisements";
-    private static final String KEY_ADVERTISEMENT_START = "start";
-    private static final String KEY_ADVERTISEMENT_STOP = "stop";
-    private static final String KEY_ADVERTISEMENT_TYPE = "type";
-    private static final String KEY_ADVERTISEMENT_REQUEST_URL = "requestUrl";
-    private static final String KEY_RECORDING_START_TIME = "recordingStartTime";
 
     private JSONObject mJsonObject;
 
@@ -61,20 +49,6 @@ public class InternalProviderData {
      */
     public InternalProviderData() {
         mJsonObject = new JSONObject();
-    }
-
-    /**
-     * Creates a new object and attempts to populate from the provided String
-     *
-     * @param data Correctly formatted InternalProviderData
-     * @throws ParseException If data is not formatted correctly
-     */
-    public InternalProviderData(@NonNull String data) throws ParseException {
-        try {
-            mJsonObject = new JSONObject(data);
-        } catch (JSONException e) {
-            throw new ParseException(e.getMessage());
-        }
     }
 
     /**
@@ -165,170 +139,6 @@ public class InternalProviderData {
     }
 
     /**
-     * Gets the video type of the program.
-     *
-     * @return The video type of the program, -1 if no value has been given.
-     */
-    public int getVideoType() {
-        if (mJsonObject.has(KEY_VIDEO_TYPE)) {
-            try {
-                return mJsonObject.getInt(KEY_VIDEO_TYPE);
-            } catch (JSONException ignored) {
-            }
-        }
-        return TvContractUtils.SOURCE_TYPE_INVALID;
-    }
-
-    /**
-     * Sets the video type of the program.
-     *
-     * @param videoType The video source type. Could be {@link TvContractUtils#SOURCE_TYPE_HLS},
-     * {@link TvContractUtils#SOURCE_TYPE_HTTP_PROGRESSIVE},
-     * or {@link TvContractUtils#SOURCE_TYPE_MPEG_DASH}.
-     */
-    public void setVideoType(int videoType) {
-        try {
-            mJsonObject.put(KEY_VIDEO_TYPE, videoType);
-        } catch (JSONException ignored) {
-        }
-    }
-
-    /**
-     * Gets the video url of the program if valid.
-     *
-     * @return The video url of the program if valid, null if no value has been given.
-     */
-    public String getVideoUrl() {
-        if (mJsonObject.has(KEY_VIDEO_URL)) {
-            try {
-                return mJsonObject.getString(KEY_VIDEO_URL);
-            } catch (JSONException ignored) {
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Gets a list of all advertisements. If no ads have been assigned, the list will be empty.
-     *
-     * @return A list of all advertisements for this channel or program.
-     */
-    public List<Advertisement> getAds() {
-        List<Advertisement> ads = new ArrayList<>();
-        try {
-            if (mJsonObject.has(KEY_ADVERTISEMENTS)) {
-                JSONArray adsJsonArray =
-                        new JSONArray(mJsonObject.get(KEY_ADVERTISEMENTS).toString());
-                for (int i = 0; i < adsJsonArray.length(); i++) {
-                    JSONObject ad = adsJsonArray.getJSONObject(i);
-                    long start = ad.getLong(KEY_ADVERTISEMENT_START);
-                    long stop = ad.getLong(KEY_ADVERTISEMENT_STOP);
-                    int type = ad.getInt(KEY_ADVERTISEMENT_TYPE);
-                    String requestUrl = ad.getString(KEY_ADVERTISEMENT_REQUEST_URL);
-                    ads.add(new Advertisement.Builder()
-                            .setStartTimeUtcMillis(start)
-                            .setStopTimeUtcMillis(stop)
-                            .setType(type)
-                            .setRequestUrl(requestUrl)
-                            .build());
-                }
-            }
-        } catch (JSONException ignored) {
-        }
-        return ads;
-    }
-
-    /**
-     * Gets recording start time of program for recorded program. For a non-recorded program, this
-     * value will not be set.
-     *
-     * @return Recording start of program in UTC milliseconds, 0 if no value is given.
-     */
-    public long getRecordedProgramStartTime() {
-        try {
-            return mJsonObject.getLong(KEY_RECORDING_START_TIME);
-        } catch (JSONException ignored) {
-        }
-        return 0;
-    }
-
-    /**
-     * Sets the video url of the program.
-     *
-     * @param videoUrl A valid url pointing to the video to be played.
-     */
-    public void setVideoUrl(String videoUrl) {
-        try {
-            mJsonObject.put(KEY_VIDEO_URL, videoUrl);
-        } catch (JSONException ignored) {
-        }
-    }
-
-    /**
-     * Checks whether the programs on this channel should be repeated periodically in order.
-     *
-     * @return Whether to repeat programs. Returns false if no value has been set.
-     */
-    public boolean isRepeatable() {
-        if (mJsonObject.has(KEY_REPEATABLE)) {
-            try {
-                return mJsonObject.getBoolean(KEY_REPEATABLE);
-            } catch (JSONException ignored) {
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Sets whether programs assigned to this channel should be repeated periodically.
-     * This field is relevant to channels.
-     *
-     * @param repeatable Whether to repeat programs.
-     */
-    public void setRepeatable(boolean repeatable) {
-        try {
-            mJsonObject.put(KEY_REPEATABLE, repeatable);
-        } catch (JSONException ignored) {
-        }
-    }
-
-    /**
-     * Sets a list of advertisements for this channel or program. If setting for a channel, list
-     * size should be <= 1. Channels cannot have more than one advertisement.
-     *
-     * @param ads A list of advertisements that should be shown.
-     */
-    public void setAds(List<Advertisement> ads) {
-        try {
-            if (ads != null && !ads.isEmpty()) {
-                JSONArray adsJsonArray = new JSONArray();
-                for (Advertisement ad : ads) {
-                    JSONObject adJson = new JSONObject();
-                    adJson.put(KEY_ADVERTISEMENT_START, ad.getStartTimeUtcMillis());
-                    adJson.put(KEY_ADVERTISEMENT_STOP, ad.getStopTimeUtcMillis());
-                    adJson.put(KEY_ADVERTISEMENT_TYPE, ad.getType());
-                    adJson.put(KEY_ADVERTISEMENT_REQUEST_URL, ad.getRequestUrl());
-                    adsJsonArray.put(adJson);
-                }
-                mJsonObject.put(KEY_ADVERTISEMENTS, adsJsonArray);
-            }
-        } catch (JSONException ignored) {
-        }
-    }
-
-    /**
-     * Sets the recording program start time for a recorded program.
-     *
-     * @param startTime Recording start time in UTC milliseconds of recorded program.
-     */
-    public void setRecordingStartTime(long startTime) {
-        try {
-            mJsonObject.put(KEY_RECORDING_START_TIME, startTime);
-        } catch (JSONException ignored) {
-        }
-    }
-
-    /**
      * Adds some custom data to the InternalProviderData.
      *
      * @param key The key for this data
@@ -361,24 +171,6 @@ public class InternalProviderData {
         }
         try {
             return mJsonObject.getJSONObject(KEY_CUSTOM_DATA).opt(key);
-        } catch (JSONException e) {
-            throw new ParseException(e.getMessage());
-        }
-    }
-
-    /**
-     * Checks whether a custom key is found in InternalProviderData.
-     *
-     * @param key The key assigned to this data
-     * @return Whether this key is found.
-     * @throws ParseException If there is a problem checking custom data
-     */
-    public boolean has(String key) throws ParseException {
-        if (! mJsonObject.has(KEY_CUSTOM_DATA)) {
-            return false;
-        }
-        try {
-            return mJsonObject.getJSONObject(KEY_CUSTOM_DATA).has(key);
         } catch (JSONException e) {
             throw new ParseException(e.getMessage());
         }

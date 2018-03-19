@@ -34,16 +34,13 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.PersistableBundle;
 import android.os.RemoteException;
-import android.support.annotation.VisibleForTesting;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.util.LongSparseArray;
 import android.util.SparseArray;
 
-import org.dtvkit.companionlibrary.model.Advertisement;
 import org.dtvkit.companionlibrary.model.Channel;
 import org.dtvkit.companionlibrary.model.EventPeriod;
-import org.dtvkit.companionlibrary.model.InternalProviderData;
 import org.dtvkit.companionlibrary.model.Program;
 import org.dtvkit.companionlibrary.utils.TvContractUtils;
 

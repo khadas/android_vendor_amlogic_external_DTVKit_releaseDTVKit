@@ -54,32 +54,8 @@ import java.util.Map;
  */
 public class TvContractUtils {
     public static final String PREFERENCES_FILE_KEY = "org.dtvkit.companionlibrary";
-
-    /** Indicates that no source type has been defined for this video yet */
-    public static final int SOURCE_TYPE_INVALID = -1;
-    /** Indicates that the video will use MPEG-DASH (Dynamic Adaptive Streaming over HTTP) for
-     * playback.
-     */
-    public static final int SOURCE_TYPE_MPEG_DASH = 0;
-    /** Indicates that the video will use SS (Smooth Streaming) for playback. */
-    public static final int SOURCE_TYPE_SS = 1;
-    /** Indicates that the video will use HLS (HTTP Live Streaming) for playback. */
-    public static final int SOURCE_TYPE_HLS = 2;
-    /** Indicates that the video will use HTTP Progressive for playback. */
-    public static final int SOURCE_TYPE_HTTP_PROGRESSIVE = 3;
-
     private static final String TAG = "TvContractUtils";
     private static final boolean DEBUG = false;
-    private static final SparseArray<String> VIDEO_HEIGHT_TO_FORMAT_MAP = new SparseArray<>();
-
-    static {
-        VIDEO_HEIGHT_TO_FORMAT_MAP.put(480, TvContract.Channels.VIDEO_FORMAT_480P);
-        VIDEO_HEIGHT_TO_FORMAT_MAP.put(576, TvContract.Channels.VIDEO_FORMAT_576P);
-        VIDEO_HEIGHT_TO_FORMAT_MAP.put(720, TvContract.Channels.VIDEO_FORMAT_720P);
-        VIDEO_HEIGHT_TO_FORMAT_MAP.put(1080, TvContract.Channels.VIDEO_FORMAT_1080P);
-        VIDEO_HEIGHT_TO_FORMAT_MAP.put(2160, TvContract.Channels.VIDEO_FORMAT_2160P);
-        VIDEO_HEIGHT_TO_FORMAT_MAP.put(4320, TvContract.Channels.VIDEO_FORMAT_4320P);
-    }
 
     /**
      * Updates the list of available channels.

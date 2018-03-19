@@ -37,7 +37,6 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 String uri = service.getString("uri");
 
                 InternalProviderData data = new InternalProviderData();
-                data.setRepeatable(false);
                 data.put("dvbUri", uri);
 
                 channels.add(new Channel.Builder()
@@ -79,8 +78,6 @@ public class DtvkitEpgSync extends EpgSyncJobService {
 
                 InternalProviderData data = new InternalProviderData();
                 data.put("dvbUri", dvbUri);
-                data.put("dvbUri", startMs / 1000);
-                data.put("dvbUri", endMs / 1000);
 
                 programs.add(new Program.Builder()
                         .setChannelId(channel.getId())

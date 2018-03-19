@@ -11,12 +11,12 @@ import android.media.tv.TvInputManager;
 import android.media.tv.TvInputService;
 import android.media.tv.TvTrackInfo;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.util.LongSparseArray;
 import android.view.Surface;
-import android.view.View;
 
 import org.dtvkit.companionlibrary.model.Channel;
 import org.dtvkit.companionlibrary.utils.TvContractUtils;
@@ -68,6 +68,7 @@ public class DtvkitTvInput extends TvInputService {
     class DtvkitTvInputSession extends TvInputService.Session {
         private static final String TAG = "DtvkitTvInputSession";
         private Channel mTunedChannel;
+        private List<TvTrackInfo> mTunedTracks = null;
 
         DtvkitTvInputSession(Context context) {
             super(context);
@@ -133,12 +134,25 @@ public class DtvkitTvInput extends TvInputService {
             Log.i(TAG, "onSetCaptionEnabled " + enabled);
             // TODO CaptioningManager.getLocale()
             playerSetSubtitlesOn(enabled);
+            if (enabled) {
+                notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, Integer.toString(playerGetSelectedSubtitleTrack()));
+            }
         }
 
         @Override
         public boolean onSelectTrack(int type, String trackId) {
             Log.i(TAG, "onSelectTrack " + type + ", " + trackId);
-            // TODO notifyTrackSelected(int type, String trackId)
+            if (type == TvTrackInfo.TYPE_AUDIO) {
+                if (playerSelectAudioTrack((null == trackId) ? 0xFFFF : Integer.parseInt(trackId))) {
+                    notifyTrackSelected(type, trackId);
+                    return true;
+                }
+            } else if (type == TvTrackInfo.TYPE_SUBTITLE) {
+                if (playerSelectSubtitleTrack((null == trackId) ? 0xFFFF : Integer.parseInt(trackId))) {
+                    notifyTrackSelected(type, trackId);
+                    return true;
+                }
+            }
             return false;
         }
 
@@ -181,10 +195,16 @@ public class DtvkitTvInput extends TvInputService {
                                 notifyVideoAvailable();
                             }
                             mEpgTimer.notifyDecodingStarted();
-
-                            // TODO Cache and check if different
-                            notifyTracksChanged(playerGetTracks());
-
+                            List<TvTrackInfo> tracks = playerGetTracks();
+                            if (!tracks.equals(mTunedTracks)) {
+                                mTunedTracks = tracks;
+                                // TODO Also for service changed event
+                                notifyTracksChanged(mTunedTracks);
+                            }
+                            notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(playerGetSelectedAudioTrack()));
+                            if (playerGetSubtitlesOn()) {
+                                notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, Integer.toString(playerGetSelectedSubtitleTrack()));
+                            }
                             break;
                         case "blocked":
                             notifyContentBlocked(TvContentRating.createRating("com.android.tv", "DVB", "DVB_18"));
@@ -277,13 +297,111 @@ public class DtvkitTvInput extends TvInputService {
 
     private List<TvTrackInfo> playerGetTracks() {
         List<TvTrackInfo> tracks = new ArrayList<>();
-        TvTrackInfo.Builder build1 = new TvTrackInfo.Builder(TvTrackInfo.TYPE_AUDIO, "1");
-        build1.setLanguage("en");
-        tracks.add(build1.build());
-        TvTrackInfo.Builder build2 = new TvTrackInfo.Builder(TvTrackInfo.TYPE_AUDIO, "1");
-        build2.setLanguage("ga");
-        tracks.add(build2.build());
+        try {
+            JSONArray args = new JSONArray();
+            JSONArray audioStreams = DtvkitGlueClient.getInstance().request("Player.getListOfAudioStreams", args).getJSONArray("data");
+            for (int i = 0; i < audioStreams.length(); i++)
+            {
+                JSONObject audioStream = audioStreams.getJSONObject(i);
+                TvTrackInfo.Builder track = new TvTrackInfo.Builder(TvTrackInfo.TYPE_AUDIO, Integer.toString(audioStream.getInt("pid")));
+                track.setLanguage(audioStream.getString("language"));
+                if (audioStream.getBoolean("ad")) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        track.setDescription("AD");
+                    }
+                }
+                tracks.add(track.build());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
+        try {
+            JSONArray args = new JSONArray();
+            JSONArray subtitleStreams = DtvkitGlueClient.getInstance().request("Player.getListOfSubtitleStreams", args).getJSONArray("data");
+            for (int i = 0; i < subtitleStreams.length(); i++)
+            {
+                JSONObject subtitleStream = subtitleStreams.getJSONObject(i);
+                TvTrackInfo.Builder track = new TvTrackInfo.Builder(TvTrackInfo.TYPE_SUBTITLE, Integer.toString(subtitleStream.getInt("pid")));
+                track.setLanguage(subtitleStream.getString("language"));
+                tracks.add(track.build());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
         return tracks;
+    }
+
+    private boolean playerSelectAudioTrack(int pid) {
+        try {
+            JSONArray args = new JSONArray();
+            args.put(pid);
+            DtvkitGlueClient.getInstance().request("Player.setAudioStream", args);
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+            return false;
+        }
+        return true;
+    }
+
+    private boolean playerSelectSubtitleTrack(int pid) {
+        try {
+            JSONArray args = new JSONArray();
+            args.put(pid);
+            DtvkitGlueClient.getInstance().request("Player.setSubtitleStream", args);
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+            return false;
+        }
+        return true;
+    }
+
+    private int playerGetSelectedSubtitleTrack() {
+        int pid = 0xFFFF;
+        try {
+            JSONArray args = new JSONArray();
+            JSONArray subtitleStreams = DtvkitGlueClient.getInstance().request("Player.getListOfSubtitleStreams", args).getJSONArray("data");
+            for (int i = 0; i < subtitleStreams.length(); i++)
+            {
+                JSONObject subtitleStream = subtitleStreams.getJSONObject(i);
+                if (subtitleStream.getBoolean("selected")) {
+                    pid = subtitleStream.getInt("pid");
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
+        return pid;
+    }
+
+    private int playerGetSelectedAudioTrack() {
+        int pid = 0xFFFF;
+        try {
+            JSONArray args = new JSONArray();
+            JSONArray audioStreams = DtvkitGlueClient.getInstance().request("Player.getListOfAudioStreams", args).getJSONArray("data");
+            for (int i = 0; i < audioStreams.length(); i++)
+            {
+                JSONObject audioStream = audioStreams.getJSONObject(i);
+                if (audioStream.getBoolean("selected")) {
+                    pid = audioStream.getInt("pid");
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
+        return pid;
+    }
+
+    private boolean playerGetSubtitlesOn() {
+        boolean on = false;
+        try {
+            JSONArray args = new JSONArray();
+            on = DtvkitGlueClient.getInstance().request("Player.getSubtitlesOn", args).getBoolean("data");
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
+        return on;
     }
 
     private final ContentObserver mContentObserver = new ContentObserver(new Handler()) {
