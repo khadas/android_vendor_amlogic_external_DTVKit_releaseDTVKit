@@ -50,10 +50,10 @@ public class DtvkitTvInput extends TvInputService {
     @Override
     public void onDestroy() {
         Log.i(TAG, "onDestroy");
-        super.onDestroy();
         mEpgTimer.cancel();
         mEpgTimer = null;
         mContentResolver.unregisterContentObserver(mContentObserver);
+        super.onDestroy();
     }
 
     @Override
