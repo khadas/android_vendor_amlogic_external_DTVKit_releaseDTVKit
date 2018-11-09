@@ -9,6 +9,29 @@
 #include <bcmsidebandplayerfactory.h>
 static struct bcmsideband_ctx *context = NULL;
 #endif
+
+#ifdef PLATFORM_AMLOGIC
+#define LOG_TAG "SurfaceOverlay-jni"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <jni.h>
+#include <JNIHelp.h>
+
+#include <utils/Log.h>
+#include <utils/KeyedVector.h>
+#include <android_runtime/AndroidRuntime.h>
+#include <android_runtime/android_view_Surface.h>
+#include <android/native_window.h>
+#include <gui/Surface.h>
+#include <gui/IGraphicBufferProducer.h>
+#include <ui/GraphicBuffer.h>
+#include <gralloc_usage_ext.h>
+#endif
+
 static jboolean set = JNI_FALSE;
 static int surface_x = 0;
 static int surface_y = 0;
@@ -27,6 +50,71 @@ static void onRectangleUpdated(void *context, unsigned int x, unsigned int y, un
 }
 #endif
 
+#ifdef PLATFORM_AMLOGIC
+namespace android
+{
+    static int updateNative(sp<ANativeWindow> nativeWin) {
+        char* vaddr;
+        int ret = 0;
+        ANativeWindowBuffer* buf;
+
+        if (nativeWin.get() == NULL) {
+            return 0;
+        }
+        int err = nativeWin->dequeueBuffer_DEPRECATED(nativeWin.get(), &buf);
+        if (err != 0) {
+            ALOGE("dequeueBuffer failed: %s (%d)", strerror(-err), -err);
+            return -1;
+        }
+        /*
+        nativeWin->lockBuffer_DEPRECATED(nativeWin.get(), buf);
+        sp<GraphicBuffer> graphicBuffer(new GraphicBuffer(buf, false));
+        graphicBuffer->lock(1, (void **)&vaddr);
+        if (vaddr != NULL) {
+            memset(vaddr, 0x0, graphicBuffer->getWidth() * graphicBuffer->getHeight() * 4); //to show video in osd hole...
+        }
+        graphicBuffer->unlock();
+        graphicBuffer.clear();*/
+
+        return nativeWin->queueBuffer_DEPRECATED(nativeWin.get(), buf);
+    }
+
+    static void setSurface(JNIEnv *env, jobject thiz, jobject jsurface) {
+        sp<IGraphicBufferProducer> new_st = NULL;
+        if (jsurface) {
+            sp<Surface> surface(android_view_Surface_getSurface(env, jsurface));
+            if (surface != NULL) {
+                new_st = surface->getIGraphicBufferProducer();
+                if (new_st == NULL) {
+                    jniThrowException(env, "java/lang/IllegalArgumentException",
+                        "The surface does not have a binding SurfaceTexture!");
+                    return;
+                }
+            } else {
+                jniThrowException(env, "java/lang/IllegalArgumentException",
+                        "The surface has been released");
+                return;
+            }
+        }
+
+        sp<ANativeWindow> tmpWindow = NULL;
+        if (new_st != NULL) {
+            tmpWindow = new Surface(new_st);
+            status_t err = native_window_api_connect(tmpWindow.get(),
+                NATIVE_WINDOW_API_MEDIA);
+            ALOGI("set native window overlay");
+            native_window_set_usage(tmpWindow.get(), GRALLOC_USAGE_HW_TEXTURE |
+                GRALLOC_USAGE_EXTERNAL_DISP  | GRALLOC_USAGE_AML_VIDEO_OVERLAY);
+            native_window_set_buffers_format(tmpWindow.get(), WINDOW_FORMAT_RGBA_8888);
+
+            updateNative(tmpWindow);
+        }
+    }
+}
+using namespace android;
+
+#endif
+
 extern "C" JNIEXPORT jboolean JNICALL Java_org_dtvkit_inputsource_Platform_setNativeSurface(JNIEnv *env, jclass thiz, jobject surface)
 {
    if (set != JNI_TRUE)
@@ -40,6 +128,10 @@ extern "C" JNIEXPORT jboolean JNICALL Java_org_dtvkit_inputsource_Platform_setNa
       {
          set = JNI_TRUE;
       }
+      #elif defined (PLATFORM_AMLOGIC)
+
+      setSurface(env, thiz, surface);
+
       #else
       __android_log_print(ANDROID_LOG_WARN, "DTVKitSource", "setNativeSurface: no platform selected (width %d, height %d)\n",
          ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));

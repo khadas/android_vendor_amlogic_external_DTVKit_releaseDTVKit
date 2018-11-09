@@ -111,10 +111,12 @@ public class DtvkitTvInput extends TvInputService {
             mTunedChannel = getChannel(channelUri);
             final String dvbUri = getChannelInternalDvbUri(mTunedChannel);
             notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING);
+            notifyVideoAvailable();
+            notifyContentAllowed();
             if (playerPlay(dvbUri)) {
             } else {
                 mTunedChannel = null;
-                notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
+                //notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
             }
             // TODO? notifyContentAllowed()
             return mTunedChannel != null;
