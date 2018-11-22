@@ -6,7 +6,7 @@ LOCAL_PACKAGE_NAME := inputsource
 LOCAL_AAPT_FLAGS := --auto-add-overlay \
    --extra-packages android.support.v17.leanback
 
-LOCAL_RESOURCE_DIR := frameworks/support/v17/leanback/res \
+LOCAL_RESOURCE_DIR := frameworks/support/leanback/src/main/res \
    $(LOCAL_PATH)/res
 
 LOCAL_STATIC_JAVA_LIBRARIES += \
@@ -22,7 +22,7 @@ LOCAL_JNI_SHARED_LIBRARIES := libplatform
 LOCAL_REQUIRED_MODULES := libplatform
 LOCAL_CERTIFICATE := platform
 LOCAL_PROGUARD_ENABLED := disabled
-
+LOCAL_PRIVATE_PLATFORM_APIS := true
 include $(BUILD_PACKAGE)
 include $(call all-makefiles-under, $(LOCAL_PATH))
 
