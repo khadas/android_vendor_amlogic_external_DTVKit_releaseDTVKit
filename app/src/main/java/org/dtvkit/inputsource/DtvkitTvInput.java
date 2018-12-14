@@ -113,8 +113,8 @@ public class DtvkitTvInput extends TvInputService {
         @Override
         public boolean onSetSurface(Surface surface) {
             Log.i(TAG, "onSetSurface " + surface);
-            Platform platform = new Platform();
-            return platform.setSurface(surface);
+            SurfaceOverlay.setDisplay(surface);
+            return true;
         }
 
         @Override
@@ -128,8 +128,8 @@ public class DtvkitTvInput extends TvInputService {
         @Override
         public void onOverlayViewSizeChanged(int width, int height) {
             Log.i(TAG, "onOverlayViewSizeChanged " + width + ", " + height);
-            Platform platform = new Platform();
-            playerSetRectangle(platform.getSurfaceX(), platform.getSurfaceY(), width, height);
+            //Platform platform = new Platform();
+            //playerSetRectangle(platform.getSurfaceX(), platform.getSurfaceY(), width, height);
         }
 
         @Override
