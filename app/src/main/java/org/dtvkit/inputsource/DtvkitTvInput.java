@@ -10,6 +10,7 @@ import android.media.tv.TvContract;
 import android.media.tv.TvInputManager;
 import android.media.tv.TvInputService;
 import android.media.tv.TvTrackInfo;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -92,11 +93,23 @@ public class DtvkitTvInput extends TvInputService {
 
     class DtvkitTvInputSession extends TvInputService.Session implements DtvkitDvbScan.ScannerEventListener {
         private static final String TAG = "DtvkitTvInputSession";
-        private Channel mTunedChannel;
+        private static final int ADEC_START_DECODE = 1;
+        private static final int ADEC_PAUSE_DECODE = 2;
+        private static final int ADEC_RESUME_DECODE = 3;
+        private static final int ADEC_STOP_DECODE = 4;
+        private static final int ADEC_SET_DECODE_AD = 5;
+        private static final int ADEC_SET_VOLUME = 6;
+        private static final int ADEC_SET_MUTE = 7;
+        private static final int ADEC_SET_OUTPUT_MODE = 8;
+        private static final int ADEC_SET_PRE_GAIN = 9;
+        private static final int ADEC_SET_PRE_MUTE = 10;
         private List<TvTrackInfo> mTunedTracks = null;
+        protected final Context mContext;
+        private Channel mTunedChannel;
 
         DtvkitTvInputSession(Context context) {
             super(context);
+            mContext = context;
             Log.i(TAG, "DtvkitTvInputSession");
             DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
             mDtvkitDvbScan.setScannerListener(this);
@@ -276,6 +289,61 @@ public class DtvkitTvInput extends TvInputService {
                             break;
                         default:
                             mEpgTimer.notifyDecodingStopped();
+                            break;
+                    }
+                }else if (signal.equals("AudioParamCB")) {
+                    int cmd = 0, param1 = 0, param2 = 0;
+                    AudioManager audioManager = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
+                    try {
+                        cmd = data.getInt("audio_status");
+                        param1 = data.getInt("audio_param1");
+                        param2 = data.getInt("audio_param2");
+                    } catch (JSONException ignore) {
+                        Log.e(TAG, ignore.getMessage());
+                    }
+                    Log.d(TAG, "cmd ="+cmd+" param1 ="+param1+" param2 ="+param2);
+                    switch (cmd) {
+                        case ADEC_START_DECODE:
+                            audioManager.setParameters("fmt="+param1);
+                            audioManager.setParameters("has_dtv_video="+param2);
+                            audioManager.setParameters("cmd="+cmd);
+                            break;
+                        case ADEC_PAUSE_DECODE:
+                            audioManager.setParameters("cmd="+cmd);
+                            break;
+                        case ADEC_RESUME_DECODE:
+                            audioManager.setParameters("cmd="+cmd);
+                            break;
+                        case ADEC_STOP_DECODE:
+                            audioManager.setParameters("cmd="+cmd);
+                            break;
+                        case ADEC_SET_DECODE_AD:
+                            audioManager.setParameters("cmd="+cmd);
+                            audioManager.setParameters("fmt="+param1);
+                            audioManager.setParameters("pid="+param2);
+                            break;
+                        case ADEC_SET_VOLUME:
+                            audioManager.setParameters("cmd="+cmd);
+                            audioManager.setParameters("vol="+param1);
+                            break;
+                        case ADEC_SET_MUTE:
+                            audioManager.setParameters("cmd="+cmd);
+                            audioManager.setParameters("mute="+param1);
+                            break;
+                        case ADEC_SET_OUTPUT_MODE:
+                            audioManager.setParameters("cmd="+cmd);
+                            audioManager.setParameters("mode="+param1);
+                            break;
+                        case ADEC_SET_PRE_GAIN:
+                            audioManager.setParameters("cmd="+cmd);
+                            audioManager.setParameters("gain="+param1);
+                            break;
+                        case ADEC_SET_PRE_MUTE:
+                            audioManager.setParameters("cmd="+cmd);
+                            audioManager.setParameters("mute="+param1);
+                            break;
+                        default:
+                            Log.i(TAG,"unkown audio cmd!");
                             break;
                     }
                 }
