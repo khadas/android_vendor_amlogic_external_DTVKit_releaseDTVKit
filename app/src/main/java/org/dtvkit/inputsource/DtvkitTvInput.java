@@ -393,6 +393,8 @@ public class DtvkitTvInput extends TvInputService {
         try {
             JSONArray args = new JSONArray();
             args.put(dvbUri);
+            AudioManager audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+            audioManager.setParameters("tuner_in=dtv");
             DtvkitGlueClient.getInstance().request("Player.play", args);
             return true;
         } catch (Exception e) {
