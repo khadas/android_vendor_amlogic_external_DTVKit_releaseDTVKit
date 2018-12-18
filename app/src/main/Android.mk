@@ -15,7 +15,14 @@ LOCAL_STATIC_JAVA_LIBRARIES += \
 
 LOCAL_AIDL_INCLUDES := $(LOCAL_PATH)/aidl
 
-LOCAL_SRC_FILES := $(call all-subdir-java-files) $(call all-subdir-Iaidl-files)
+LOCAL_JAVA_LIBRARIES += \
+    android.hidl.base-V1.0-java \
+    android.hidl.manager-V1.0-java
+
+LOCAL_STATIC_JAVA_LIBRARIES += \
+    vendor.amlogic.hardware.rpcserver-V1.0-java
+
+LOCAL_SRC_FILES := $(call all-subdir-java-files)
 
 #TARGET_BUILD_APPS := inputsource # for normal app (embedded ndk jni)
 LOCAL_JNI_SHARED_LIBRARIES := libplatform

@@ -20,7 +20,7 @@ LOCAL_CFLAGS += -DPLATFORM_AMLOGIC
 LOCAL_C_INCLUDES += $(JNI_H_INCLUDE) hardware/amlogic/gralloc\
     frameworks/base/include \
     frameworks/native/include \
-	libnativehelper/include/nativehelper
+    libnativehelper/include/nativehelper
 
 LOCAL_SHARED_LIBRARIES += \
     libcutils \
