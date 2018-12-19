@@ -128,15 +128,13 @@ public abstract class EpgSyncJobService extends JobService {
 
     /** The default period between full EPG syncs, one day. */
     private static final long DEFAULT_SYNC_PERIOD_MILLIS = 1000 * 60 * 60 * 12; // 12 hour
-    private static final long DEFAULT_IMMEDIATE_EPG_DURATION_MILLIS = 1000 * 60 * 60; // 1 Hour
     private static final long DEFAULT_PERIODIC_EPG_DURATION_MILLIS = 1000 * 60 * 60 * 48; // 48 Hour
 
     private static final int PERIODIC_SYNC_JOB_ID = 0;
     private static final int REQUEST_SYNC_JOB_ID = 1;
     private static final int BATCH_OPERATION_COUNT = 100;
     private static final long OVERRIDE_DEADLINE_MILLIS = 1000;  // 1 second
-    private static final String BUNDLE_KEY_SYNC_PERIOD = "bundle_key_sync_period";
-    private static final String BUNDLE_KEY_SYNC_FORCE_UPDATE = "BUNDLE_KEY_SYNC_FORCE_UPDATE";
+    private static final String BUNDLE_KEY_SYNC_NOW_NEXT = "BUNDLE_KEY_SYNC_NOW_NEXT";
 
 
     private final SparseArray<EpgSyncTask> mTaskArray = new SparseArray<>();
@@ -163,6 +161,8 @@ public abstract class EpgSyncJobService extends JobService {
      */
     public abstract List<Program> getProgramsForChannel(Uri channelUri, Channel channel,
             long startMs, long endMs);
+
+    public abstract List<Program> getNowNextProgramsForChannel(Uri channelUri, Channel channel);
 
     public abstract List<EventPeriod> getListOfUpdatedEventPeriods();
 
@@ -272,7 +272,6 @@ public abstract class EpgSyncJobService extends JobService {
         }
         PersistableBundle persistableBundle = new PersistableBundle();
         persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_INPUT_ID, inputId);
-        persistableBundle.putLong(EpgSyncJobService.BUNDLE_KEY_SYNC_PERIOD, syncDuration);
         JobInfo.Builder builder = new JobInfo.Builder(PERIODIC_SYNC_JOB_ID, jobServiceComponent);
         JobInfo jobInfo = builder
                 .setExtras(persistableBundle)
@@ -296,8 +295,7 @@ public abstract class EpgSyncJobService extends JobService {
      */
     public static void requestImmediateSync(Context context, String inputId,
             ComponentName jobServiceComponent) {
-        requestImmediateSync(context, inputId, DEFAULT_IMMEDIATE_EPG_DURATION_MILLIS, false,
-                jobServiceComponent);
+        requestImmediateSync(context, inputId, false, jobServiceComponent);
     }
 
     /**
@@ -318,21 +316,20 @@ public abstract class EpgSyncJobService extends JobService {
      * @param context Application's context.
      * @param inputId Component name for the app's TvInputService. This can be received through an
      * Intent extra parameter {@link TvInputInfo#EXTRA_INPUT_ID}.
-     * @param syncDuration The duration of EPG content to fetch in milliseconds. For a manual sync,
      * this should be relatively short. For a background sync this should be long.
      * @param jobServiceComponent The {@link EpgSyncJobService} class that will run.
      */
-    public static void requestImmediateSync(Context context, String inputId, long syncDuration, boolean forceUpdate,
+    public static void requestImmediateSync(Context context, String inputId, boolean nowNext,
             ComponentName jobServiceComponent) {
         if (jobServiceComponent.getClass().isAssignableFrom(EpgSyncJobService.class)) {
             throw new IllegalArgumentException("This class does not extend EpgSyncJobService");
         }
+
         PersistableBundle persistableBundle = new PersistableBundle();
         persistableBundle.putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true);
         persistableBundle.putBoolean(ContentResolver.SYNC_EXTRAS_EXPEDITED, true);
         persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_INPUT_ID, inputId);
-        persistableBundle.putLong(EpgSyncJobService.BUNDLE_KEY_SYNC_PERIOD, syncDuration);
-        persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_FORCE_UPDATE, forceUpdate);
+        persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_NOW_NEXT, nowNext);
         JobInfo.Builder builder = new JobInfo.Builder(REQUEST_SYNC_JOB_ID, jobServiceComponent);
         JobInfo jobInfo = builder
                 .setExtras(persistableBundle)
@@ -370,6 +367,7 @@ public abstract class EpgSyncJobService extends JobService {
         public Void doInBackground(Void... voids) {
             PersistableBundle extras = params.getExtras();
             mInputId = extras.getString(BUNDLE_KEY_INPUT_ID);
+
             if (mInputId == null) {
                 broadcastError(ERROR_INPUT_ID_NULL);
                 return null;
@@ -389,50 +387,63 @@ public abstract class EpgSyncJobService extends JobService {
                 return null;
             }
 
-            List<EventPeriod> eventPeriods = getListOfUpdatedEventPeriods();
+            /* Get which type of sync this is. Now next or updated event period sync */
+            boolean nowNext = extras.getBoolean(BUNDLE_KEY_SYNC_NOW_NEXT, false);
 
-            // Default to one hour sync
-            long durationMs = extras.getLong(BUNDLE_KEY_SYNC_PERIOD, DEFAULT_IMMEDIATE_EPG_DURATION_MILLIS);
-            boolean forceUpdate = extras.getBoolean(BUNDLE_KEY_SYNC_FORCE_UPDATE, false);
+            /* Get the updated event periods if required for this type of sync */
+            List<EventPeriod> eventPeriods = new ArrayList<>();
+            if (!nowNext) {
+                eventPeriods = getListOfUpdatedEventPeriods();
+            }
 
-            boolean updatePrograms;
-            long startMs = System.currentTimeMillis();
-            long endMs = startMs + durationMs;
             for (int i = 0; i < channelMap.size(); ++i) {
+                if (DEBUG) {
+                    Log.d(TAG, "Update channel " + channelMap.valueAt(i).toString());
+                }
+
                 Uri channelUri = TvContract.buildChannelUri(channelMap.keyAt(i));
 
+                /* Check whether the job has been cancelled */
                 if (isCancelled()) {
                     broadcastError(ERROR_EPG_SYNC_CANCELED);
                     return null;
                 }
-                if (forceUpdate) {
-                    updatePrograms = true;
-                } else {
-                    updatePrograms = false;
-                    try {
-                        String dvbUri = channelMap.valueAt(i).getInternalProviderData().get("dvbUri").toString();
 
-                        for (int j = 0; j < eventPeriods.size(); j++) {
-                            EventPeriod period = eventPeriods.get(j);
-                            if (period.getDvbUri().equals(dvbUri)) {
-                                updatePrograms = true;
-                                startMs = period.getStartUtc() * 1000;
-                                endMs = period.getEndUtc() * 1000;
+                /* Get the programs */
+                List<Program> programs = new ArrayList<>();
+                if (nowNext) {
+                    programs = getNowNextProgramsForChannel(channelUri, channelMap.valueAt(i));
+                    if (DEBUG) {
+                        Log.d(TAG, "Got programs for now next: " + programs.toString());
+                    }
+                } else {
+                    long startMs;
+                    long endMs;
+                    String dvbUri = null;
+                    try {
+                        dvbUri = channelMap.valueAt(i).getInternalProviderData().get("dvbUri").toString();
+                    } catch (Exception e) {
+                    }
+
+                    for (int j = 0; j < eventPeriods.size(); j++) {
+                        EventPeriod period = eventPeriods.get(j);
+                        if (period.getDvbUri().equals(dvbUri)) {
+                            startMs = period.getStartUtc() * 1000;
+                            endMs = period.getEndUtc() * 1000;
+                            programs.addAll(getProgramsForChannel(channelUri, channelMap.valueAt(i),
+                                    startMs, endMs));
+                            if (DEBUG) {
+                                Log.d(TAG, "Got programs for period (" + startMs + " - " + endMs +
+                                        "): " + programs.toString());
                             }
                         }
-                    } catch (Exception e) {
                     }
                 }
 
-                if (updatePrograms) {
-                    List<Program> programs = getProgramsForChannel(channelUri, channelMap.valueAt(i),
-                            startMs, endMs);
-                    if (DEBUG) {
-                        Log.d(TAG, programs.toString());
-                    }
+                if (!programs.isEmpty()) {
+                    /* Set channel ids if not set */
                     for (int index = 0; index < programs.size(); index++) {
                         if (programs.get(index).getChannelId() == -1) {
-                            // Automatically set the channel id if not set
                             programs.set(index,
                                     new Program.Builder(programs.get(index))
                                             .setChannelId(channelMap.valueAt(i).getId())
@@ -440,8 +451,7 @@ public abstract class EpgSyncJobService extends JobService {
                         }
                     }
 
-                    // Double check if the job is cancelled, so that this task can be finished faster
-                    // after cancel() is called.
+                    /* Double check whether the job has been cancelled */
                     if (isCancelled()) {
                         broadcastError(ERROR_EPG_SYNC_CANCELED);
                         return null;

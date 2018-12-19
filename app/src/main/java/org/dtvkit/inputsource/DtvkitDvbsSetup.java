@@ -1,12 +1,12 @@
 package org.dtvkit.inputsource;
 
-import org.dtvkit.inputsource.R;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.tv.TvContract;
 import android.media.tv.TvInputInfo;
 import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
@@ -27,6 +27,7 @@ import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
 import java.util.Locale;
 
 public class DtvkitDvbsSetup extends Activity {
@@ -54,21 +55,24 @@ public class DtvkitDvbsSetup extends Activity {
         }
     };
 
-    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, final Intent intent) {
-            String status = intent.getStringExtra(EpgSyncJobService.SYNC_STATUS);
-            if (status.equals(EpgSyncJobService.SYNC_FINISHED)) {
-                setSearchStatus("Finished");
-                finish();
-            }
-        }
-    };
+   private final BroadcastReceiver mReceiver = new BroadcastReceiver()
+   {
+      @Override
+      public void onReceive(Context context, final Intent intent)
+      {
+         String status = intent.getStringExtra(EpgSyncJobService.SYNC_STATUS);
+         if (status.equals(EpgSyncJobService.SYNC_FINISHED))
+         {
+            setSearchStatus("Finished");
+            finish();
+         }
+      }
+   };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.setup);
+        setContentView(R.layout.satsetup);
 
         mDataMananer = new DataMananer(this);
 
@@ -417,7 +421,7 @@ public class DtvkitDvbsSetup extends Activity {
         EpgSyncJobService.cancelAllSyncRequests(this);
         String inputId = this.getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
         Log.i(TAG, String.format("inputId: %s", inputId));
-        EpgSyncJobService.requestImmediateSync(this, inputId, 1000 * 60 * 60 * 12, true, new ComponentName(this, DtvkitEpgSync.class)); // 12 hours
+        EpgSyncJobService.requestImmediateSync(this, inputId, true, new ComponentName(this, DtvkitEpgSync.class)); // 12 hours
     }
 
     private void startMonitoringSearch() {

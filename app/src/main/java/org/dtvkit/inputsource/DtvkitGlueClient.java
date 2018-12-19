@@ -104,6 +104,10 @@ public class DtvkitGlueClient {
         void onSignal(String signal, JSONObject data);
     }
 
+    interface OverlayTarget {
+        void draw(int src_width, int src_height, int dst_x, int dst_y, int dst_width, int dst_height, byte[] data);
+    }
+
     protected DtvkitGlueClient() {
         // Singleton
         mHALCallback = new HALCallback(this);
@@ -127,6 +131,10 @@ public class DtvkitGlueClient {
         if (mHandlers.contains(handler)) {
             mHandlers.remove(handler);
         }
+    }
+
+    public void setOverlayTarget(OverlayTarget target) {
+        //mTarget = target;
     }
 
     public JSONObject request(String resource, JSONArray arguments) throws Exception {

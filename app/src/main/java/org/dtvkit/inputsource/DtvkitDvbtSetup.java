@@ -6,6 +6,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.tv.TvContract;
 import android.media.tv.TvInputInfo;
 import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
@@ -71,7 +72,7 @@ public class DtvkitDvbtSetup extends Activity {
         @Override
         public void onReceive(Context context, final Intent intent) {
             String status = intent.getStringExtra(EpgSyncJobService.SYNC_STATUS);
-            if (status == EpgSyncJobService.SYNC_FINISHED) {
+            if (status.equals(EpgSyncJobService.SYNC_FINISHED)) {
                 setSearchStatus("Finished", "");
                 finish();
             }
@@ -83,19 +84,33 @@ public class DtvkitDvbtSetup extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.autosetup);
 
-        Button search = (Button)findViewById(R.id.startsearch);
-        search.setOnClickListener(new View.OnClickListener() {
+        final View startSearch = findViewById(R.id.terrestrialstartsearch);
+        final View stopSearch = findViewById(R.id.terrestrialstopsearch);
+
+        startSearch.setEnabled(true);
+        startSearch.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                findViewById(R.id.startsearch).setEnabled(false);
+                startSearch.setEnabled(false);
+                stopSearch.setEnabled(true);
+                stopSearch.requestFocus();
                 startSearch();
             }
         });
-        search.requestFocus();
+        startSearch.requestFocus();
         Intent intent = getIntent();
         if (intent != null) {
             mIsDvbt = intent.getBooleanExtra(DataMananer.KEY_IS_DVBT, false);
         }
         ((TextView)findViewById(R.id.description)).setText(mIsDvbt ? R.string.strSearchDvbtDescription : R.string.strSearchDvbcDescription);
+
+        stopSearch.setEnabled(false);
+        stopSearch.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                onSearchFinished();
+            }
+        });
+
         mDataMananer = new DataMananer(this);
         initOrUpdateView(true);
     }
@@ -125,7 +140,7 @@ public class DtvkitDvbtSetup extends Activity {
         Spinner public_search_mode_spinner = (Spinner)findViewById(R.id.public_search_mode_spinner);
         LinearLayout frequency_channel_container = (LinearLayout)findViewById(R.id.frequency_channel_container);
         Spinner frequency_channel_spinner = (Spinner)findViewById(R.id.frequency_channel_spinner);
-        Button search = (Button)findViewById(R.id.startsearch);
+        Button search = (Button)findViewById(R.id.terrestrialstartsearch);
 
         int isFrequencyMode = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
         if (isFrequencyMode == DataMananer.VALUE_FREQUENCY_MODE) {
@@ -347,7 +362,7 @@ public class DtvkitDvbtSetup extends Activity {
     }
 
     private void stopSearch() {
-        findViewById(R.id.startsearch).setEnabled(true);
+        findViewById(R.id.terrestrialstartsearch).setEnabled(true);
         try {
             JSONArray args = new JSONArray();
             args.put(true); // Commit
@@ -359,6 +374,7 @@ public class DtvkitDvbtSetup extends Activity {
     }
 
     private void onSearchFinished() {
+        disableStopSearchButton();
         setSearchStatus("Finishing search", "");
         setSearchProgressIndeterminate(true);
         stopMonitoringSearch();
@@ -376,9 +392,11 @@ public class DtvkitDvbtSetup extends Activity {
         // By default, gets all channels and 1 hour of programs (DEFAULT_IMMEDIATE_EPG_DURATION_MILLIS)
         EpgSyncJobService.cancelAllSyncRequests(this);
 
-        String inputId = this.getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
+        // If the intent that started this activity is from Live Channels app
+        // String inputId = this.getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
+        String inputId = TvContract.buildInputId(new ComponentName(getApplicationContext(), DtvkitTvInput.class));
         Log.i(TAG, String.format("inputId: %s", inputId));
-        EpgSyncJobService.requestImmediateSync(this, inputId, 1000 * 60 * 60 * 12, true, new ComponentName(this, DtvkitEpgSync.class)); // 12 hours
+        EpgSyncJobService.requestImmediateSync(this, inputId, true, new ComponentName(this, DtvkitEpgSync.class)); // 12 hours
     }
 
     private void startMonitoringSearch() {
@@ -428,6 +446,15 @@ public class DtvkitDvbtSetup extends Activity {
             public void run() {
                 final ProgressBar bar = (ProgressBar) findViewById(R.id.searchprogress);
                 bar.setIndeterminate(indeterminate);
+            }
+        });
+    }
+
+    private void disableStopSearchButton() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                findViewById(R.id.terrestrialstopsearch).setEnabled(false);
             }
         });
     }

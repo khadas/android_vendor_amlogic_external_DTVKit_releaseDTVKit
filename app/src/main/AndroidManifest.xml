@@ -17,6 +17,7 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <uses-permission android:name="com.android.tv.permission.RECEIVE_INPUT_EVENT" />
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -45,9 +46,19 @@
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
+        <activity android:name=".DtvkitDvbcSetup">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".Setup">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
         <service
             android:name=".DtvkitTvInput"
-            android:label="DTVKit"
+            android:label="DTVKit2"
             android:permission="android.permission.BIND_TV_INPUT">
             <intent-filter>
                 <action android:name="android.media.tv.TvInputService" />

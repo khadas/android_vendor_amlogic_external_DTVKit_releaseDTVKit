@@ -96,6 +96,54 @@ public class DtvkitEpgSync extends EpgSyncJobService {
         return programs;
     }
 
+    public List<Program> getNowNextProgramsForChannel(Uri channelUri, Channel channel) {
+        List<Program> programs = new ArrayList<>();
+
+        try {
+            String dvbUri = String.format("dvb://%04x.%04x.%04x", channel.getOriginalNetworkId(), channel.getTransportStreamId(), channel.getServiceId());
+
+            Log.i(TAG, "Get channel now next programs for epg sync. Uri " + dvbUri);
+
+            JSONArray args = new JSONArray();
+            args.put(dvbUri); // uri
+            JSONObject events = DtvkitGlueClient.getInstance().request("Dvb.getNowNextEvents", args).getJSONObject("data");
+
+            JSONObject now = events.optJSONObject("now");
+            if (now != null) {
+                InternalProviderData data = new InternalProviderData();
+                data.put("dvbUri", dvbUri);
+                programs.add(new Program.Builder()
+                        .setChannelId(channel.getId())
+                        .setTitle(now.getString("name"))
+                        .setStartTimeUtcMillis(now.getLong("startutc") * 1000)
+                        .setEndTimeUtcMillis(now.getLong("endutc") * 1000)
+                        .setDescription(now.getString("description"))
+                        .setCanonicalGenres(getGenres(now.getString("genre")))
+                        .setInternalProviderData(data)
+                        .build());
+            }
+
+            JSONObject next = events.optJSONObject("next");
+            if (next != null) {
+                InternalProviderData data = new InternalProviderData();
+                data.put("dvbUri", dvbUri);
+                programs.add(new Program.Builder()
+                        .setChannelId(channel.getId())
+                        .setTitle(next.getString("name"))
+                        .setStartTimeUtcMillis(next.getLong("startutc") * 1000)
+                        .setEndTimeUtcMillis(next.getLong("endutc") * 1000)
+                        .setDescription(next.getString("description"))
+                        .setCanonicalGenres(getGenres(next.getString("genre")))
+                        .setInternalProviderData(data)
+                        .build());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
+
+        return programs;
+    }
+
     @Override
     public List<EventPeriod> getListOfUpdatedEventPeriods()
     {

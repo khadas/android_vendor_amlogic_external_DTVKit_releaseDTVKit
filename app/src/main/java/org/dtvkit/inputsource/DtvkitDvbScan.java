@@ -224,7 +224,7 @@ public class DtvkitDvbScan {
         // By default, gets all channels and 1 hour of programs (DEFAULT_IMMEDIATE_EPG_DURATION_MILLIS)
         EpgSyncJobService.cancelAllSyncRequests(context);
         Log.d(TAG, String.format("StartSyncDb inputId: %s", inputId));
-        EpgSyncJobService.requestImmediateSync(context, inputId, 1000 * 60 * 60 * 12, true, new ComponentName(context, DtvkitEpgSync.class)); // 12 hours
+        EpgSyncJobService.requestImmediateSync(context, inputId, true, new ComponentName(context, DtvkitEpgSync.class)); // 12 hours
         return ret;
     }
 

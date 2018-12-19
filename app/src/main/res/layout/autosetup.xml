@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="horizontal">
@@ -209,12 +210,33 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="10dp" />
-        <Button
-            android:id="@+id/startsearch"
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="#12355b"
-            android:text="@string/strAutoSearch" />
+            android:text="@string/strAutoSearch"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/terrestrialstartsearch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="1dp"
+                android:layout_weight="1"
+                android:background="@drawable/button"
+                android:text="@string/strStartSearch" />
+
+            <Button
+                android:id="@+id/terrestrialstopsearch"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_marginLeft="1dp"
+                android:layout_weight="1"
+                android:background="@drawable/button"
+                android:text="@string/strStopSearch" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/description"
@@ -225,4 +247,5 @@
             android:text="@string/strSearchDvbcDescription"
             android:textSize="16sp" />
     </LinearLayout>
+
 </LinearLayout>

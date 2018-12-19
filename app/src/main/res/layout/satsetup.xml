@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_margin="50dp"
+    android:orientation="vertical">
+
+    <ImageView
+        android:id="@+id/imageView3"
+        android:layout_width="match_parent"
+        android:layout_height="67dp"
+        android:src="@drawable/dtvkit" />
+
+    <CheckBox
+        android:id="@+id/network"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:nextFocusDown="@+id/frequency"
+        android:text="@string/strNetworkSearch" />
+
+    <CheckBox
+        android:id="@+id/clear_old"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/strClearOld" />
+
+    <CheckBox
+        android:id="@+id/dvbs2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/strDVBS2" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal" >
+
+        <TextView
+            android:id="@+id/search_mode_text"
+            android:layout_width="250dp"
+            android:layout_height="wrap_content"
+            android:text="@string/strSearchMode" />
+
+        <Spinner
+            android:id="@+id/search_mode"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="15dp"
+            android:entries="@array/search_mode_entries"/>
+    </LinearLayout>
+
+    <!--<EditText
+        android:id="@+id/frequency"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:hint="Frequency"
+        android:inputType="number"
+        android:nextFocusDown="@+id/satellite"
+        android:singleLine="false" />
+
+    <Spinner
+        android:id="@+id/satellite"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:nextFocusUp="@+id/frequency"
+        android:entries="@array/satellites" />
+
+    <Spinner
+        android:id="@+id/polarity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:nextFocusDown="@+id/symbolrate"
+        android:entries="@array/polarities" />
+
+    <EditText
+        android:id="@+id/symbolrate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:hint="Symbol rate"
+        android:inputType="number" />-->
+
+    <LinearLayout
+        android:id="@+id/fec_mode_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal" >
+
+        <TextView
+            android:id="@+id/fec_mode_text"
+            android:layout_width="250dp"
+            android:layout_height="wrap_content"
+            android:text="@string/strFecMode" />
+
+        <Spinner
+            android:id="@+id/fec_mode"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="15dp"
+            android:entries="@array/fec_mode_entries"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/modulation_mode_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal" >
+
+        <TextView
+            android:id="@+id/modulation_mode_text"
+            android:layout_width="250dp"
+            android:layout_height="wrap_content"
+            android:text="@string/strModulationMode" />
+
+        <Spinner
+            android:id="@+id/modulation_mode"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="15dp"
+            android:entries="@array/modulation_mode_entries"/>
+    </LinearLayout>
+
+    <!--<Spinner
+        android:id="@+id/fec"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:entries="@array/fecs" />
+
+    <Spinner
+        android:id="@+id/modulation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:entries="@array/modulations" />-->
+
+    <TextView
+        android:id="@+id/searchstatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:layout_marginTop="10dp"
+        android:text="@string/strSearchNotStarted"
+        android:textAlignment="center"
+        android:textSize="20dp" />
+
+    <ProgressBar
+        android:id="@+id/searchprogress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal" >
+
+        <Button
+            android:id="@+id/setup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="20dp"
+            android:text="@string/strSetUp" />
+
+        <Button
+            android:id="@+id/startsearch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="20dp"
+            android:text="@string/strStartSearch" />
+    </LinearLayout>
+</LinearLayout>

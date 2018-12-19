@@ -28,6 +28,16 @@
         <item>8psk</item>
         <item>16qam</item>
     </string-array>
+    <string-array name="cableModulations">
+        <item>auto</item>
+        <item>qam4</item>
+        <item>qam8</item>
+        <item>qam16</item>
+        <item>qam32</item>
+        <item>qam64</item>
+        <item>qam128</item>
+        <item>qam256</item>
+    </string-array>
     <string name="strSearchNotStarted">Search not started</string>
     <string name="strSearchDvbcDescription">Press START SEARCH to start searching for DVB-C channels.</string>
     <string name="strSearchDvbtDescription">Press START SEARCH to start searching for DVB-T channels.</string>
@@ -50,6 +60,13 @@
     <string name="strDvbt">DVB-T</string>
     <string name="strDvbs">DVB-S</string>
 
+    <string name="strStopSearch">Stop Search</string>
+    <string name="manualSearch">Manual Search</string>
+    <string name="autoSearch">Automatic Search</string>
+    <string name="terrestrial">Terrestrial</string>
+    <string name="satellite">Satellite</string>
+    <string name="cable">Cable</string>
+
     <!-- manaul search -->
     <string name="search_method">Search Method:</string>
     <string name="search_frequency">Channel Frequency:</string>
@@ -62,4 +79,5 @@
     <string name="dvbc_search_mode">Mode:</string>
     <string name="dvbt_search_symbol_rate">Symbol Rate:</string>
     <string name="public_search_mode">Search Mode:</string>
+
 </resources>
