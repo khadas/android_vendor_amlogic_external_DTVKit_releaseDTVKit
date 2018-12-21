@@ -20,7 +20,7 @@ LOCAL_JAVA_LIBRARIES += \
     android.hidl.manager-V1.0-java
 
 LOCAL_STATIC_JAVA_LIBRARIES += \
-    vendor.amlogic.hardware.rpcserver-V1.0-java
+    vendor.amlogic.hardware.dtvkitserver-V1.0-java
 
 LOCAL_SRC_FILES := $(call all-subdir-java-files)
 
