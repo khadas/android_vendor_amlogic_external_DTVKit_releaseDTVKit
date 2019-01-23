@@ -148,6 +148,9 @@ public class DtvkitTvInput extends TvInputService {
         @Override
         public boolean onTune(Uri channelUri) {
             Log.i(TAG, "onTune " + channelUri);
+            if (ContentUris.parseId(channelUri) == -1) {
+                return false;
+            }
             mTunedChannel = getChannel(channelUri);
             final String dvbUri = getChannelInternalDvbUri(mTunedChannel);
             notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING);

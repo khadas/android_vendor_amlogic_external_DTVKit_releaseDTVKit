@@ -29,11 +29,22 @@
         <item>16qam</item>
     </string-array>
     <string name="strSearchNotStarted">Search not started</string>
-    <string name="strSearchDescription">Press START SEARCH to start searching for DVB-T channels.</string>
+    <string name="strSearchDvbcDescription">Press START SEARCH to start searching for DVB-C channels.</string>
+    <string name="strSearchDvbtDescription">Press START SEARCH to start searching for DVB-T channels.</string>
     <string name="strStartSearch">Start Search</string>
     <string name="strTextview">TextView</string>
     <string name="strTestString">TEST BINDER CONNECTION!!</string>
     <string name="strNetworkSearch">Network Search</string>
     <string name="strDVBS2">DVBS-2</string>
     <string name="strPlaceholder">Placeholder activity for product customisation.</string>
+    <string name="strSetUp">Set Up</string>
+    <string name="strSetUpNotFound">Setup Not Found!</string>
+    <string name="strClearOld">Clear Old Search</string>
+    <string name="strSearchMode">Search Mode:</string>
+    <string name="strFecMode">Forward Error Correction Mode:</string>
+    <string name="strModulationMode">Modulation Mode:</string>
+    <string name="invalid_parameter">Invalid parameter!</string>
+    <string name="strDvbc">DVB-C</string>
+    <string name="strDvbt">DVB-T</string>
+    <string name="strDvbs">DVB-S</string>
 </resources>

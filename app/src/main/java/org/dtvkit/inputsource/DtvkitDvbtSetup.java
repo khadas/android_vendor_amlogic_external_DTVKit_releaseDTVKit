@@ -22,11 +22,13 @@ import java.util.Locale;
 public class DtvkitDvbtSetup extends Activity {
     private static final String TAG = "DtvkitDvbtSetup";
 
+    private boolean mIsDvbt = false;
+
     private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
         @Override
         public void onSignal(String signal, JSONObject data) {
 
-            if (signal.equals("DvbtStatusChanged")) {
+            if ((mIsDvbt && signal.equals("DvbtStatusChanged")) || (!mIsDvbt && signal.equals("DvbcStatusChanged"))) {
                 int progress = 0;
                 try {
                     progress = data.getInt("progress");
@@ -77,6 +79,11 @@ public class DtvkitDvbtSetup extends Activity {
                 startSearch();
             }
         });
+        Intent intent = getIntent();
+        if (intent != null) {
+            mIsDvbt = intent.getBooleanExtra(DataMananer.KEY_IS_DVBT, false);
+        }
+        ((TextView)findViewById(R.id.description)).setText(mIsDvbt ? R.string.strSearchDvbtDescription : R.string.strSearchDvbcDescription);
     }
 
     @Override
@@ -94,7 +101,7 @@ public class DtvkitDvbtSetup extends Activity {
         try {
             JSONArray args = new JSONArray();
             args.put(false); // Commit
-            DtvkitGlueClient.getInstance().request("Dvbt.finishSearch", args);
+            DtvkitGlueClient.getInstance().request(mIsDvbt ? "Dvbt.finishSearch" : "Dvbc.finishSearch", args);
         } catch (Exception e) {
             setSearchStatus("Failed to finish search", e.getMessage());
             return;
@@ -103,7 +110,7 @@ public class DtvkitDvbtSetup extends Activity {
         try {
             JSONArray args = new JSONArray();
             args.put(true); // retune
-            DtvkitGlueClient.getInstance().request("Dvbt.startSearch", args);
+            DtvkitGlueClient.getInstance().request(mIsDvbt ? "Dvbt.startSearch" : "Dvbc.startSearch", args);
         } catch (Exception e) {
             stopMonitoringSearch();
             setSearchStatus("Failed to start search", e.getMessage());
@@ -117,7 +124,7 @@ public class DtvkitDvbtSetup extends Activity {
         try {
             JSONArray args = new JSONArray();
             args.put(true); // Commit
-            DtvkitGlueClient.getInstance().request("Dvbt.finishSearch", args);
+            DtvkitGlueClient.getInstance().request(mIsDvbt ? "Dvbt.finishSearch" : "Dvbc.finishSearch", args);
         } catch (Exception e) {
             setSearchStatus("Failed to finish search", e.getMessage());
             return;
