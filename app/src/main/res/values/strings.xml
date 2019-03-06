@@ -32,6 +32,8 @@
     <string name="strSearchDvbcDescription">Press START SEARCH to start searching for DVB-C channels.</string>
     <string name="strSearchDvbtDescription">Press START SEARCH to start searching for DVB-T channels.</string>
     <string name="strStartSearch">Start Search</string>
+    <string name="strManualSearch">Manual Search</string>
+    <string name="strAutoSearch">Auto Search</string>
     <string name="strTextview">TextView</string>
     <string name="strTestString">TEST BINDER CONNECTION!!</string>
     <string name="strNetworkSearch">Network Search</string>
@@ -47,4 +49,17 @@
     <string name="strDvbc">DVB-C</string>
     <string name="strDvbt">DVB-T</string>
     <string name="strDvbs">DVB-S</string>
+
+    <!-- manaul search -->
+    <string name="search_method">Search Method:</string>
+    <string name="search_frequency">Channel Frequency:</string>
+    <string name="search_frequency_hint">MHz</string>
+    <string name="search_number">Channel Number:</string>
+    <string name="search_number_hint">Number</string>
+    <string name="dvbt_search_bandwidth">Bandwidth:</string>
+    <string name="dvbt_search_mode">Mode:</string>
+    <string name="dvbt_search_type">Type:</string>
+    <string name="dvbc_search_mode">Mode:</string>
+    <string name="dvbt_search_symbol_rate">Symbol Rate:</string>
+    <string name="public_search_mode">Search Mode:</string>
 </resources>

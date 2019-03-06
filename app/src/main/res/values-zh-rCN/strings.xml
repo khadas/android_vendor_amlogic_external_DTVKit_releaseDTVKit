@@ -43,4 +43,19 @@
     <string name="strFecMode">前向纠错模式:</string>
     <string name="strModulationMode">调制模式:</string>
     <string name="invalid_parameter">无效的参数!</string>
+
+    <!-- manaul search -->
+    <string name="strManualSearch">手动搜索</string>
+    <string name="strAutoSearch">自动搜索</string>
+    <string name="search_method">搜索方法:</string>
+    <string name="search_frequency">频率:</string>
+    <string name="search_frequency_hint">MHz</string>
+    <string name="search_number">频道号:</string>
+    <string name="search_number_hint">数字</string>
+    <string name="dvbt_search_bandwidth">带宽:</string>
+    <string name="dvbt_search_mode">模式:</string>
+    <string name="dvbt_search_type">类型:</string>
+    <string name="dvbc_search_mode">模式:</string>
+    <string name="dvbt_search_symbol_rate">符号率:</string>
+    <string name="public_search_mode">搜索模式:</string>
 </resources>

@@ -123,6 +123,26 @@ public class DataMananer {
     public static final int SELECT_DVBT = 1;
     public static final int SELECT_DVBS = 2;
 
+    //manual search
+    public static final String KEY_IS_FREQUENCY = "frequency_mode";
+    public static final int VALUE_FREQUENCY_MODE = 0;
+    public static final String KEY_DVBT_BANDWIDTH = "dvbt_band_width";
+    public static final String[] VALUE_DVBT_BANDWIDTH_LIST = {"5MHZ", "6MHZ", "7MHZ", "8MHZ", "10MHZ"};
+    public static final int VALUE_DVBT_BANDWIDTH_5MHZ = 0;
+    public static final String KEY_DVBT_MODE = "dvbt_mode";
+    public static final String[] VALUE_DVBT_MODE_LIST = {"1K", "2K", "4K", "8K", "16K", "32K"};
+    public static final int VALUE_DVBT_MODE_1K = 0;
+    public static final String KEY_DVBT_TYPE = "dvbt_type";
+    public static final String[] VALUE_DVBT_TYPE_LIST = {"DVB-T", "DVB-T2"};
+    public static final int VALUE_DVBT_MODE_DVBT = 0;
+    public static final String KEY_DVBC_MODE = "dvbc_mode";
+    public static final String[] VALUE_DVBC_MODE_LIST = {"QAM4", "QAM8", "QAM16", "QAM32", "QAM64", "QAM128", "QAM256", "AUTO"};
+    public static final int VALUE_DVBC_MODE_QAM16 = 2;
+    public static final String KEY_DVBC_SYMBOL_RATE = "dvbc_symbol_rate";
+    public static final int VALUE_DVBC_SYMBOL_RATE = 6900;
+    public static final String KEY_PUBLIC_SEARCH_MODE = "public_search_mode";
+    public static final int VALUE_PUBLIC_SEARCH_MODE_AUTO = 1;
+
     public DataMananer(Context context) {
         this.mContext = context;
     }
@@ -205,6 +225,27 @@ public class DataMananer {
                 break;
             case KEY_SELECT_SEARCH_ACTIVITY:
                 defValue = SELECT_DVBC;
+                break;
+            case KEY_IS_FREQUENCY:
+                defValue = VALUE_FREQUENCY_MODE;
+                break;
+            case KEY_DVBT_BANDWIDTH:
+                defValue = VALUE_DVBT_BANDWIDTH_5MHZ;
+                break;
+            case KEY_DVBT_MODE:
+                defValue = VALUE_DVBT_BANDWIDTH_5MHZ;
+                break;
+            case KEY_DVBT_TYPE:
+                defValue = VALUE_DVBT_MODE_DVBT;
+                break;
+            case KEY_DVBC_MODE:
+                defValue = VALUE_DVBC_MODE_QAM16;
+                break;
+            case KEY_DVBC_SYMBOL_RATE:
+                defValue = VALUE_DVBC_SYMBOL_RATE;
+                break;
+            case KEY_PUBLIC_SEARCH_MODE:
+                defValue = VALUE_PUBLIC_SEARCH_MODE_AUTO;
                 break;
             default:
                 defValue = 0;
