@@ -234,7 +234,7 @@ public class DtvkitTvInput extends TvInputService {
 
         public OverlayView(Context context) {
             super(context);
-            //DtvkitGlueClient.getInstance().setOverlayTarget(mTarget);
+            DtvkitGlueClient.getInstance().setOverlayTarget(mTarget);
         }
 
         @Override
@@ -452,7 +452,7 @@ public class DtvkitTvInput extends TvInputService {
             Log.i(TAG, "DtvkitTvInputSession");
             DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
             mDtvkitDvbScan.setScannerListener(this);
-            setOverlayViewEnabled(false);
+            setOverlayViewEnabled(true);
             numActiveRecordings = recordingGetNumActiveRecordings();
             Log.i(TAG, "numActiveRecordings: " + numActiveRecordings);
 
@@ -497,7 +497,7 @@ public class DtvkitTvInput extends TvInputService {
         @Override
         public boolean onSetSurface(Surface surface) {
             Log.i(TAG, "onSetSurface " + surface);
-            SurfaceOverlay.setDisplay(surface);
+            DtvkitGlueClient.getInstance().setDisplay(surface);
             return true;
         }
 

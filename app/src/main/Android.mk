@@ -15,12 +15,12 @@ LOCAL_STATIC_JAVA_LIBRARIES += \
 
 LOCAL_AIDL_INCLUDES := $(LOCAL_PATH)/aidl
 
-LOCAL_JAVA_LIBRARIES += \
-    android.hidl.base-V1.0-java \
-    android.hidl.manager-V1.0-java
+#LOCAL_JAVA_LIBRARIES += \
+#    android.hidl.base-V1.0-java \
+#    android.hidl.manager-V1.0-java
 
-LOCAL_STATIC_JAVA_LIBRARIES += \
-    vendor.amlogic.hardware.dtvkitserver-V1.0-java
+#LOCAL_STATIC_JAVA_LIBRARIES += \
+#    vendor.amlogic.hardware.dtvkitserver-V1.0-java
 
 LOCAL_SRC_FILES := $(call all-subdir-java-files) $(call all-subdir-Iaidl-files)
 

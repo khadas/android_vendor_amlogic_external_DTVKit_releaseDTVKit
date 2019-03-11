@@ -74,7 +74,7 @@ public class DtvkitGlueClient1 {
     }
 
     public void notifyCallback(DTVKitHidlParcel parcel) {
-            Log.i(TAG, "notifyCallback resource:" + parcel.resource + "json:"+ parcel.json);
+            /*Log.i(TAG, "notifyCallback resource:" + parcel.resource + "json:"+ parcel.json);
 
             JSONObject object;
             try {
@@ -86,7 +86,7 @@ public class DtvkitGlueClient1 {
 
             for (SignalHandler handler : DtvkitClient.mHandlers) {
                 handler.onSignal(parcel.resource, object);
-            }
+            }*/
 
         }
     }
