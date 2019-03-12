@@ -264,17 +264,21 @@ public class DtvkitDvbtSetup extends Activity {
                 if (!TextUtils.isEmpty(parameter)) {
                     int isfrequencysearch = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
                     if (mIsDvbt) {
-                        args.put(Integer.valueOf(parameter));
                         if (DataMananer.VALUE_FREQUENCY_MODE == isfrequencysearch) {
+                            args.put(Integer.valueOf(parameter) * 1000000);//mhz
                             args.put(DataMananer.VALUE_DVBT_BANDWIDTH_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_BANDWIDTH)]);
                             args.put(DataMananer.VALUE_DVBT_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_MODE)]);
                             args.put(DataMananer.VALUE_DVBT_TYPE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE)]);
+                        } else {
+                            args.put(Integer.valueOf(parameter));
                         }
                     } else {
-                        args.put(Integer.valueOf(parameter));
                         if (DataMananer.VALUE_FREQUENCY_MODE == isfrequencysearch) {
+                            args.put(Integer.valueOf(parameter) * 1000000);//mhz
                             args.put(DataMananer.VALUE_DVBC_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]);
                             args.put(mDataMananer.getIntParameters(DataMananer.KEY_DVBC_SYMBOL_RATE));
+                        } else {
+                            args.put(Integer.valueOf(parameter));
                         }
                     }
                     return args;
