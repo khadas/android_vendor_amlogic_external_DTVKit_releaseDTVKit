@@ -22,6 +22,9 @@ import android.content.ActivityNotFoundException;
 import android.widget.Toast;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
+import android.widget.LinearLayout;
+import android.text.Editable;
+import android.text.TextUtils;
 
 import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.json.JSONArray;
@@ -96,6 +99,11 @@ public class DtvkitDvbsSetup extends Activity {
         Spinner searchmode = (Spinner)findViewById(R.id.search_mode);
         Spinner fecmode = (Spinner)findViewById(R.id.fec_mode);
         Spinner modulationmode = (Spinner)findViewById(R.id.modulation_mode);
+        final LinearLayout blindContainer = (LinearLayout)findViewById(R.id.blind_frequency_container);
+        EditText edit_start_freq = (EditText)findViewById(R.id.edit_start_freq);
+        EditText edit_end_freq = (EditText)findViewById(R.id.edit_end_freq);
+        edit_start_freq.setText(DataMananer.VALUE_BLIND_DEFAULT_START_FREQUENCY + "");
+        edit_end_freq.setText(DataMananer.VALUE_BLIND_DEFAULT_END_FREQUENCY + "");
 
         nit.setChecked(mDataMananer.getIntParameters(DataMananer.KEY_NIT) == 1 ? true : false);
         clear.setChecked(mDataMananer.getIntParameters(DataMananer.KEY_CLEAR) == 1 ? true : false);
@@ -132,6 +140,11 @@ public class DtvkitDvbsSetup extends Activity {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 Log.d(TAG, "searchmode onItemSelected position = " + position);
                 mDataMananer.saveIntParameters(DataMananer.KEY_SEARCH_MODE, position);
+                if (position == DataMananer.VALUE_SEARCH_MODE_BLIND) {
+                    blindContainer.setVisibility(View.VISIBLE);
+                } else {
+                    blindContainer.setVisibility(View.GONE);
+                }
             }
 
             @Override
@@ -163,7 +176,13 @@ public class DtvkitDvbsSetup extends Activity {
                 // TODO Auto-generated method stub
             }
         });
-        searchmode.setSelection(mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_MODE));
+        int searchmodeValue = mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_MODE);
+        searchmode.setSelection(searchmodeValue);
+        if (searchmodeValue == DataMananer.VALUE_SEARCH_MODE_BLIND) {
+            blindContainer.setVisibility(View.VISIBLE);
+        } else {
+            blindContainer.setVisibility(View.GONE);
+        }
         fecmode.setSelection(mDataMananer.getIntParameters(DataMananer.KEY_FEC_MODE));
         modulationmode.setSelection(mDataMananer.getIntParameters(DataMananer.KEY_MODULATION_MODE));
     }
@@ -192,10 +211,18 @@ public class DtvkitDvbsSetup extends Activity {
 
     private JSONArray initSearchParameter() {
         JSONArray args = new JSONArray();
-        boolean needclear = mDataMananer.getIntParameters(DataMananer.KEY_CLEAR) == 1 ? true : false;
+        JSONObject obj = initLbnData();
+        if (obj == null) {
+            return null;
+        }
+        args.put(obj.toString());//arg1
+        //needclear not needed
+        //boolean needclear = mDataMananer.getIntParameters(DataMananer.KEY_CLEAR) == 1 ? true : false;
+        //args.put(needclear);
         String searchmode = DataMananer.KEY_SEARCH_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_MODE)];
-        args.put(needclear);
-        args.put(searchmode);
+        args.put(mDataMananer.getIntParameters(DataMananer.KEY_DVBS2) == 1);//arg2
+        args.put(DataMananer.KEY_MODULATION_ARRAY_VALUE[mDataMananer.getIntParameters(DataMananer.KEY_MODULATION_MODE)]);//arg3
+        args.put(searchmode);//arg4
         switch (searchmode) {
             case "blind":
                 Log.d(TAG, "initSearchParameter blind");
@@ -217,15 +244,84 @@ public class DtvkitDvbsSetup extends Activity {
     }
 
     private JSONArray initBlindSearch(JSONArray args) {
+        try {
+            int[] result = getBlindFrequency();
+            if (result[0] < 0 || result[1] < 0 || result[0] > result[1]) {
+                return null;
+            }
+            args.put(result[0]);// "start_freq" khz //arg5
+            args.put(result[1]);//"end_freq" khz //arg6
+        } catch (Exception e) {
+            args = null;
+            Log.d(TAG, "initBlindSearch Exception " + e.getMessage());
+        }
         return args;
+    }
+
+    private int[] getBlindFrequency() {
+        int[] result = {-1, -1};
+        EditText edit_start_freq = (EditText)findViewById(R.id.edit_start_freq);
+        EditText edit_end_freq = (EditText)findViewById(R.id.edit_end_freq);
+        Editable edit_start_freq_edit = edit_start_freq.getText();
+        Editable edit_end_freq_edit = edit_end_freq.getText();
+        if (edit_start_freq_edit != null && edit_end_freq_edit != null) {
+            String edit_start_freq_value = edit_start_freq_edit.toString();
+            String edit_end_freq_value = edit_end_freq_edit.toString();
+            Log.d(TAG, "getBlindFrequency edit_start_freq_value = " + edit_start_freq_value +
+                ", edit_end_freq_value = " + edit_end_freq_value);
+            if (!TextUtils.isEmpty(edit_start_freq_value) && TextUtils.isDigitsOnly(edit_start_freq_value)) {
+                result[0] = Integer.valueOf(edit_start_freq_value);
+            }
+            if (!TextUtils.isEmpty(edit_end_freq_value) && TextUtils.isDigitsOnly(edit_end_freq_value)) {
+                result[1] = Integer.valueOf(edit_end_freq_value);
+            }
+        }
+        return result;
     }
 
     private JSONArray initSatelliteSearch(JSONArray args) {
         try {
-            JSONObject obj = new JSONObject();
-            obj.put("nit", mDataMananer.getIntParameters(DataMananer.KEY_NIT) == 1 ? true : false);
-            obj.put("satellite", mDataMananer.getStringParameters(DataMananer.KEY_SATALLITE));
-            obj.put("unicable", mDataMananer.getIntParameters(DataMananer.KEY_UNICABLE_SWITCH) == 1);
+            args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) == 1 ? true : false);//arg5
+            args.put(mDataMananer.getStringParameters(DataMananer.KEY_SATALLITE));//arg6
+        } catch (Exception e) {
+            args = null;
+            Log.d(TAG, "initSatelliteSearch Exception " + e.getMessage());
+        }
+        return args;
+    }
+
+    private JSONArray initTransponderSearch(JSONArray args) {
+        try {
+            args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) == 1);//arg5
+            args.put(mDataMananer.getStringParameters(DataMananer.KEY_SATALLITE));//arg6
+            String[] singleParameter = null;
+            String parameter = mDataMananer.getStringParameters(DataMananer.KEY_TRANSPONDER);
+            if (parameter != null) {
+                singleParameter = parameter.split("/");
+                if (singleParameter != null && singleParameter.length == 3) {
+                    args.put(Integer.valueOf(singleParameter[0]));//arg7
+                    args.put(singleParameter[1]);//arg8
+                    args.put(Integer.valueOf(singleParameter[2]));//arg9
+                } else {
+                    return null;
+                }
+            } else {
+                return null;
+            }
+            args.put(DataMananer.KEY_FEC_ARRAY_VALUE[mDataMananer.getIntParameters(DataMananer.KEY_FEC_MODE)]);//arg10
+        } catch (Exception e) {
+            args = null;
+            Log.d(TAG, "initTransponderSearch Exception " + e.getMessage());
+        }
+        return args;
+    }
+
+    private JSONObject initLbnData() {
+        JSONObject obj = null;
+        try {
+            obj = new JSONObject();
+            boolean unicable_switch = (mDataMananer.getIntParameters(DataMananer.KEY_UNICABLE_SWITCH) == 1);
+            obj.put("unicable", unicable_switch);
             obj.put("unicable_chan", mDataMananer.getIntParameters(DataMananer.KEY_USER_BAND));
             obj.put("unicable_if", mDataMananer.getIntParameters(DataMananer.KEY_UB_FREQUENCY));
             obj.put("unicable_position_b", mDataMananer.getIntParameters(DataMananer.KEY_POSITION) == 1);
@@ -233,6 +329,15 @@ public class DtvkitDvbsSetup extends Activity {
             obj.put("c_switch", mDataMananer.getIntParameters(DataMananer.KEY_DISEQC1_0));
             obj.put("u_switch", mDataMananer.getIntParameters(DataMananer.KEY_DISEQC1_1));
             obj.put("dish_pos", mDataMananer.getIntParameters(DataMananer.KEY_DISEQC1_2_DISH_CURRENT_POSITION));
+            int lnb_type = mDataMananer.getIntParameters(DataMananer.KEY_LNB_TYPE);
+            //saved lnbtype: 0:single, 1:universal, 2:user define
+            //needed lnbtype: 0:single, 1:universal, 2:unicable, 3:user define
+            if (unicable_switch) {
+                lnb_type = 2;//unicable
+            } else if (lnb_type == 2) {//
+                lnb_type = 3;//user define
+            }
+            obj.put("lnb_type", lnb_type);
 
             JSONObject lnbobj = new JSONObject();
             JSONObject lowband_obj = new JSONObject();
@@ -263,13 +368,13 @@ public class DtvkitDvbsSetup extends Activity {
                         Log.d(TAG, "null lnb customized data!");
                     }
             }
-            lowband_obj.put("min_freq", lowlnb);
-            lowband_obj.put("max_freq", lowlnb);
+            lowband_obj.put("min_freq", 0);
+            lowband_obj.put("max_freq", 11750);
             lowband_obj.put("local_oscillator_frequency", lowlnb);
             lowband_obj.put("lnb_voltage", DataMananer.DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER_LIST[mDataMananer.getIntParameters(DataMananer.KEY_LNB_POWER)]);
             lowband_obj.put("tone_22k", mDataMananer.getIntParameters(DataMananer.KEY_22_KHZ) == 1);
-            highband_obj.put("min_freq", lowlnb);
-            highband_obj.put("max_freq", highlnb);
+            highband_obj.put("min_freq", 0);
+            highband_obj.put("max_freq", 11750);
             highband_obj.put("local_oscillator_frequency", highlnb);
             highband_obj.put("lnb_voltage", DataMananer.DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER_LIST[mDataMananer.getIntParameters(DataMananer.KEY_LNB_POWER)]);
             highband_obj.put("tone_22k", mDataMananer.getIntParameters(DataMananer.KEY_22_KHZ) == 1);
@@ -279,41 +384,11 @@ public class DtvkitDvbsSetup extends Activity {
                 lnbobj.put("high_band", highband_obj);
             }
             obj.put("lnb", lnbobj);
-
-            args.put(obj.toString());
         } catch (Exception e) {
-            args = null;
-            Log.d(TAG, "initSatelliteSearch Exception " + e.getMessage());
+            obj = null;
+            Log.d(TAG, "initLbnData Exception " + e.getMessage());
         }
-        return args;
-    }
-
-    private JSONArray initTransponderSearch(JSONArray args) {
-        try {
-            args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) == 1);
-            args.put(mDataMananer.getStringParameters(DataMananer.KEY_SATALLITE));
-            String[] singleParameter = null;
-            String parameter = mDataMananer.getStringParameters(DataMananer.KEY_TRANSPONDER);
-            if (parameter != null) {
-                singleParameter = parameter.split("/");
-                if (singleParameter != null && singleParameter.length == 3) {
-                    args.put(Integer.valueOf(singleParameter[0]));
-                    args.put(singleParameter[1]);
-                    args.put(Integer.valueOf(singleParameter[2]));
-                } else {
-                    return null;
-                }
-            } else {
-                return null;
-            }
-            args.put(DataMananer.KEY_FEC_ARRAY_VALUE[mDataMananer.getIntParameters(DataMananer.KEY_FEC_MODE)]);
-            args.put(mDataMananer.getIntParameters(DataMananer.KEY_DVBS2) == 1);
-            args.put(DataMananer.KEY_MODULATION_ARRAY_VALUE[mDataMananer.getIntParameters(DataMananer.KEY_MODULATION_MODE)]);
-        } catch (Exception e) {
-            args = null;
-            Log.d(TAG, "initTransponderSearch Exception " + e.getMessage());
-        }
-        return args;
+        return obj;
     }
 
      private void testAddSatallite() {
@@ -389,6 +464,7 @@ public class DtvkitDvbsSetup extends Activity {
             DtvkitGlueClient.getInstance().request("Dvbs.startManualSearch", args);*/
             JSONArray args = initSearchParameter();
             if (args != null) {
+                Log.i(TAG, "search parameter:" + args.toString());
                 DtvkitGlueClient.getInstance().request("Dvbs.startSearch", args);
             } else {
                 stopMonitoringSearch();

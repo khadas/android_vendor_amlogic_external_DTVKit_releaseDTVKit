@@ -101,13 +101,16 @@ public class DataMananer {
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_TONE_BURST_LIST = {"none", "a", "b"};
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_0_LIST = {"none", "1/4", "2/4", "3/4", "4/4"};
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_1_LIST = {"none", "1/16", "2/16", "3/16", "4/16", "5/16", "6/16", "7/16", "8/16", "9/16", "10/16", "11/16", "12/16", "13/16", "14/16", "15/16", "16/16"};
-    public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER_LIST = {"13V", "18V", "off"/*, "13/18V"*/};
+    public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER_LIST = {"13v", "18v", "off"/*, "13/18V"*/};
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_22KHZ_LIST = {"on", "off"/*, "auto"*/};
 
     public static final String KEY_NIT = "network_search";
     public static final String KEY_CLEAR = "clear_old_search";
     public static final String KEY_DVBS2 = "dvbs_enable";
     public static final String KEY_SEARCH_MODE = "search_mode";
+    public static final int VALUE_BLIND_DEFAULT_START_FREQUENCY = 950;//MHZ
+    public static final int VALUE_BLIND_DEFAULT_END_FREQUENCY = 2150;//MHZ
+    public static final int VALUE_SEARCH_MODE_BLIND = 0;
     public static final String KEY_FEC_MODE = "forward_error_correction";
     public static final String KEY_MODULATION_MODE = "modulation";
     public static final String[] KEY_SEARCH_MODE_LIST = {"blind", "satellite", "transponder"};
