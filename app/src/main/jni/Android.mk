@@ -33,6 +33,9 @@ LOCAL_STATIC_LIBRARIES := libamgralloc_ext_static
 LOCAL_PRELINK_MODULE := false
 LOCAL_MODULE_TAGS := optional
 
+ifneq ($(BUILD_DTVKIT_IN_SYSTEM), true)
 LOCAL_PRODUCT_MODULE := true
+endif
+
 LOCAL_PRIVATE_PLATFORM_APIS := true
 include $(BUILD_SHARED_LIBRARY)

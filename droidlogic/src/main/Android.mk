@@ -17,7 +17,11 @@ LOCAL_SRC_FILES := $(call all-subdir-java-files, ($(LOCAL_PATH)/java))
 
 LOCAL_CERTIFICATE := platform
 LOCAL_PROGUARD_ENABLED := disabled
+
+ifneq ($(BUILD_DTVKIT_IN_SYSTEM), true)
 LOCAL_PRODUCT_MODULE := true
+endif
+
 LOCAL_PRIVATE_PLATFORM_APIS := true
 include $(BUILD_PACKAGE)
 include $(call all-makefiles-under, $(LOCAL_PATH))
