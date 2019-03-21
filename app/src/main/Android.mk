@@ -22,14 +22,18 @@ LOCAL_JAVA_LIBRARIES += \
 LOCAL_STATIC_JAVA_LIBRARIES += \
     vendor.amlogic.hardware.dtvkitserver-V1.0-java
 
-LOCAL_SRC_FILES := $(call all-subdir-java-files)
+LOCAL_SRC_FILES := $(call all-subdir-java-files) $(call all-subdir-Iaidl-files)
 
 #TARGET_BUILD_APPS := inputsource # for normal app (embedded ndk jni)
 LOCAL_JNI_SHARED_LIBRARIES := libplatform
 LOCAL_REQUIRED_MODULES := libplatform
 LOCAL_CERTIFICATE := platform
 LOCAL_PROGUARD_ENABLED := disabled
+
+ifneq ($(BUILD_DTVKIT_IN_SYSTEM), true)
 LOCAL_PRODUCT_MODULE := true
+endif
+
 LOCAL_PRIVATE_PLATFORM_APIS := true
 include $(BUILD_PACKAGE)
 include $(call all-makefiles-under, $(LOCAL_PATH))

@@ -3,103 +3,56 @@ package org.dtvkit.inputsource;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
-import android.os.HwBinder;
-import java.util.NoSuchElementException;
 
+import org.dtvkit.IDTVKit;
+import org.dtvkit.IOverlayTarget;
+import org.dtvkit.ISignalHandler;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
-
-import android.hidl.manager.V1_0.IServiceManager;
-import android.hidl.manager.V1_0.IServiceNotification;
-import vendor.amlogic.hardware.dtvkitserver.V1_0.IDTVKitServer;
-import vendor.amlogic.hardware.dtvkitserver.V1_0.IDTVKitServerCallback;
-import vendor.amlogic.hardware.dtvkitserver.V1_0.ConnectType;
-import vendor.amlogic.hardware.dtvkitserver.V1_0.Result;
-import vendor.amlogic.hardware.dtvkitserver.V1_0.DTVKitHidlParcel;
-
 
 public class DtvkitGlueClient {
     private static final String TAG = "DtvkitGlueClient";
 
     private static DtvkitGlueClient mSingleton = null;
+    private IDTVKit mDtvkit = null;
     private ArrayList<SignalHandler> mHandlers = new ArrayList<>();
-    // Notification object used to listen to the start of the rpcserver daemon.
-    private final ServiceNotification mServiceNotification = new ServiceNotification();
-    private static final int DTVKITSERVER_DEATH_COOKIE = 1000;
-    private IDTVKitServer mProxy = null;
-    private HALCallback mHALCallback;
-    // Mutex for all mutable shared state.
-    private final Object mLock = new Object();
-    final class ServiceNotification extends IServiceNotification.Stub {
-        @Override
-        public void onRegistration(String fqName, String name, boolean preexisting) {
-            Log.i(TAG, "rpcserver HIDL service started " + fqName + " " + name);
-            connectToProxy();
-        }
-    }
+    private OverlayTarget mTarget = null;
 
-    private void connectToProxy() {
-        synchronized (mLock) {
-            if (mProxy != null) {
-                return;
-            }
-
-            try {
-                mProxy = IDTVKitServer.getService();
-                mProxy.linkToDeath(new DeathRecipient(), DTVKITSERVER_DEATH_COOKIE);
-                mProxy.setCallback(mHALCallback, ConnectType.TYPE_EXTEND);
-            } catch (NoSuchElementException e) {
-                Log.e(TAG, "connectToProxy: DTVKitServer HIDL service not found."
-                        + " Did the service fail to start?", e);
-            } catch (RemoteException e) {
-                Log.e(TAG, "connectToProxy: DTVKitServer HIDL service not responding", e);
-            }
-        }
-
-        Log.i(TAG, "connect to DTVKitServer HIDL service success");
-    }
-
-    private static class HALCallback extends IDTVKitServerCallback.Stub {
-        DtvkitGlueClient DtvkitClient;
-        HALCallback(DtvkitGlueClient dkgc) {
-            DtvkitClient = dkgc;
-    }
-
-    public void notifyCallback(DTVKitHidlParcel parcel) {
-            Log.i(TAG, "notifyCallback resource:" + parcel.resource + "json:"+ parcel.json);
-
+    private final ISignalHandler.Stub mSignalHandler = new ISignalHandler.Stub() {
+        public void signal(String signal, String json) {
             JSONObject object;
             try {
-                object = new JSONObject(parcel.json);
+                object = new JSONObject(json);
             } catch (Exception e) {
                 Log.e(TAG, e.getMessage());
                 return;
             }
 
-            for (SignalHandler handler : DtvkitClient.mHandlers) {
-                handler.onSignal(parcel.resource, object);
+            for (SignalHandler handler : mHandlers) {
+                handler.onSignal(signal, object);
             }
-
         }
-    }
+    };
 
-    final class DeathRecipient implements HwBinder.DeathRecipient {
-        DeathRecipient() {
+    private final IOverlayTarget.Stub mOverlayTarget = new IOverlayTarget.Stub() {
+        public void draw(int src_width, int src_height, int dst_x, int dst_y, int dst_width, int dst_height, byte[] data) {
+            if (mTarget != null) {
+                mTarget.draw(src_width, src_height, dst_x, dst_y, dst_width, dst_height, data);
+            }
         }
+    };
 
+    private final IBinder.DeathRecipient mDeathRecipient = new IBinder.DeathRecipient() {
         @Override
-        public void serviceDied(long cookie) {
-            if (DTVKITSERVER_DEATH_COOKIE == cookie) {
-                Log.e(TAG, "dtvkitserver HIDL service died cookie: " + cookie);
-                synchronized (mLock) {
-                    mProxy = null;
-                }
-            }
+        public void binderDied() {
+            mDtvkit = null;
         }
-    }
+    };
+
     interface SignalHandler {
         void onSignal(String signal, JSONObject data);
     }
@@ -110,14 +63,15 @@ public class DtvkitGlueClient {
 
     protected DtvkitGlueClient() {
         // Singleton
-        mHALCallback = new HALCallback(this);
-        connectIfUnconnected();
     }
 
     public static DtvkitGlueClient getInstance() {
         if (mSingleton == null) {
             mSingleton = new DtvkitGlueClient();
         }
+
+        mSingleton.connectIfUnconnected();
+
         return mSingleton;
     }
 
@@ -134,13 +88,13 @@ public class DtvkitGlueClient {
     }
 
     public void setOverlayTarget(OverlayTarget target) {
-        //mTarget = target;
+        mTarget = target;
     }
 
     public JSONObject request(String resource, JSONArray arguments) throws Exception {
-        //mSingleton.connectIfUnconnected();
+        mSingleton.connectIfUnconnected();
         try {
-            JSONObject object = new JSONObject(mProxy.request(resource, arguments.toString()));
+            JSONObject object = new JSONObject(mDtvkit.request(resource, arguments.toString()));
             if (object.getBoolean("accepted")) {
                 return object;
             } else {
@@ -152,15 +106,31 @@ public class DtvkitGlueClient {
     }
 
     private void connectIfUnconnected() {
-        try {
-            boolean ret = IServiceManager.getService()
-                .registerForNotifications("vendor.amlogic.hardware.dtvkitserver@1.0::IDTVKitServer", "", mServiceNotification);
-            if (!ret) {
-                Log.e(TAG, "Failed to register service start notification");
+        if (mDtvkit == null) {
+            IBinder service = getService("org.dtvkit.IDTVKit");
+            if (service != null) {
+                mDtvkit = IDTVKit.Stub.asInterface(service);
+                try {
+                    mDtvkit.registerSignalHandler(mSignalHandler);
+                    mDtvkit.registerOverlayTarget(mOverlayTarget);
+                    mDtvkit.asBinder().linkToDeath(mDeathRecipient, 0);
+                } catch (Exception e) {
+                    Log.e(TAG, e.getMessage());}
+            } else {
+                Log.e(TAG, "Failed to get service");
             }
-        } catch (RemoteException e) {
-            Log.e(TAG, "Failed to register service start notification", e);
         }
-            connectToProxy();
+    }
+
+    private IBinder getService(String name) {
+        IBinder service = null;
+        try {
+            Method getService = Class.forName("android.os.ServiceManager").getMethod("getService", String.class);
+            final Object[] args = {name};
+            service = (IBinder) getService.invoke(new Object(), args);
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
+        return service;
     }
 }
