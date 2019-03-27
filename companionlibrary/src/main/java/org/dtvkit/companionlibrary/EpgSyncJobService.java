@@ -389,13 +389,13 @@ public abstract class EpgSyncJobService extends JobService {
 
             /* Get which type of sync this is. Now next or updated event period sync */
             boolean nowNext = extras.getBoolean(BUNDLE_KEY_SYNC_NOW_NEXT, false);
-
+            nowNext = false;
             /* Get the updated event periods if required for this type of sync */
             List<EventPeriod> eventPeriods = new ArrayList<>();
             if (!nowNext) {
                 eventPeriods = getListOfUpdatedEventPeriods();
             }
-
+            long channelId = 0;
             for (int i = 0; i < channelMap.size(); ++i) {
                 if (DEBUG) {
                     Log.d(TAG, "Update channel " + channelMap.valueAt(i).toString());
@@ -408,13 +408,14 @@ public abstract class EpgSyncJobService extends JobService {
                     broadcastError(ERROR_EPG_SYNC_CANCELED);
                     return null;
                 }
+                channelId = channelMap.valueAt(i).getId();
 
                 /* Get the programs */
                 List<Program> programs = new ArrayList<>();
                 if (nowNext) {
                     programs = getNowNextProgramsForChannel(channelUri, channelMap.valueAt(i));
                     if (DEBUG) {
-                        Log.d(TAG, "Got programs for now next: " + programs.toString());
+                       Log.d(TAG, "Got programs for now next: " + programs.toString());
                     }
                 } else {
                     long startMs;
@@ -434,10 +435,12 @@ public abstract class EpgSyncJobService extends JobService {
                                     startMs, endMs));
                             if (DEBUG) {
                                 Log.d(TAG, "Got programs for period (" + startMs + " - " + endMs +
-                                        "): " + programs.toString());
+                                        ")");
                             }
                         }
                     }
+                    Log.d(TAG, "Got programs for period programs:" + programs.toString());
+
                 }
 
                 if (!programs.isEmpty()) {
@@ -456,7 +459,7 @@ public abstract class EpgSyncJobService extends JobService {
                         broadcastError(ERROR_EPG_SYNC_CANCELED);
                         return null;
                     }
-                    updatePrograms(channelUri, programs);
+                    updatePrograms(channelUri, channelId, programs);
                 }
 
                 Intent intent = new Intent(ACTION_SYNC_STATUS_CHANGED);
@@ -518,24 +521,24 @@ public abstract class EpgSyncJobService extends JobService {
          * @param newPrograms A list of {@link Program} instances which includes program
          *         information.
          */
-        private void updatePrograms(Uri channelUri, List<Program> newPrograms) {
+        private void updatePrograms(Uri channelUri, long channelId, List<Program> newPrograms) {
             final int fetchedProgramsCount = newPrograms.size();
             if (fetchedProgramsCount == 0) {
                 broadcastError(ERROR_NO_PROGRAMS);
                 return;
             }
-            List<Program> oldPrograms = TvContractUtils.getPrograms(mContext.getContentResolver(),
-                    channelUri);
+            List<Program> oldPrograms = TvContractUtils.getPrograms(mContext.getContentResolver(), channelUri);
             Program firstNewProgram = newPrograms.get(0);
             int oldProgramsIndex = 0;
             int newProgramsIndex = 0;
+
             // Skip the past programs. They will be automatically removed by the system.
             for (Program program : oldPrograms) {
-                if (program.getEndTimeUtcMillis() < System.currentTimeMillis() ||
-                        program.getEndTimeUtcMillis() < firstNewProgram.getStartTimeUtcMillis()) {
-                    oldProgramsIndex++;
-                } else {
+                if (/*program.getEndTimeUtcMillis() < System.currentTimeMillis() ||*/
+                        program.getEndTimeUtcMillis() > firstNewProgram.getStartTimeUtcMillis()) {
                     break;
+                } else {
+                    oldProgramsIndex++;
                 }
             }
             // Compare the new programs with old programs one by one and update/delete the old one
@@ -545,41 +548,47 @@ public abstract class EpgSyncJobService extends JobService {
                 return;
             }
             while (newProgramsIndex < fetchedProgramsCount) {
-                Program oldProgram = oldProgramsIndex < oldPrograms.size()
-                        ? oldPrograms.get(oldProgramsIndex) : null;
+                Program oldProgram = oldProgramsIndex < oldPrograms.size() ? oldPrograms.get(oldProgramsIndex) : null;
                 Program newProgram = newPrograms.get(newProgramsIndex);
                 boolean addNewProgram = false;
                 if (oldProgram != null) {
                     if (oldProgram.equals(newProgram)) {
                         // Exact match. No need to update. Move on to the next programs.
+                        if (DEBUG) Log.e(TAG, "equals");
                         oldProgramsIndex++;
                         newProgramsIndex++;
                     } else if (shouldUpdateProgramMetadata(oldProgram, newProgram)) {
                         // Partial match. Update the old program with the new one.
                         // NOTE: Use 'update' in this case instead of 'insert' and 'delete'. There
                         // could be application specific settings which belong to the old program.
+                        Log.e(TAG, "shouldUpdateProgramMetadata");
                         ops.add(ContentProviderOperation.newUpdate(
-                                TvContract.buildProgramUri(oldProgram.getId()))
+                                TvContract.Programs.CONTENT_URI)
                                 .withValues(newProgram.toContentValues())
+                                .withSelection("channel_id="+channelId+" and start_time_utc_millis="+oldProgram.getStartTimeUtcMillis(), null)
                                 .build());
                         oldProgramsIndex++;
                         newProgramsIndex++;
                     } else if (oldProgram.getEndTimeUtcMillis()
                             < newProgram.getEndTimeUtcMillis()) {
+                        if (DEBUG) Log.e(TAG, "oldendtime < newendtime");
                         // No match. Remove the old program first to see if the next program in
                         // {@code oldPrograms} partially matches the new program.
                         ops.add(ContentProviderOperation.newDelete(
-                                TvContract.buildProgramUri(oldProgram.getId()))
+                                TvContract.Programs.CONTENT_URI)
+                                .withSelection("channel_id="+channelId+" and start_time_utc_millis="+oldProgram.getStartTimeUtcMillis(), null)
                                 .build());
                         oldProgramsIndex++;
                     } else {
                         // No match. The new program does not match any of the old programs. Insert
                         // it as a new program.
+                        if (DEBUG) Log.e(TAG, "No match");
                         addNewProgram = true;
                         newProgramsIndex++;
                     }
                 } else {
                     // No old programs. Just insert new programs.
+                    if (DEBUG) Log.e(TAG, "No old programs");
                     addNewProgram = true;
                     newProgramsIndex++;
                 }
@@ -590,8 +599,7 @@ public abstract class EpgSyncJobService extends JobService {
                             .build());
                 }
                 // Throttle the batch operation not to cause TransactionTooLargeException.
-                if (ops.size() > BATCH_OPERATION_COUNT
-                        || newProgramsIndex >= fetchedProgramsCount) {
+                if (ops.size() > BATCH_OPERATION_COUNT || newProgramsIndex >= fetchedProgramsCount) {
                     try {
                         mContext.getContentResolver().applyBatch(TvContract.AUTHORITY, ops);
                     } catch (RemoteException | OperationApplicationException e) {

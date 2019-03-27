@@ -61,7 +61,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
     @Override
     public List<Program> getProgramsForChannel(Uri channelUri, Channel channel, long startMs, long endMs) {
         List<Program> programs = new ArrayList<>();
-
+        long starttime, endtime;
         try {
         String dvbUri = String.format("dvb://%04x.%04x.%04x", channel.getOriginalNetworkId(), channel.getTransportStreamId(), channel.getServiceId());
 
@@ -70,6 +70,8 @@ public class DtvkitEpgSync extends EpgSyncJobService {
 
             JSONArray args = new JSONArray();
             args.put(dvbUri); // uri
+            args.put(startMs/1000);
+            args.put(endMs/1000);
             JSONArray events = DtvkitGlueClient.getInstance().request("Dvb.getListOfEvents", args).getJSONArray("data");
 
             for (int i = 0; i < events.length(); i++)
@@ -78,16 +80,22 @@ public class DtvkitEpgSync extends EpgSyncJobService {
 
                 InternalProviderData data = new InternalProviderData();
                 data.put("dvbUri", dvbUri);
-
-                programs.add(new Program.Builder()
-                        .setChannelId(channel.getId())
-                        .setTitle(event.getString("name"))
-                        .setStartTimeUtcMillis(event.getLong("startutc") * 1000)
-                        .setEndTimeUtcMillis(event.getLong("endutc") * 1000)
-                        .setDescription(event.getString("description"))
-                        .setCanonicalGenres(getGenres(event.getString("genre")))
-                        .setInternalProviderData(data)
-                        .build());
+                starttime = event.getLong("startutc") * 1000;
+                endtime = event.getLong("endutc") * 1000;
+                if (starttime >= endMs || endtime <= startMs) {
+                    Log.i(TAG, "Skip##  startMs:endMs=["+startMs+":"+endMs+"]  event:startT:endT=["+starttime+":"+endtime+"]");
+                    continue;
+                }else{
+                    programs.add(new Program.Builder()
+                            .setChannelId(channel.getId())
+                            .setTitle(event.getString("name"))
+                            .setStartTimeUtcMillis(starttime)
+                            .setEndTimeUtcMillis(endtime)
+                            .setDescription(event.getString("description"))
+                            .setCanonicalGenres(getGenres(event.getString("genre")))
+                            .setInternalProviderData(data)
+                            .build());
+                }
             }
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
