@@ -292,6 +292,11 @@ public class DtvkitTvInput extends TvInputService {
         @Override
         public void onTune(Uri uri) {
             Log.i(TAG, "onTune for recording " + uri);
+            if (ContentUris.parseId(uri) == -1) {
+                Log.e(TAG, "DtvkitRecordingSession onTune invalid uri = " + uri);
+                notifyError(TvInputManager.RECORDING_ERROR_UNKNOWN);
+                return;
+            }
             mChannel = uri;
             Channel channel = getChannel(uri);
             if (recordingCheckAvailability(getChannelInternalDvbUri(channel))) {
@@ -517,7 +522,10 @@ public class DtvkitTvInput extends TvInputService {
         @Override
         public boolean onTune(Uri channelUri) {
             Log.i(TAG, "onTune " + channelUri);
-
+            if (ContentUris.parseId(channelUri) == -1) {
+                Log.e(TAG, "DtvkitTvInputSession onTune invalid channelUri = " + channelUri);
+                return false;
+            }
             removeScheduleTimeshiftRecordingTask();
             if (timeshiftRecorderState != RecorderState.STOPPED) {
                 timeshiftRecorderState = RecorderState.STOPPED;
