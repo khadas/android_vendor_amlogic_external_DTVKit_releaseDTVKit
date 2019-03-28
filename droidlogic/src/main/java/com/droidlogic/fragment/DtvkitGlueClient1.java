@@ -60,8 +60,11 @@ public class DtvkitGlueClient1 {
                 Log.e(TAG, "connectToProxy: DTVKitServer HIDL service not responding", e);
             }
         }
-
-        Log.i(TAG, "connect to DTVKitServer HIDL service success");
+        if (mProxy != null) {
+            Log.i(TAG, "connect to DTVKitServer HIDL service success");
+        } else {
+            Log.e(TAG, "connect to DTVKitServer HIDL service fail");
+        }
     }
 
     private static class HALCallback extends IDTVKitServerCallback.Stub {
@@ -133,6 +136,10 @@ public class DtvkitGlueClient1 {
 
     public JSONObject request(String resource, JSONArray arguments) throws Exception {
         //mSingleton.connectIfUnconnected();
+        if (mProxy == null) {
+            Log.e(TAG, "request mProxy null");
+            return null;
+        }
         try {
             JSONObject object = new JSONObject(mProxy.request(resource, arguments.toString()));
             if (object.getBoolean("accepted")) {

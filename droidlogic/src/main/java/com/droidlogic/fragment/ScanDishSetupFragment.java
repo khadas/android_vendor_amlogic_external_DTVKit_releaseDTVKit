@@ -579,10 +579,18 @@ public class ScanDishSetupFragment extends Fragment {
                 String listtype = mParameterMananer.getCurrentListType();
                 if (ItemListView.ITEM_SATALLITE.equals(listtype)) {
                     LinkedList<ItemDetail> items = mParameterMananer.getSatelliteList();
-                    mParameterMananer.setCurrentSatellite(items != null ? items.get(position).getFirstText() : "null");
+                    if (items != null && position < items.size()) {
+                        mParameterMananer.setCurrentSatellite(items != null ? items.get(position).getFirstText() : "null");
+                    } else {
+                        Log.e(TAG, "onListItemSelected setCurrentSatellite erro position index");
+                    }
                 } else if (ParameterMananer.ITEM_TRANSPONDER.equals(listtype)) {
                     LinkedList<ItemDetail> items = mParameterMananer.getTransponderList();
-                    mParameterMananer.setCurrentTransponder(items != null ? (items.get(position).getFirstText()) : "null");
+                    if (items != null && position < items.size()) {
+                        mParameterMananer.setCurrentTransponder(items != null ? (items.get(position).getFirstText()) : "null");
+                    } else {
+                        Log.e(TAG, "onListItemSelected setCurrentTransponder erro position index");
+                    }
                 }
                 mItemAdapterItem.reFill(mParameterMananer.getItemList(listtype));
                 mItemAdapterOption.reFill(mParameterMananer.getCompleteParameterList(mParameterMananer.getCurrentListType(), mParameterMananer.getCurrentSatelliteIndex()));
