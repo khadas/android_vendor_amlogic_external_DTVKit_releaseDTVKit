@@ -162,6 +162,8 @@ public abstract class EpgSyncJobService extends JobService {
     public abstract List<Program> getProgramsForChannel(Uri channelUri, Channel channel,
             long startMs, long endMs);
 
+    public abstract List<Program> getAllProgramsForChannel(Uri channelUri, Channel channel);
+
     public abstract List<Program> getNowNextProgramsForChannel(Uri channelUri, Channel channel);
 
     public abstract List<EventPeriod> getListOfUpdatedEventPeriods();
@@ -389,12 +391,12 @@ public abstract class EpgSyncJobService extends JobService {
 
             /* Get which type of sync this is. Now next or updated event period sync */
             boolean nowNext = extras.getBoolean(BUNDLE_KEY_SYNC_NOW_NEXT, false);
-            nowNext = false;
+
             /* Get the updated event periods if required for this type of sync */
-            List<EventPeriod> eventPeriods = new ArrayList<>();
+            /*List<EventPeriod> eventPeriods = new ArrayList<>();
             if (!nowNext) {
                 eventPeriods = getListOfUpdatedEventPeriods();
-            }
+            }*/
             long channelId = 0;
             for (int i = 0; i < channelMap.size(); ++i) {
                 if (DEBUG) {
@@ -412,36 +414,7 @@ public abstract class EpgSyncJobService extends JobService {
 
                 /* Get the programs */
                 List<Program> programs = new ArrayList<>();
-                if (nowNext) {
-                    programs = getNowNextProgramsForChannel(channelUri, channelMap.valueAt(i));
-                    if (DEBUG) {
-                       Log.d(TAG, "Got programs for now next: " + programs.toString());
-                    }
-                } else {
-                    long startMs;
-                    long endMs;
-                    String dvbUri = null;
-                    try {
-                        dvbUri = channelMap.valueAt(i).getInternalProviderData().get("dvbUri").toString();
-                    } catch (Exception e) {
-                    }
-
-                    for (int j = 0; j < eventPeriods.size(); j++) {
-                        EventPeriod period = eventPeriods.get(j);
-                        if (period.getDvbUri().equals(dvbUri)) {
-                            startMs = period.getStartUtc() * 1000;
-                            endMs = period.getEndUtc() * 1000;
-                            programs.addAll(getProgramsForChannel(channelUri, channelMap.valueAt(i),
-                                    startMs, endMs));
-                            if (DEBUG) {
-                                Log.d(TAG, "Got programs for period (" + startMs + " - " + endMs +
-                                        ")");
-                            }
-                        }
-                    }
-                    Log.d(TAG, "Got programs for period programs:" + programs.toString());
-
-                }
+                programs.addAll(getAllProgramsForChannel(channelUri, channelMap.valueAt(i)));
 
                 if (!programs.isEmpty()) {
                     /* Set channel ids if not set */
@@ -561,7 +534,7 @@ public abstract class EpgSyncJobService extends JobService {
                         // Partial match. Update the old program with the new one.
                         // NOTE: Use 'update' in this case instead of 'insert' and 'delete'. There
                         // could be application specific settings which belong to the old program.
-                        Log.e(TAG, "shouldUpdateProgramMetadata");
+                        if (DEBUG) Log.e(TAG, "shouldUpdateProgramMetadata");
                         ops.add(ContentProviderOperation.newUpdate(
                                 TvContract.Programs.CONTENT_URI)
                                 .withValues(newProgram.toContentValues())

@@ -86,7 +86,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                     Log.i(TAG, "Skip##  startMs:endMs=["+startMs+":"+endMs+"]  event:startT:endT=["+starttime+":"+endtime+"]");
                     continue;
                 }else{
-                    programs.add(new Program.Builder()
+                    Program pro = new Program.Builder()
                             .setChannelId(channel.getId())
                             .setTitle(event.getString("name"))
                             .setStartTimeUtcMillis(starttime)
@@ -94,12 +94,53 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                             .setDescription(event.getString("description"))
                             .setCanonicalGenres(getGenres(event.getString("genre")))
                             .setInternalProviderData(data)
-                            .build());
+                            .build();
+                    programs.add(pro);
                 }
             }
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
         }
+
+        return programs;
+    }
+
+    @Override
+    public List<Program> getAllProgramsForChannel(Uri channelUri, Channel channel) {
+        List<Program> programs = new ArrayList<>();
+
+        try {
+        String dvbUri = String.format("dvb://%04x.%04x.%04x", channel.getOriginalNetworkId(), channel.getTransportStreamId(), channel.getServiceId());
+
+            Log.i(TAG, String.format("Get channel programs for epg sync. Uri %s", dvbUri));
+
+            JSONArray args = new JSONArray();
+            args.put(dvbUri); // uri
+            //starttime\endtime use min and max.
+            JSONArray events = DtvkitGlueClient.getInstance().request("Dvb.getListOfEvents", args).getJSONArray("data");
+
+            for (int i = 0; i < events.length(); i++)
+            {
+                JSONObject event = events.getJSONObject(i);
+
+                InternalProviderData data = new InternalProviderData();
+                data.put("dvbUri", dvbUri);
+                Program pro = new Program.Builder()
+                        .setChannelId(channel.getId())
+                        .setTitle(event.getString("name"))
+                        .setStartTimeUtcMillis(event.getLong("startutc") * 1000)
+                        .setEndTimeUtcMillis(event.getLong("endutc") * 1000)
+                        .setDescription(event.getString("description"))
+                        .setCanonicalGenres(getGenres(event.getString("genre")))
+                        .setInternalProviderData(data)
+                        .build();
+                programs.add(pro);
+                Log.i("cz_debug", "## get pro by event:"+ pro.toString()+ " ##");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
+        Log.i(TAG, "## programs["+ programs.size() +"] ##");
 
         return programs;
     }
