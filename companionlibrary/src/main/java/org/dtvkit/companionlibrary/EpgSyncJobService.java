@@ -397,7 +397,6 @@ public abstract class EpgSyncJobService extends JobService {
             if (!nowNext) {
                 eventPeriods = getListOfUpdatedEventPeriods();
             }*/
-            long channelId = 0;
             for (int i = 0; i < channelMap.size(); ++i) {
                 if (DEBUG) {
                     Log.d(TAG, "Update channel " + channelMap.valueAt(i).toString());
@@ -410,7 +409,6 @@ public abstract class EpgSyncJobService extends JobService {
                     broadcastError(ERROR_EPG_SYNC_CANCELED);
                     return null;
                 }
-                channelId = channelMap.valueAt(i).getId();
 
                 /* Get the programs */
                 List<Program> programs = new ArrayList<>();
@@ -432,7 +430,7 @@ public abstract class EpgSyncJobService extends JobService {
                         broadcastError(ERROR_EPG_SYNC_CANCELED);
                         return null;
                     }
-                    updatePrograms(channelUri, channelId, programs);
+                    updatePrograms(channelUri, programs);
                 }
 
                 Intent intent = new Intent(ACTION_SYNC_STATUS_CHANGED);
@@ -494,7 +492,7 @@ public abstract class EpgSyncJobService extends JobService {
          * @param newPrograms A list of {@link Program} instances which includes program
          *         information.
          */
-        private void updatePrograms(Uri channelUri, long channelId, List<Program> newPrograms) {
+        private void updatePrograms(Uri channelUri, List<Program> newPrograms) {
             final int fetchedProgramsCount = newPrograms.size();
             if (fetchedProgramsCount == 0) {
                 broadcastError(ERROR_NO_PROGRAMS);
@@ -536,9 +534,8 @@ public abstract class EpgSyncJobService extends JobService {
                         // could be application specific settings which belong to the old program.
                         if (DEBUG) Log.e(TAG, "shouldUpdateProgramMetadata");
                         ops.add(ContentProviderOperation.newUpdate(
-                                TvContract.Programs.CONTENT_URI)
+                                TvContract.buildProgramUri(oldProgram.getId()))
                                 .withValues(newProgram.toContentValues())
-                                .withSelection("channel_id="+channelId+" and start_time_utc_millis="+oldProgram.getStartTimeUtcMillis(), null)
                                 .build());
                         oldProgramsIndex++;
                         newProgramsIndex++;
@@ -548,8 +545,7 @@ public abstract class EpgSyncJobService extends JobService {
                         // No match. Remove the old program first to see if the next program in
                         // {@code oldPrograms} partially matches the new program.
                         ops.add(ContentProviderOperation.newDelete(
-                                TvContract.Programs.CONTENT_URI)
-                                .withSelection("channel_id="+channelId+" and start_time_utc_millis="+oldProgram.getStartTimeUtcMillis(), null)
+                                TvContract.buildProgramUri(oldProgram.getId()))
                                 .build());
                         oldProgramsIndex++;
                     } else {
