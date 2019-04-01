@@ -79,14 +79,29 @@ public class DtvkitDvbsSetup extends Activity {
 
         mDataMananer = new DataMananer(this);
 
-        Button search = (Button)findViewById(R.id.startsearch);
+        final Button search = (Button)findViewById(R.id.startsearch);
+        final Button stop = (Button)findViewById(R.id.stopsearch);
+        final Button setup = (Button)findViewById(R.id.setup);
         search.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                search.setEnabled(false);
+                stop.setEnabled(true);
+                stop.requestFocus();
                 startSearch();
             }
         });
         search.requestFocus();
-        Button setup = (Button)findViewById(R.id.setup);
+
+        stop.setEnabled(false);
+        stop.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                stop.setEnabled(false);
+                search.setEnabled(true);
+                search.requestFocus();
+                stopSearch();
+            }
+        });
+
         setup.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 setUp();
@@ -465,19 +480,92 @@ public class DtvkitDvbsSetup extends Activity {
             JSONArray args = initSearchParameter();
             if (args != null) {
                 Log.i(TAG, "search parameter:" + args.toString());
-                DtvkitGlueClient.getInstance().request("Dvbs.startSearch", args);
+                //DtvkitGlueClient.getInstance().request("Dvbs.startSearch", args);
+                //prevent ui not fresh on time
+                doSearchByThread(args);
             } else {
                 stopMonitoringSearch();
                 setSearchStatus(getString(R.string.invalid_parameter));
+                enableSearchButton(true);
+                stopSearch();
                 return;
             }
         } catch (Exception e) {
             stopMonitoringSearch();
             setSearchStatus(e.getMessage());
+            stopSearch();
         }
     }
 
+    private void stopSearch() {
+        enableSearchButton(true);
+        setSearchStatus("Finishing search");
+        getProgressBar().setIndeterminate(true);
+        stopMonitoringSearch();
+        try {
+            JSONArray args = new JSONArray();
+            args.put(true); // Commit
+            DtvkitGlueClient.getInstance().request("Dvbs.finishSearch", args);
+        } catch (Exception e) {
+            setSearchStatus("Failed to finish search:" + e.getMessage());
+            return;
+        }
+        setSearchStatus(getString(R.string.strSearchNotStarted));
+    }
+
+    private void doSearchByThread(final JSONArray args) {
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    DtvkitGlueClient.getInstance().request("Dvbs.startSearch", args);
+                } catch (Exception e) {
+                    doStopByUiThread(e);
+                }
+                enableSearchButton(true);
+            }
+        }).start();
+    }
+
+    private void doStopByUiThread(final Exception e) {
+        runOnUiThread(new Runnable() {
+            public void run() {
+                stopMonitoringSearch();
+                setSearchStatus(e.getMessage());
+            }
+        });
+    }
+
+    private void enableSetupButton(boolean enable) {
+        runOnUiThread(new Runnable() {
+            public void run() {
+                Button setup = (Button)findViewById(R.id.setup);
+                setup.setEnabled(enable);
+            }
+        });
+    }
+
+    private void enableSearchButton(boolean enable) {
+        runOnUiThread(new Runnable() {
+            public void run() {
+                Button search = (Button)findViewById(R.id.startsearch);
+                search.setEnabled(enable);
+            }
+        });
+    }
+
+    private void enableStopButton(boolean enable) {
+        runOnUiThread(new Runnable() {
+            public void run() {
+                Button stop = (Button)findViewById(R.id.stopsearch);
+                stop.setEnabled(enable);
+            }
+        });
+    }
+
     private void onSearchFinished() {
+        enableSearchButton(false);
+        enableStopButton(false);
+        enableSetupButton(false);
         setSearchStatus("Finishing search");
         getProgressBar().setIndeterminate(true);
         stopMonitoringSearch();

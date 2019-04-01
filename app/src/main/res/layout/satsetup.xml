@@ -208,14 +208,28 @@
             android:id="@+id/setup"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginRight="20dp"
+            android:layout_marginRight="1dp"
+            android:background="@drawable/button"
+            android:layout_weight="1"
             android:text="@string/strSetUp" />
 
         <Button
             android:id="@+id/startsearch"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="20dp"
+            android:layout_marginLeft="1dp"
+            android:layout_marginRight="1dp"
+            android:background="@drawable/button"
+            android:layout_weight="1"
             android:text="@string/strStartSearch" />
+
+        <Button
+            android:id="@+id/stopsearch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="1dp"
+            android:background="@drawable/button"
+            android:layout_weight="1"
+            android:text="@string/strStopSearch" />
     </LinearLayout>
 </LinearLayout>

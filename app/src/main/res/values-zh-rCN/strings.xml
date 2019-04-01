@@ -31,6 +31,7 @@
     <string name="strSearchNotStarted">搜台未启动</string>
     <string name="strSearchDescription">按下搜索开始搜索DVB-T的节目.</string>
     <string name="strStartSearch">开始搜索</string>
+    <string name="strStopSearch">停止搜索</string>
     <string name="strTextview">文字</string>
     <string name="strTestString">测试BINDER连接!!</string>
     <string name="strNetworkSearch">网络搜索</string>
