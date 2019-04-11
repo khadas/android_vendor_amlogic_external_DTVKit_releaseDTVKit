@@ -1200,7 +1200,7 @@ public class DtvkitTvInput extends TvInputService {
             for (int i = 0; i < audioStreams.length(); i++)
             {
                 JSONObject audioStream = audioStreams.getJSONObject(i);
-                TvTrackInfo.Builder track = new TvTrackInfo.Builder(TvTrackInfo.TYPE_AUDIO, Integer.toString(audioStream.getInt("pid")));
+                TvTrackInfo.Builder track = new TvTrackInfo.Builder(TvTrackInfo.TYPE_AUDIO, Integer.toString(audioStream.getInt("index")));
                 track.setLanguage(audioStream.getString("language"));
                 if (audioStream.getBoolean("ad")) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -1218,7 +1218,7 @@ public class DtvkitTvInput extends TvInputService {
             for (int i = 0; i < subtitleStreams.length(); i++)
             {
                 JSONObject subtitleStream = subtitleStreams.getJSONObject(i);
-                TvTrackInfo.Builder track = new TvTrackInfo.Builder(TvTrackInfo.TYPE_SUBTITLE, Integer.toString(subtitleStream.getInt("pid")));
+                TvTrackInfo.Builder track = new TvTrackInfo.Builder(TvTrackInfo.TYPE_SUBTITLE, Integer.toString(subtitleStream.getInt("index")));
                 track.setLanguage(subtitleStream.getString("language"));
                 tracks.add(track.build());
             }
@@ -1228,10 +1228,10 @@ public class DtvkitTvInput extends TvInputService {
         return tracks;
     }
 
-    private boolean playerSelectAudioTrack(int pid) {
+    private boolean playerSelectAudioTrack(int index) {
         try {
             JSONArray args = new JSONArray();
-            args.put(pid);
+            args.put(index);
             DtvkitGlueClient.getInstance().request("Player.setAudioStream", args);
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
@@ -1240,10 +1240,10 @@ public class DtvkitTvInput extends TvInputService {
         return true;
     }
 
-    private boolean playerSelectSubtitleTrack(int pid) {
+    private boolean playerSelectSubtitleTrack(int index) {
         try {
             JSONArray args = new JSONArray();
-            args.put(pid);
+            args.put(index);
             DtvkitGlueClient.getInstance().request("Player.setSubtitleStream", args);
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
@@ -1253,7 +1253,7 @@ public class DtvkitTvInput extends TvInputService {
     }
 
     private int playerGetSelectedSubtitleTrack() {
-        int pid = 0xFFFF;
+        int index = 0xFFFF;
         try {
             JSONArray args = new JSONArray();
             JSONArray subtitleStreams = DtvkitGlueClient.getInstance().request("Player.getListOfSubtitleStreams", args).getJSONArray("data");
@@ -1261,18 +1261,18 @@ public class DtvkitTvInput extends TvInputService {
             {
                 JSONObject subtitleStream = subtitleStreams.getJSONObject(i);
                 if (subtitleStream.getBoolean("selected")) {
-                    pid = subtitleStream.getInt("pid");
+                    index = subtitleStream.getInt("index");
                     break;
                 }
             }
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
         }
-        return pid;
+        return index;
     }
 
     private int playerGetSelectedAudioTrack() {
-        int pid = 0xFFFF;
+        int index = 0xFFFF;
         try {
             JSONArray args = new JSONArray();
             JSONArray audioStreams = DtvkitGlueClient.getInstance().request("Player.getListOfAudioStreams", args).getJSONArray("data");
@@ -1280,14 +1280,14 @@ public class DtvkitTvInput extends TvInputService {
             {
                 JSONObject audioStream = audioStreams.getJSONObject(i);
                 if (audioStream.getBoolean("selected")) {
-                    pid = audioStream.getInt("pid");
+                    index = audioStream.getInt("index");
                     break;
                 }
             }
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
         }
-        return pid;
+        return index;
     }
 
     private boolean playerGetSubtitlesOn() {
