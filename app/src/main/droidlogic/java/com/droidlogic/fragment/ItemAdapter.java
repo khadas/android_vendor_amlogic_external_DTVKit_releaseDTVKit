@@ -9,6 +9,8 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
 
+import org.dtvkit.inputsource.R;
+
 public class ItemAdapter extends BaseAdapter {
 
     private LinkedList<ItemDetail> mData;

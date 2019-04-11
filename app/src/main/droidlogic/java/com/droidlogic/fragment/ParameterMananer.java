@@ -18,11 +18,13 @@ import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
 
+import org.dtvkit.inputsource.DtvkitGlueClient;
+
 public class ParameterMananer {
 
     private static final String TAG = "ParameterMananer";
     private Context mContext;
-    private DtvkitGlueClient1 mDtvkitGlueClient;
+    private DtvkitGlueClient mDtvkitGlueClient;
 
     public static final String ITEM_SATALLITE              = "satellite";
     public static final String ITEM_TRANSPONDER            = "transponder";
@@ -117,12 +119,12 @@ public class ParameterMananer {
 
     public static final String[] DIALOG_SET_ITEM_UNICABLE_KEY_LIST = {KEY_UNICABLE_SWITCH, KEY_USER_BAND, KEY_UB_FREQUENCY, KEY_POSITION};
 
-    public ParameterMananer(Context context, DtvkitGlueClient1 client) {
+    public ParameterMananer(Context context, DtvkitGlueClient client) {
         this.mContext = context;
         this.mDtvkitGlueClient = client;
     }
 
-    public void setDtvkitGlueClient(DtvkitGlueClient1 client) {
+    public void setDtvkitGlueClient(DtvkitGlueClient client) {
         if (mDtvkitGlueClient == null) {
             mDtvkitGlueClient = client;
         }
@@ -658,7 +660,7 @@ public class ParameterMananer {
         try {
             JSONArray args1 = new JSONArray();
             args1.put(0);
-            JSONObject jsonObj = DtvkitGlueClient1.getInstance().request("Dvb.getFrontend", args1);
+            JSONObject jsonObj = DtvkitGlueClient.getInstance().request("Dvb.getFrontend", args1);
             if (jsonObj != null) {
                 Log.d(TAG, "getStrengthStatus resultObj:" + jsonObj.toString());
             } else {
@@ -686,7 +688,7 @@ public class ParameterMananer {
         try {
             JSONArray args1 = new JSONArray();
             args1.put(0);
-            JSONObject jsonObj = DtvkitGlueClient1.getInstance().request("Dvb.getFrontend", args1);
+            JSONObject jsonObj = DtvkitGlueClient.getInstance().request("Dvb.getFrontend", args1);
             if (jsonObj != null) {
                 Log.d(TAG, "getQualityStatus resultObj:" + jsonObj.toString());
             } else {
@@ -729,7 +731,7 @@ public class ParameterMananer {
             JSONArray args1 = new JSONArray();
             args1.put(derection);
             args1.put(step);
-            JSONObject resultObj = DtvkitGlueClient1.getInstance().request("Dvbs.dishMove", args1);
+            JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.dishMove", args1);
             if (resultObj != null) {
                 Log.d(TAG, "dishMove resultObj:" + resultObj.toString());
             } else {
@@ -745,7 +747,7 @@ public class ParameterMananer {
     public void stopDishMove() {
         try {
             JSONArray args1 = new JSONArray();
-            JSONObject resultObj = DtvkitGlueClient1.getInstance().request("Dvbs.stopDishMove", args1);
+            JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.stopDishMove", args1);
             if (resultObj != null) {
                 Log.d(TAG, "stopDishMove resultObj:" + resultObj.toString());
             } else {
@@ -762,7 +764,7 @@ public class ParameterMananer {
         try {
             JSONArray args1 = new JSONArray();
             args1.put(position);
-            JSONObject resultObj = DtvkitGlueClient1.getInstance().request("Dvbs.storeDishPosition", args1);
+            JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.storeDishPosition", args1);
             if (resultObj != null) {
                 Log.d(TAG, "storeDishPosition resultObj:" + resultObj.toString());
             } else {
@@ -779,7 +781,7 @@ public class ParameterMananer {
         try {
             JSONArray args1 = new JSONArray();
             args1.put(position);
-            JSONObject resultObj = DtvkitGlueClient1.getInstance().request("Dvbs.moveDishToPosition", args1);
+            JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.moveDishToPosition", args1);
             if (resultObj != null) {
                 Log.d(TAG, "moveDishToPosition resultObj:" + resultObj.toString());
             } else {
@@ -796,7 +798,7 @@ public class ParameterMananer {
         try {
             JSONArray args1 = new JSONArray();
             args1.put(status);
-            JSONObject resultObj = DtvkitGlueClient1.getInstance().request("Dvbs.enableDishLimits", args1);
+            JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.enableDishLimits", args1);
             if (resultObj != null) {
                 Log.d(TAG, "enableDishLimits resultObj:" + resultObj.toString());
             } else {
@@ -814,7 +816,7 @@ public class ParameterMananer {
             JSONArray args1 = new JSONArray();
             args1.put(east);
             args1.put(west);
-            JSONObject resultObj = DtvkitGlueClient1.getInstance().request("Dvbs.setDishLimits", args1);
+            JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.setDishLimits", args1);
             if (resultObj != null) {
                 Log.d(TAG, "setDishLimits resultObj:" + resultObj.toString());
             } else {
@@ -894,7 +896,7 @@ public class ParameterMananer {
     public JSONObject getSatellites() {
         JSONObject resultObj = null;
         try {
-            resultObj = DtvkitGlueClient1.getInstance().request("Dvbs.getSatellites", new JSONArray());
+            resultObj = DtvkitGlueClient.getInstance().request("Dvbs.getSatellites", new JSONArray());
             if (resultObj != null) {
                 Log.d(TAG, "getSatellites resultObj:" + resultObj.toString());
             } else {
@@ -941,7 +943,7 @@ public class ParameterMananer {
         try {
             JSONArray args1 = new JSONArray();
             args1.put(satellite);
-            resultObj = DtvkitGlueClient1.getInstance().request("Dvbs.getTransponders", args1);
+            resultObj = DtvkitGlueClient.getInstance().request("Dvbs.getTransponders", args1);
             if (resultObj != null) {
                 Log.d(TAG, "getTransponders resultObj:" + resultObj.toString());
             } else {
@@ -961,8 +963,8 @@ public class ParameterMananer {
             args.put(isEast);
             args.put(position);
             Log.d(TAG, "addSatallite->" + args.toString());
-            DtvkitGlueClient1.getInstance().request("Dvbs.addSatellite", args);
-            /*JSONObject resultObj = DtvkitGlueClient1.getInstance().request("Dvbs.getSatellites", new JSONArray());
+            DtvkitGlueClient.getInstance().request("Dvbs.addSatellite", args);
+            /*JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.getSatellites", new JSONArray());
             if (resultObj != null) {
                 Log.d(TAG, "addSatallite resultObj:" + resultObj.toString());
             } else {
@@ -981,8 +983,8 @@ public class ParameterMananer {
             args.put(isEast);
             args.put(position);
             Log.d(TAG, "editSatellite->" + args.toString());
-            DtvkitGlueClient1.getInstance().request("Dvbs.addSatellite", args);
-            /*JSONObject resultObj = DtvkitGlueClient1.getInstance().request("Dvbs.getSatellites", new JSONArray());
+            DtvkitGlueClient.getInstance().request("Dvbs.addSatellite", args);
+            /*JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.getSatellites", new JSONArray());
             if (resultObj != null) {
                 Log.d(TAG, "editSatellite resultObj:" + resultObj.toString());
             } else {
@@ -999,8 +1001,8 @@ public class ParameterMananer {
             JSONArray args = new JSONArray();
             args.put(name);
             Log.d(TAG, "removeSatellite->" + args.toString());
-            DtvkitGlueClient1.getInstance().request("Dvbs.deleteSatellite", args);
-            /*JSONObject resultObj = DtvkitGlueClient1.getInstance().request("Dvbs.getSatellites", args);
+            DtvkitGlueClient.getInstance().request("Dvbs.deleteSatellite", args);
+            /*JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.getSatellites", args);
             if (resultObj != null) {
                 Log.d(TAG, "removeSatellite resultObj:" + resultObj.toString());
             } else {
@@ -1020,10 +1022,10 @@ public class ParameterMananer {
             args.put(polarity);
             args.put(symbolrate);
             Log.d(TAG, "addTransponder->" + args.toString());
-            DtvkitGlueClient1.getInstance().request("Dvbs.addTransponder", args);
+            DtvkitGlueClient.getInstance().request("Dvbs.addTransponder", args);
             /*JSONArray args1 = new JSONArray();
             args1.put(satellite);
-            JSONObject resultObj = DtvkitGlueClient1.getInstance().request("Dvbs.getTransponders", args1);
+            JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.getTransponders", args1);
             if (resultObj != null) {
                 Log.d(TAG, "addTransponder resultObj:" + resultObj.toString());
             } else {
@@ -1043,10 +1045,10 @@ public class ParameterMananer {
             args.put(polarity);
             args.put(symbolrate);
             Log.d(TAG, "editTransponder->" + args.toString());
-            DtvkitGlueClient1.getInstance().request("Dvbs.addTransponder", args);
+            DtvkitGlueClient.getInstance().request("Dvbs.addTransponder", args);
             /*JSONArray args1 = new JSONArray();
             args1.put(satellite);
-            JSONObject resultObj = DtvkitGlueClient1.getInstance().request("Dvbs.getTransponders", args1);
+            JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.getTransponders", args1);
             if (resultObj != null) {
                 Log.d(TAG, "editTransponder resultObj:" + resultObj.toString());
             } else {
@@ -1066,10 +1068,10 @@ public class ParameterMananer {
             args.put(polarity);
             args.put(symbolrate);
             Log.d(TAG, "removeTransponder->" + args.toString());
-            DtvkitGlueClient1.getInstance().request("Dvbs.deleteTransponder", args);
+            DtvkitGlueClient.getInstance().request("Dvbs.deleteTransponder", args);
             /*JSONArray args1 = new JSONArray();
             args1.put(name);
-            JSONObject resultObj = DtvkitGlueClient1.getInstance().request("Dvbs.getTransponders", args1);
+            JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.getTransponders", args1);
             if (resultObj != null) {
                 Log.d(TAG, "removeTransponder resultObj:" + resultObj.toString());
             } else {

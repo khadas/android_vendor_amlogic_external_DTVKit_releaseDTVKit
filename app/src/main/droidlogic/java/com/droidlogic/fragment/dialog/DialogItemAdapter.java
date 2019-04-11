@@ -11,10 +11,12 @@ import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import com.droidlogic.fragment.R;
+//import com.droidlogic.fragment.R;
 
 import java.util.LinkedList;
 import java.util.regex.Pattern;
+
+import org.dtvkit.inputsource.R;
 
 public class DialogItemAdapter extends BaseAdapter {
 

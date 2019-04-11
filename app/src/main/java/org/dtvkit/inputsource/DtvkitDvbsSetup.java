@@ -212,7 +212,7 @@ public class DtvkitDvbsSetup extends Activity {
     private void setUp() {
         try {
             Intent intent = new Intent();
-            intent.setClassName("com.droidlogic.fragment", "com.droidlogic.fragment.ScanMainActivity");
+            intent.setClassName("org.dtvkit.inputsource", "com.droidlogic.fragment.ScanMainActivity");
             String inputId = this.getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
             if (inputId != null) {
                 intent.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);

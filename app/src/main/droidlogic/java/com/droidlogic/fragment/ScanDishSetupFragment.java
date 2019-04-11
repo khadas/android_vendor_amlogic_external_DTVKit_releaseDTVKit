@@ -7,7 +7,7 @@ import com.droidlogic.fragment.ItemListView.ListItemFocusedListener;
 import com.droidlogic.fragment.ItemListView.ListItemSelectedListener;
 import com.droidlogic.fragment.ItemListView.ListSwitchedListener;
 import com.droidlogic.fragment.ItemListView.ListTypeSwitchedListener;
-import com.droidlogic.fragment.R.color;
+//import com.droidlogic.fragment.R.color;
 import com.droidlogic.fragment.dialog.CustomDialog;
 import com.droidlogic.fragment.dialog.DialogCallBack;
 import com.droidlogic.fragment.dialog.DialogManager;
@@ -30,6 +30,9 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.media.tv.TvInputInfo;
+
+import org.dtvkit.inputsource.R;
+import org.dtvkit.inputsource.R.color;
 
 public class ScanDishSetupFragment extends Fragment {
 

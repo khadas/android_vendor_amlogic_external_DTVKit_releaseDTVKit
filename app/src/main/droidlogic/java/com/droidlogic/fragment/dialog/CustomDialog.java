@@ -20,12 +20,14 @@ import android.text.TextUtils;
 import android.widget.Toast;
 
 import com.droidlogic.fragment.ParameterMananer;
-import com.droidlogic.fragment.R;
+//import com.droidlogic.fragment.R;
 import com.droidlogic.fragment.ScanMainActivity;
 
 import java.util.LinkedList;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import org.dtvkit.inputsource.R;
 
 public class CustomDialog/* extends AlertDialog*/ {
 
