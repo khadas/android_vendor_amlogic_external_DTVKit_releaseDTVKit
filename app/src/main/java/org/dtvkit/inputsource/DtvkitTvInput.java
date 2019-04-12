@@ -19,6 +19,20 @@ import android.media.tv.TvInputInfo;
 import android.media.tv.TvInputManager;
 import android.media.tv.TvInputService;
 import android.media.tv.TvTrackInfo;
+
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.content.pm.ServiceInfo;
+import android.media.tv.TvInputHardwareInfo;
+import android.media.tv.TvInputManager.Hardware;
+import android.media.tv.TvInputManager.HardwareCallback;
+import android.media.tv.TvInputHardwareInfo;
+import android.media.tv.TvStreamConfig;
+import android.text.TextUtils;
+import java.io.IOException;
+import org.xmlpull.v1.XmlPullParserException;
+import android.content.Intent;
+
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
@@ -70,6 +84,11 @@ public class DtvkitTvInput extends TvInputService {
     private static final int RETRY_TIMES = 10;
     private int retry_times = RETRY_TIMES;
 
+    TvInputInfo mTvInputInfo = null;
+    public Hardware mHardware;
+    public TvStreamConfig[] mConfigs;
+    private TvInputManager mTvInputManager;
+
     private enum PlayerState {
         STOPPED, PLAYING
     }
@@ -93,8 +112,8 @@ public class DtvkitTvInput extends TvInputService {
     public void onCreate() {
         super.onCreate();
         Log.i(TAG, "onCreate");
+        mTvInputManager = (TvInputManager)this.getSystemService(Context.TV_INPUT_SERVICE);
         mDtvkitDvbScan = new DtvkitDvbScan();
-        setInputId(".DtvkitTvInput");
         mContentResolver = getContentResolver();
         mContentResolver.registerContentObserver(TvContract.Channels.CONTENT_URI, true, mContentObserver);
         onChannelsChanged();
@@ -128,8 +147,7 @@ public class DtvkitTvInput extends TvInputService {
     }
 
     protected void setInputId(String name) {
-        ComponentName component = new ComponentName("org.dtvkit.inputsource", name);
-        mInputId = component.flattenToShortString();
+        mInputId = name;
         Log.d(TAG, "set input id to " + mInputId);
     }
 
@@ -497,7 +515,13 @@ public class DtvkitTvInput extends TvInputService {
         @Override
         public boolean onSetSurface(Surface surface) {
             Log.i(TAG, "onSetSurface " + surface);
-            DtvkitGlueClient.getInstance().setDisplay(surface);
+            if (null != mHardware && mConfigs.length > 0) {
+                if (null == surface) {
+                    mHardware.setSurface(null, mConfigs[0]);
+                } else {
+                    mHardware.setSurface(surface, mConfigs[0]);
+                }
+            }
             return true;
         }
 
@@ -964,22 +988,19 @@ public class DtvkitTvInput extends TvInputService {
                 else if (signal.equals("DvbUpdatedEventPeriods"))
                 {
                     Log.i(TAG, "DvbUpdatedEventPeriods");
-                    String inputId = TvContract.buildInputId(new ComponentName(mContext, DtvkitTvInput.class));
                     ComponentName sync = new ComponentName(mContext, DtvkitEpgSync.class);
-                    EpgSyncJobService.requestImmediateSync(mContext, inputId, false, sync);
+                    EpgSyncJobService.requestImmediateSync(mContext, mInputId, false, sync);
                 }
                 else if (signal.equals("DvbUpdatedEventNow"))
                 {
                     Log.i(TAG, "DvbUpdatedEventNow");
-                    String inputId = TvContract.buildInputId(new ComponentName(mContext, DtvkitTvInput.class));
                     ComponentName sync = new ComponentName(mContext, DtvkitEpgSync.class);
-                    EpgSyncJobService.requestImmediateSync(mContext, inputId, true, sync);
+                    EpgSyncJobService.requestImmediateSync(mContext, mInputId, true, sync);
                 }
                 else if (signal.equals("DvbUpdatedEventPeriods"))
                 {
-                    String inputId = TvContract.buildInputId(new ComponentName(mContext, DtvkitTvInput.class));
                     ComponentName sync = new ComponentName(mContext, DtvkitEpgSync.class);
-                    EpgSyncJobService.requestImmediateSync(mContext, inputId, false, sync);
+                    EpgSyncJobService.requestImmediateSync(mContext, mInputId, false, sync);
                 }
                 else if (signal.equals("MhegAppStarted"))
                 {
@@ -1009,8 +1030,7 @@ public class DtvkitTvInput extends TvInputService {
     }
 
     private void onChannelsChanged() {
-        mChannels = TvContractUtils.buildChannelMap(mContentResolver,
-                TvContract.buildInputId(new ComponentName(getApplicationContext(), DtvkitTvInput.class)));
+        mChannels = TvContractUtils.buildChannelMap(mContentResolver, mInputId);
     }
 
     private Channel getChannel(Uri channelUri) {
@@ -1889,4 +1909,71 @@ public class DtvkitTvInput extends TvInputService {
             scheduleTimeshiftRecordingHandler.removeCallbacks(timeshiftRecordRunnable);
         }
     }
+
+    private HardwareCallback mHardwareCallback = new HardwareCallback(){
+        @Override
+        public void onReleased() {
+            Log.d(TAG, "onReleased");
+            mHardware = null;
+        }
+
+        @Override
+        public void onStreamConfigChanged(TvStreamConfig[] configs) {
+            Log.d(TAG, "onStreamConfigChanged");
+            mConfigs = configs;
+        }
+    };
+
+    public ResolveInfo getResolveInfo(String cls_name) {
+        if (TextUtils.isEmpty(cls_name))
+            return null;
+        ResolveInfo ret_ri = null;
+        PackageManager pm = getApplicationContext().getPackageManager();
+        List<ResolveInfo> services = pm.queryIntentServices(new Intent(TvInputService.SERVICE_INTERFACE),
+                PackageManager.GET_SERVICES | PackageManager.GET_META_DATA);
+        for (ResolveInfo ri : services) {
+            ServiceInfo si = ri.serviceInfo;
+            if (!android.Manifest.permission.BIND_TV_INPUT.equals(si.permission)) {
+                continue;
+            }
+            Log.d(TAG, "cls_name = " + cls_name + ", si.name = " + si.name);
+            if (cls_name.equals(si.name)) {
+                ret_ri = ri;
+                break;
+            }
+        }
+        return ret_ri;
+    }
+
+    public TvInputInfo onHardwareAdded(TvInputHardwareInfo hardwareInfo) {
+        Log.d(TAG, "onHardwareAdded ," + "DeviceId :" + hardwareInfo.getDeviceId());
+        if (hardwareInfo.getDeviceId() != 19)
+            return null;
+        ResolveInfo rinfo = getResolveInfo(DtvkitTvInput.class.getName());
+        if (rinfo != null) {
+            try {
+            mTvInputInfo = TvInputInfo.createTvInputInfo(getApplicationContext(), rinfo, hardwareInfo, null, null);
+            } catch (XmlPullParserException e) {
+                //TODO: handle exception
+            } catch (IOException e) {
+                //TODO: handle exception
+            }
+        }
+        setInputId(mTvInputInfo.getId());
+        mHardware = mTvInputManager.acquireTvInputHardware(19,mHardwareCallback,mTvInputInfo);
+        return mTvInputInfo;
+    }
+
+    public String onHardwareRemoved(TvInputHardwareInfo hardwareInfo) {
+        Log.d(TAG, "onHardwareRemoved");
+        if (hardwareInfo.getDeviceId() != 19)
+            return null;
+        String id = null;
+        if (mTvInputInfo != null) {
+            id = mTvInputInfo.getId();
+            mTvInputInfo = null;
+        }
+        return id;
+    }
+
 }
