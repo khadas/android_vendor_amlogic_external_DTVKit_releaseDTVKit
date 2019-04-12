@@ -11,6 +11,8 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.Toast;
 
+import org.dtvkit.inputsource.R;
+
 public class PlaceholderFragment extends Fragment {
 
     private final static String TAG = "PlaceholderFragment";

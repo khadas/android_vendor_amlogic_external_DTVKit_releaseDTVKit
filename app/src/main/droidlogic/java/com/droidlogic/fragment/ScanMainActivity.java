@@ -22,6 +22,9 @@ import android.widget.Toast;
 
 import com.droidlogic.fragment.dialog.DialogManager;
 
+import org.dtvkit.inputsource.R;
+import org.dtvkit.inputsource.DtvkitGlueClient;
+
 public class ScanMainActivity extends Activity {
     private static final String TAG = "ScanMainActivity";
     private Button mDishSetup = null;
@@ -30,7 +33,7 @@ public class ScanMainActivity extends Activity {
     private ScanFragmentManager mScanFragmentManager = null;
     private ParameterMananer mParameterMananer = null;
     private DialogManager mDialogManager = null;
-    private DtvkitGlueClient1 mDtvkitGlueClient = null;
+    private DtvkitGlueClient mDtvkitGlueClient = null;
 
     public static final int REQUEST_CODE_START_SETUP_ACTIVITY = 1;
 
@@ -43,7 +46,7 @@ public class ScanMainActivity extends Activity {
         //mScanFragmentManager.show(new PlaceholderFragment());
         mScanFragmentManager.show(new ScanDishSetupFragment());
         mCurrentFragment = ScanFragmentManager.INIT_FRAGMENT;
-        mDtvkitGlueClient = DtvkitGlueClient1.getInstance();
+        mDtvkitGlueClient = DtvkitGlueClient.getInstance();
         mParameterMananer = new ParameterMananer(this, mDtvkitGlueClient);
         mDialogManager = new DialogManager(this, mParameterMananer);
     }
@@ -66,7 +69,7 @@ public class ScanMainActivity extends Activity {
         return mScanFragmentManager;
     }
 
-    public DtvkitGlueClient1 getDtvkitGlueClient() {
+    public DtvkitGlueClient getDtvkitGlueClient() {
         return mDtvkitGlueClient;
     }
 

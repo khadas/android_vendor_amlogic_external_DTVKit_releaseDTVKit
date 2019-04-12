@@ -7,6 +7,8 @@ import android.app.FragmentTransaction;
 import android.os.Handler;
 import android.util.Log;
 
+import org.dtvkit.inputsource.R;
+
 public class ScanFragmentManager {
     private static final String TAG = "ScanFragmentManager";
     private static final String FIRST_BACKSTACK_RECORD_NAME = "0";

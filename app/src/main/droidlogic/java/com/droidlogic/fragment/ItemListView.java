@@ -27,6 +27,9 @@ import com.droidlogic.fragment.ItemAdapter.ItemDetail;
 
 import java.util.LinkedList;
 
+import org.dtvkit.inputsource.R;
+import org.dtvkit.inputsource.DtvkitGlueClient;
+
 public class ItemListView extends ListView implements OnItemSelectedListener {
     private static final String TAG = "ItemListView";
 
@@ -66,7 +69,7 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
         mParameterMananer = new ParameterMananer(mContext, null);
     }
 
-    public void setDtvkitGlueClient(DtvkitGlueClient1 client) {
+    public void setDtvkitGlueClient(DtvkitGlueClient client) {
         mParameterMananer.setDtvkitGlueClient(client);
     }
 

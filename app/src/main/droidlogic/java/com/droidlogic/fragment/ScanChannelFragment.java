@@ -6,6 +6,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import org.dtvkit.inputsource.R;
+
 public class ScanChannelFragment extends Fragment {
 
     public static ScanChannelFragment newInstance() {

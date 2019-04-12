@@ -56,6 +56,11 @@
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
+        <activity android:name="com.droidlogic.fragment.ScanMainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
         <service
             android:name=".DtvkitTvInput"
             android:label="DTVKit2"
