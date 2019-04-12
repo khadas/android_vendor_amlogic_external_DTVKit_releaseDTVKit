@@ -102,6 +102,7 @@ public class DtvkitTvInput extends TvInputService {
     private boolean scheduleTimeshiftRecording = false;
     private Handler scheduleTimeshiftRecordingHandler = null;
     private Runnable timeshiftRecordRunnable;
+    private long mDtvkitTvInputSessionCount = 0;
 
     public DtvkitTvInput() {
         Log.i(TAG, "DtvkitTvInput");
@@ -463,6 +464,7 @@ public class DtvkitTvInput extends TvInputService {
         private PlayerState playerState = PlayerState.STOPPED;
         private boolean timeshiftAvailable = false;
         private int timeshiftBufferSizeMins = 60;
+        private long mCurrentDtvkitTvInputSessionIndex = 0;
 
         DtvkitTvInputSession(Context context) {
             super(context);
@@ -499,29 +501,54 @@ public class DtvkitTvInput extends TvInputService {
 
             playerSetTimeshiftBufferSize(timeshiftBufferSizeMins);
             recordingSetDefaultDisk("/data");
+            mDtvkitTvInputSessionCount++;
+            mCurrentDtvkitTvInputSessionIndex = mDtvkitTvInputSessionCount;
         }
 
         public void onRelease() {
-            Log.i(TAG, "onRelease");
-            mhegStop();
-            removeScheduleTimeshiftRecordingTask();
-            scheduleTimeshiftRecording = false;
-            playerStopTimeshiftRecording(false);
-            playerStop();
+            Log.i(TAG, "onRelease mDtvkitTvInputSessionCount = " + mDtvkitTvInputSessionCount + ", mCurrentDtvkitTvInputSessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
+            boolean needRelease = false;
+            if (mCurrentDtvkitTvInputSessionIndex == mDtvkitTvInputSessionCount) {
+                needRelease = true;
+                Log.d(TAG, "onRelease need release");
+            }
+            if (needRelease) {
+                mhegStop();
+                removeScheduleTimeshiftRecordingTask();
+                scheduleTimeshiftRecording = false;
+
+                playerStopTimeshiftRecording(false);
+                playerStop();
+            } else {
+                Log.d(TAG, "onRelease not release first part");
+            }
+
             DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
-            mDtvkitDvbScan.setScannerListener(null);
+            if (needRelease) {
+                mDtvkitDvbScan.setScannerListener(null);
+            } else {
+                Log.d(TAG, "onRelease not release second part");
+            }
         }
 
         @Override
         public boolean onSetSurface(Surface surface) {
-            Log.i(TAG, "onSetSurface " + surface);
+            Log.i(TAG, "onSetSurface " + surface + ", mDtvkitTvInputSessionCount = " + mDtvkitTvInputSessionCount + ", mCurrentDtvkitTvInputSessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
+            if (mCurrentDtvkitTvInputSessionIndex != mDtvkitTvInputSessionCount) {
+                Log.d(TAG, "onSetSurface no need to set as new session has set it");
+                return true;
+            }
+
             if (null != mHardware && mConfigs.length > 0) {
                 if (null == surface) {
                     mHardware.setSurface(null, mConfigs[0]);
+                    Log.d(TAG, "onSetSurface null");
                 } else {
                     mHardware.setSurface(surface, mConfigs[0]);
+                    Log.d(TAG, "onSetSurface ok");
                 }
             }
+
             return true;
         }
 
