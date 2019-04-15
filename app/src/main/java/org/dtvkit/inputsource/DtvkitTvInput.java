@@ -47,6 +47,7 @@ import android.util.LongSparseArray;
 import android.view.Surface;
 import android.view.View;
 import android.view.KeyEvent;
+import android.os.HandlerThread;
 
 import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.dtvkit.companionlibrary.model.Channel;
@@ -469,6 +470,8 @@ public class DtvkitTvInput extends TvInputService {
         private boolean timeshiftAvailable = false;
         private int timeshiftBufferSizeMins = 60;
         private long mCurrentDtvkitTvInputSessionIndex = 0;
+        protected HandlerThread mHandlerThread = null;
+        protected Handler mHandlerThreadHandle = null;
 
         DtvkitTvInputSession(Context context) {
             super(context);
@@ -506,11 +509,13 @@ public class DtvkitTvInput extends TvInputService {
             recordingSetDefaultDisk("/data");
             mDtvkitTvInputSessionCount++;
             mCurrentDtvkitTvInputSessionIndex = mDtvkitTvInputSessionCount;
+            initWorkThread();
         }
 
         @Override
         public void onRelease() {
             Log.i(TAG, "onRelease");
+            releaseWorkThread();
         }
 
         public void doRelease() {
@@ -576,28 +581,10 @@ public class DtvkitTvInput extends TvInputService {
                 Log.e(TAG, "DtvkitTvInputSession onTune invalid channelUri = " + channelUri);
                 return false;
             }
-            removeScheduleTimeshiftRecordingTask();
-            if (timeshiftRecorderState != RecorderState.STOPPED) {
-                timeshiftRecorderState = RecorderState.STOPPED;
-                timeshifting = false;
-                scheduleTimeshiftRecording = false;
-                playerStopTimeshiftRecording(false);
-            }
-
+            mHandlerThreadHandle.obtainMessage(MSG_ON_TUNE, 0, 0, channelUri).sendToTarget();
             mTunedChannel = getChannel(channelUri);
-            final String dvbUri = getChannelInternalDvbUri(mTunedChannel);
-            Log.i(TAG, "mhegStop");
-            mhegStop();
-            notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING);
-            if (playerPlay(dvbUri)) {
-                DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
-            } else {
-                mTunedChannel = null;
-                notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
-                notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
-            }
-            // TODO? notifyContentAllowed()
-            Log.i(TAG, "onTune Done");
+
+            Log.i(TAG, "onTune will be Done in onTuneByHandlerThreadHandle");
             return mTunedChannel != null;
         }
 
@@ -1038,6 +1025,76 @@ public class DtvkitTvInput extends TvInputService {
                 }
             }
         };
+
+        protected static final int MSG_ON_TUNE = 1;
+
+        protected void initWorkThread() {
+            Log.d(TAG, "initWorkThread");
+            if (mHandlerThread == null) {
+                mHandlerThread = new HandlerThread("DtvkitInputWorker");
+                mHandlerThread.start();
+                mHandlerThreadHandle = new Handler(mHandlerThread.getLooper(), new Handler.Callback() {
+                    @Override
+                    public boolean handleMessage(Message msg) {
+                        Log.d(TAG, "mHandlerThreadHandle handleMessage:"+msg.what);
+                        switch (msg.what) {
+                            case MSG_ON_TUNE:
+                                Uri channelUri = (Uri)msg.obj;
+                                if (channelUri != null) {
+                                    onTuneByHandlerThreadHandle(channelUri);
+                                }
+                                break;
+                            default:
+                                Log.d(TAG, "initWorkThread default");
+                                break;
+                        }
+                        return true;
+                    }
+                });
+            }
+        }
+
+        protected void releaseWorkThread() {
+            Log.d(TAG, "releaseWorkThread");
+            if (mHandlerThreadHandle != null) {
+                mHandlerThreadHandle.removeCallbacksAndMessages(null);
+            }
+            if (mHandlerThread != null) {
+                mHandlerThread.quit();
+            }
+            mHandlerThread = null;
+            mHandlerThreadHandle = null;
+        }
+
+        protected boolean onTuneByHandlerThreadHandle(Uri channelUri) {
+            Log.i(TAG, "onTuneByHandlerThreadHandle " + channelUri);
+            if (ContentUris.parseId(channelUri) == -1) {
+                Log.e(TAG, "onTuneByHandlerThreadHandle invalid channelUri = " + channelUri);
+                return false;
+            }
+            removeScheduleTimeshiftRecordingTask();
+            if (timeshiftRecorderState != RecorderState.STOPPED) {
+                timeshiftRecorderState = RecorderState.STOPPED;
+                timeshifting = false;
+                scheduleTimeshiftRecording = false;
+                playerStopTimeshiftRecording(false);
+            }
+
+            mTunedChannel = getChannel(channelUri);
+            final String dvbUri = getChannelInternalDvbUri(mTunedChannel);
+            Log.i(TAG, "onTuneByHandlerThreadHandle mhegStop");
+            mhegStop();
+            notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING);
+            if (playerPlay(dvbUri)) {
+                DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
+            } else {
+                mTunedChannel = null;
+                notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
+                notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
+            }
+            Log.i(TAG, "onTuneByHandlerThreadHandle Done");
+            return mTunedChannel != null;
+        }
     }
 
     private void onChannelsChanged() {
@@ -1073,7 +1130,7 @@ public class DtvkitTvInput extends TvInputService {
             args.put(volume);
             DtvkitGlueClient.getInstance().request("Player.setVolume", args);
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerSetVolume = " + e.getMessage());
         }
     }
 
@@ -1083,7 +1140,7 @@ public class DtvkitTvInput extends TvInputService {
             args.put(on);
             DtvkitGlueClient.getInstance().request("Player.setSubtitlesOn", args);
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerSetSubtitlesOn=  " + e.getMessage());
         }
     }
 
@@ -1096,7 +1153,7 @@ public class DtvkitTvInput extends TvInputService {
             DtvkitGlueClient.getInstance().request("Player.play", args);
             return true;
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerPlay = " + e.getMessage());
             return false;
         }
     }
@@ -1106,7 +1163,7 @@ public class DtvkitTvInput extends TvInputService {
             JSONArray args = new JSONArray();
             DtvkitGlueClient.getInstance().request("Player.stop", args);
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerStop = " + e.getMessage());
         }
     }
 
@@ -1116,7 +1173,7 @@ public class DtvkitTvInput extends TvInputService {
             DtvkitGlueClient.getInstance().request("Player.pause", args);
             return true;
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerPause = " + e.getMessage());
             return false;
         }
     }
@@ -1127,7 +1184,7 @@ public class DtvkitTvInput extends TvInputService {
             DtvkitGlueClient.getInstance().request("Player.resume", args);
             return true;
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerResume = " + e.getMessage());
             return false;
         }
     }
@@ -1137,7 +1194,7 @@ public class DtvkitTvInput extends TvInputService {
             JSONArray args = new JSONArray();
             DtvkitGlueClient.getInstance().request("Player.fastForward", args);
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerFastForwards" + e.getMessage());
         }
     }
 
@@ -1146,7 +1203,7 @@ public class DtvkitTvInput extends TvInputService {
             JSONArray args = new JSONArray();
             DtvkitGlueClient.getInstance().request("Player.fastRewind", args);
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerFastRewind = " + e.getMessage());
         }
     }
 
@@ -1157,7 +1214,7 @@ public class DtvkitTvInput extends TvInputService {
             DtvkitGlueClient.getInstance().request("Player.setPlaySpeed", args);
             return true;
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerSetSpeed = " + e.getMessage());
             return false;
         }
     }
@@ -1169,7 +1226,7 @@ public class DtvkitTvInput extends TvInputService {
             DtvkitGlueClient.getInstance().request("Player.seekTo", args);
             return true;
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerSeekTo = " + e.getMessage());
             return false;
         }
     }
@@ -1180,7 +1237,7 @@ public class DtvkitTvInput extends TvInputService {
             DtvkitGlueClient.getInstance().request("Player.startTimeshiftRecording", args);
             return true;
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerStartTimeshiftRecording = " + e.getMessage());
             return false;
         }
     }
@@ -1205,7 +1262,7 @@ public class DtvkitTvInput extends TvInputService {
             DtvkitGlueClient.getInstance().request("Player.playTimeshiftRecording", args);
             return true;
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerStopTimeshiftRecording = " + e.getMessage());
             return false;
         }
     }
@@ -1219,7 +1276,7 @@ public class DtvkitTvInput extends TvInputService {
             args.put(height);
             DtvkitGlueClient.getInstance().request("Player.setRectangle", args);
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerSetRectangle = " + e.getMessage());
         }
     }
 
@@ -1241,7 +1298,7 @@ public class DtvkitTvInput extends TvInputService {
                 tracks.add(track.build());
             }
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "getListOfAudioStreams = " + e.getMessage());
         }
         try {
             JSONArray args = new JSONArray();
@@ -1254,7 +1311,7 @@ public class DtvkitTvInput extends TvInputService {
                 tracks.add(track.build());
             }
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "getListOfSubtitleStreams = " + e.getMessage());
         }
         return tracks;
     }
@@ -1265,7 +1322,7 @@ public class DtvkitTvInput extends TvInputService {
             args.put(index);
             DtvkitGlueClient.getInstance().request("Player.setAudioStream", args);
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerSelectAudioTrack = " + e.getMessage());
             return false;
         }
         return true;
@@ -1277,7 +1334,7 @@ public class DtvkitTvInput extends TvInputService {
             args.put(index);
             DtvkitGlueClient.getInstance().request("Player.setSubtitleStream", args);
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerSelectSubtitleTrack = " + e.getMessage());
             return false;
         }
         return true;
@@ -1297,7 +1354,7 @@ public class DtvkitTvInput extends TvInputService {
                 }
             }
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerGetSelectedSubtitleTrack = " + e.getMessage());
         }
         return index;
     }
@@ -1316,7 +1373,7 @@ public class DtvkitTvInput extends TvInputService {
                 }
             }
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerGetSelectedAudioTrack = " + e.getMessage());
         }
         return index;
     }
@@ -1327,7 +1384,7 @@ public class DtvkitTvInput extends TvInputService {
             JSONArray args = new JSONArray();
             on = DtvkitGlueClient.getInstance().request("Player.getSubtitlesOn", args).getBoolean("data");
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerGetSubtitlesOn = " + e.getMessage());
         }
         return on;
     }
@@ -1338,7 +1395,7 @@ public class DtvkitTvInput extends TvInputService {
             JSONArray args = new JSONArray();
             response = DtvkitGlueClient.getInstance().request("Player.getStatus", args).getJSONObject("data");
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerGetStatus = " + e.getMessage());
         }
         return response;
     }
@@ -1356,7 +1413,7 @@ public class DtvkitTvInput extends TvInputService {
                     elapsed = content.getLong("elapsed");
                 }
             } catch (JSONException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, "playerGetElapsed = " + e.getMessage());
             }
         }
         return elapsed;
@@ -1368,7 +1425,7 @@ public class DtvkitTvInput extends TvInputService {
             JSONArray args = new JSONArray();
             response = DtvkitGlueClient.getInstance().request("Player.getTimeshiftRecorderStatus", args).getJSONObject("data");
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerGetTimeshiftRecorderStatus = " + e.getMessage());
         }
         return response;
     }
@@ -1379,7 +1436,7 @@ public class DtvkitTvInput extends TvInputService {
             JSONArray args = new JSONArray();
             timeshiftBufferSize = DtvkitGlueClient.getInstance().request("Player.getTimeshiftBufferSize", args).getInt("data");
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerGetTimeshiftBufferSize = " + e.getMessage());
         }
         return timeshiftBufferSize;
     }
@@ -1391,7 +1448,7 @@ public class DtvkitTvInput extends TvInputService {
             DtvkitGlueClient.getInstance().request("Player.setTimeshiftBufferSize", args);
             return true;
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "playerSetTimeshiftBufferSize = " + e.getMessage());
             return false;
         }
     }
@@ -1404,7 +1461,7 @@ public class DtvkitTvInput extends TvInputService {
             DtvkitGlueClient.getInstance().request("Recording.setDefaultDisk", args);
             return true;
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "recordingSetDefaultDisk = " + e.getMessage());
             return false;
         }
     }
@@ -1417,7 +1474,7 @@ public class DtvkitTvInput extends TvInputService {
                     timeshiftRecorderState = playerTimeshiftRecorderStatus.getString("timeshiftrecorderstate");
                 }
             } catch (JSONException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, "playerGetTimeshiftRecorderState = " + e.getMessage());
             }
         }
 
@@ -1432,7 +1489,7 @@ public class DtvkitTvInput extends TvInputService {
             quiet = DtvkitGlueClient.getInstance().request("Mheg.start", args).getInt("data");
             Log.e(TAG, "Mheg started");
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "mhegStartService = " + e.getMessage());
         }
         return quiet;
     }
@@ -1443,7 +1500,7 @@ public class DtvkitTvInput extends TvInputService {
             DtvkitGlueClient.getInstance().request("Mheg.stop", args);
             Log.e(TAG, "Mheg stopped");
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "mhegStop = " + e.getMessage());
         }
     }
     private boolean mhegKeypress(int keyCode) {
@@ -1454,7 +1511,7 @@ public class DtvkitTvInput extends TvInputService {
             used = DtvkitGlueClient.getInstance().request("Mheg.notifyKeypress", args).getBoolean("data");
             Log.e(TAG, "Mheg keypress, used:" + used);
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "mhegKeypress = " + e.getMessage());
         }
         return used;
     }
