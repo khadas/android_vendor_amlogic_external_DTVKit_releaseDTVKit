@@ -63,6 +63,9 @@ dtvkit
 import org.dtvkit.inputsource.DtvkitDvbScan;
 import org.dtvkit.inputsource.DtvkitDvbScan.ScannerEvent;
 
+import com.droidlogic.settings.PropSettingManager;
+import com.droidlogic.settings.ConvertSettingManager;
+
 //import com.droidlogic.app.tv.TvControlManager;
 
 import java.util.ArrayList;
@@ -720,13 +723,12 @@ public class DtvkitTvInput extends TvInputService {
             if (timeshiftRecorderState == RecorderState.RECORDING && !timeshifting) /* Watching live tv while recording */ {
                 timeshifting = true;
                 boolean seekToBeginning = false;
-
                 if (timeMs == startPosition) {
                     seekToBeginning = true;
                 }
                 playerPlayTimeshiftRecording(false, !seekToBeginning);
             } else if (timeshiftRecorderState == RecorderState.RECORDING && timeshifting) {
-                playerSeekTo((timeMs - originalStartPosition) / 1000);
+                playerSeekTo((timeMs - (originalStartPosition + PropSettingManager.getStreamTimeDiff())) / 1000);
             } else {
                 playerSeekTo(timeMs / 1000);
             }
@@ -752,12 +754,13 @@ public class DtvkitTvInput extends TvInputService {
         }
 
         public long onTimeShiftGetStartPosition() {
-            Log.i(TAG, "onTimeShiftGetStartPosition: " + startPosition);
-
             if (timeshiftRecorderState != RecorderState.STOPPED) {
                 Log.i(TAG, "requesting timeshift recorder status");
                 long length = 0;
                 JSONObject timeshiftRecorderStatus = playerGetTimeshiftRecorderStatus();
+                if (originalStartPosition != 0 && originalStartPosition != TvInputManager.TIME_SHIFT_INVALID_TIME) {
+                    startPosition = originalStartPosition + PropSettingManager.getStreamTimeDiff();
+                }
                 if (timeshiftRecorderStatus != null) {
                     try {
                         length = timeshiftRecorderStatus.getLong("length");
@@ -771,28 +774,27 @@ public class DtvkitTvInput extends TvInputService {
                     Log.i(TAG, "new start position: " + startPosition);
                 }
             }
-
+            Log.i(TAG, "onTimeShiftGetStartPosition startPosition:" + startPosition + ", as date = " + ConvertSettingManager.convertLongToDate(startPosition));
             return startPosition;
         }
 
         public long onTimeShiftGetCurrentPosition() {
-            Log.i(TAG, "onTimeShiftGetCurrentPosition ");
             if (startPosition == 0) /* Playing back recorded program */ {
                 if (playerState == PlayerState.PLAYING) {
                     currentPosition = playerGetElapsed() * 1000;
                     Log.i(TAG, "playing back record program. current position: " + currentPosition);
                 }
             } else if (timeshifting) {
-                currentPosition = (playerGetElapsed() * 1000) + originalStartPosition;
+                currentPosition = (playerGetElapsed() * 1000) + originalStartPosition + PropSettingManager.getStreamTimeDiff();
                 Log.i(TAG, "timeshifting. current position: " + currentPosition);
             } else if (startPosition == TvInputManager.TIME_SHIFT_INVALID_TIME) {
                 currentPosition = TvInputManager.TIME_SHIFT_INVALID_TIME;
                 Log.i(TAG, "Invalid time. Current position: " + currentPosition);
             } else {
-                currentPosition = System.currentTimeMillis();
+                currentPosition = /*System.currentTimeMillis()*/PropSettingManager.getCurrentStreamTime(true);
                 Log.i(TAG, "live tv. current position: " + currentPosition);
             }
-
+            Log.d(TAG, "onTimeShiftGetCurrentPosition currentPosition = " + currentPosition + ", as date = " + ConvertSettingManager.convertLongToDate(currentPosition));
             return currentPosition;
         }
 
@@ -897,6 +899,7 @@ public class DtvkitTvInput extends TvInputService {
                             else if (type.equals("dvbrecording")) {
                                 startPosition = originalStartPosition = 0; // start position is always 0 when playing back recorded program
                                 currentPosition = playerGetElapsed(data) * 1000;
+                                Log.i(TAG, "dvbrecording currentPosition = " + currentPosition + "as date = " + ConvertSettingManager.convertLongToDate(startPosition));
                                 notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_AVAILABLE);
                             }
                             playerState = PlayerState.PLAYING;
@@ -995,7 +998,9 @@ public class DtvkitTvInput extends TvInputService {
                     switch (playerGetTimeshiftRecorderState(data)) {
                         case "recording":
                             timeshiftRecorderState = RecorderState.RECORDING;
-                            startPosition = originalStartPosition = System.currentTimeMillis();
+                            startPosition = /*System.currentTimeMillis()*/PropSettingManager.getCurrentStreamTime(true);
+                            originalStartPosition = PropSettingManager.getCurrentStreamTime(false);//keep the original time
+                            Log.i(TAG, "recording originalStartPosition as date = " + ConvertSettingManager.convertLongToDate(originalStartPosition) + ", startPosition = " + ConvertSettingManager.convertLongToDate(startPosition));
                             notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_AVAILABLE);
                             break;
                         case "off":
