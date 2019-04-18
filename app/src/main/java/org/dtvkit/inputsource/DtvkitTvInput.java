@@ -85,9 +85,10 @@ public class DtvkitTvInput extends TvInputService {
     private int retry_times = RETRY_TIMES;
 
     TvInputInfo mTvInputInfo = null;
-    public Hardware mHardware;
-    public TvStreamConfig[] mConfigs;
+    protected Hardware mHardware;
+    protected TvStreamConfig[] mConfigs;
     private TvInputManager mTvInputManager;
+    private Surface mSurface;
 
     private enum PlayerState {
         STOPPED, PLAYING
@@ -470,7 +471,6 @@ public class DtvkitTvInput extends TvInputService {
             super(context);
             mContext = context;
             Log.i(TAG, "DtvkitTvInputSession");
-            DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
             mDtvkitDvbScan.setScannerListener(this);
             setOverlayViewEnabled(true);
             numActiveRecordings = recordingGetNumActiveRecordings();
@@ -505,51 +505,47 @@ public class DtvkitTvInput extends TvInputService {
             mCurrentDtvkitTvInputSessionIndex = mDtvkitTvInputSessionCount;
         }
 
+        @Override
         public void onRelease() {
-            Log.i(TAG, "onRelease mDtvkitTvInputSessionCount = " + mDtvkitTvInputSessionCount + ", mCurrentDtvkitTvInputSessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
-            boolean needRelease = false;
-            if (mCurrentDtvkitTvInputSessionIndex == mDtvkitTvInputSessionCount) {
-                needRelease = true;
-                Log.d(TAG, "onRelease need release");
-            }
-            if (needRelease) {
-                mhegStop();
-                removeScheduleTimeshiftRecordingTask();
-                scheduleTimeshiftRecording = false;
+            Log.i(TAG, "onRelease");
+        }
 
-                playerStopTimeshiftRecording(false);
-                playerStop();
-            } else {
-                Log.d(TAG, "onRelease not release first part");
-            }
-
+        public void doRelease() {
+            Log.i(TAG, "doRelease");
+            mhegStop();
+            removeScheduleTimeshiftRecordingTask();
+            scheduleTimeshiftRecording = false;
+            playerStopTimeshiftRecording(false);
+            playerStop();
             DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
-            if (needRelease) {
-                mDtvkitDvbScan.setScannerListener(null);
-            } else {
-                Log.d(TAG, "onRelease not release second part");
-            }
+            mDtvkitDvbScan.setScannerListener(null);
         }
 
         @Override
         public boolean onSetSurface(Surface surface) {
             Log.i(TAG, "onSetSurface " + surface + ", mDtvkitTvInputSessionCount = " + mDtvkitTvInputSessionCount + ", mCurrentDtvkitTvInputSessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
-            if (mCurrentDtvkitTvInputSessionIndex != mDtvkitTvInputSessionCount) {
-                Log.d(TAG, "onSetSurface no need to set as new session has set it");
-                return true;
-            }
 
             if (null != mHardware && mConfigs.length > 0) {
                 if (null == surface) {
-                    mHardware.setSurface(null, mConfigs[0]);
-                    Log.d(TAG, "onSetSurface null");
+                    if (mCurrentDtvkitTvInputSessionIndex == mDtvkitTvInputSessionCount) {
+                        doRelease();
+                        mHardware.setSurface(null, null);
+                        Log.d(TAG, "onSetSurface null");
+                        mSurface = null;
+                    }
                 } else {
+                    if (mSurface != surface) {
+                        Log.d(TAG, "TvView swithed,  onSetSurface null first");
+                        doRelease();
+                        mHardware.setSurface(null, null);
+                    }
                     mHardware.setSurface(surface, mConfigs[0]);
+                    surface = mSurface;
                     Log.d(TAG, "onSetSurface ok");
                 }
             }
 
-            return true;
+            return false;
         }
 
         @Override
@@ -591,6 +587,7 @@ public class DtvkitTvInput extends TvInputService {
             mhegStop();
             notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING);
             if (playerPlay(dvbUri)) {
+                DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
             } else {
                 mTunedChannel = null;
                 notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
@@ -1033,24 +1030,6 @@ public class DtvkitTvInput extends TvInputService {
                 {
                    Log.i(TAG, "MhegAppStarted");
                    notifyVideoAvailable();
-                }
-                else if (signal.equals("AppVideoPosition"))
-                {
-                   Log.i(TAG, "AppVideoPosition");
-                   int left,top,right,bottom;
-                   left = 0;
-                   top = 0;
-                   right = 1920;
-                   bottom = 1080;
-                   try {
-                      left = data.getInt("left");
-                      top = data.getInt("top");
-                      right = data.getInt("right");
-                      bottom = data.getInt("bottom");
-                   } catch (JSONException e) {
-                      Log.e(TAG, e.getMessage());
-                   }
-                   layoutSurface(left,top,right,bottom);
                 }
             }
         };
