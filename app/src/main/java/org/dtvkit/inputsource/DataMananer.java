@@ -122,9 +122,16 @@ public class DataMananer {
     public static final String KEY_PACKAGE_NAME = "org.dtvkit.inputsource";
     public static final String KEY_ACTIVITY_DVBT = "org.dtvkit.inputsource.DtvkitDvbtSetup";
     public static final String KEY_ACTIVITY_DVBS = "org.dtvkit.inputsource.DtvkitDvbsSetup";
+    public static final String KEY_ACTIVITY_SETTINGS = "com.droidlogic.settings.DtvkitDvbSettings";
     public static final int SELECT_DVBC = 0;
     public static final int SELECT_DVBT = 1;
     public static final int SELECT_DVBS = 2;
+    public static final int SELECT_SETTINGS = 3;
+    public static final String KEY_DTVKIT_COUNTRY = "dtvkit_country";
+    public static final String KEY_DTVKIT_MAIN_AUDIO_LANG = "main_audio_lang";
+    public static final String KEY_DTVKIT_ASSIST_AUDIO_LANG = "assist_audio_lang";
+    public static final String KEY_DTVKIT_MAIN_SUBTITLE_LANG = "main_subtitle_lang";
+    public static final String KEY_DTVKIT_ASSIST_SUBTITLE_LANG = "assist_subtitle_lang";
 
     //manual search
     public static final String KEY_IS_FREQUENCY = "frequency_mode";

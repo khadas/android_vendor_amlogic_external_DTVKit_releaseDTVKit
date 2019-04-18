@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -118,6 +119,12 @@ public class ParameterMananer {
     public static final int KEY_DISEQC1_2_DISH_LIMITS_STATUS_DEFAULT_VALUE_INDEX = 0;
 
     public static final String[] DIALOG_SET_ITEM_UNICABLE_KEY_LIST = {KEY_UNICABLE_SWITCH, KEY_USER_BAND, KEY_UB_FREQUENCY, KEY_POSITION};
+
+    public static final String KEY_DTVKIT_COUNTRY = "dtvkit_country";
+    public static final String KEY_DTVKIT_MAIN_AUDIO_LANG = "main_audio_lang";
+    public static final String KEY_DTVKIT_ASSIST_AUDIO_LANG = "assist_audio_lang";
+    public static final String KEY_DTVKIT_MAIN_SUBTITLE_LANG = "main_subtitle_lang";
+    public static final String KEY_DTVKIT_ASSIST_SUBTITLE_LANG = "assist_subtitle_lang";
 
     public ParameterMananer(Context context, DtvkitGlueClient client) {
         this.mContext = context;
@@ -1081,5 +1088,343 @@ public class ParameterMananer {
             Log.d(TAG, "removeTransponder Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
         }
+    }
+
+    public List<String> getCountryList() {
+        List<String> result = new ArrayList<String>();
+        try {
+            JSONObject resultObj = getCountrys();
+            Locale[] allLocale = Locale.getAvailableLocales();
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return result;
+                }
+                for (int i = 0; i < data.length(); i++) {
+                    String countryName = (String)(((JSONObject)(data.get(i))).get("country_name"));
+                    if (allLocale != null && allLocale.length > 0) {
+                        Log.d(TAG, "allLocale size = " + allLocale.length);
+                        for (Locale one : allLocale) {
+                            try {
+                                String iso3Country = one.getISO3Country();
+                                boolean isEqual = (countryName == null ? iso3Country == null :countryName.equalsIgnoreCase(iso3Country));
+                                if (isEqual) {
+                                    countryName = one.getDisplayCountry();
+                                    break;
+                                }
+                            } catch (Exception e1) {
+                                Log.e(TAG, "getCountryList ios3 country Exception " + e1.getMessage() + ", trace=" + e1.getStackTrace() + " continue");
+                                continue;
+                            }
+                        }
+                    }
+                    result.add(countryName);
+                }
+
+            } else {
+                Log.d(TAG, "getCountryList then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getCountryList Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+
+        return result;
+    }
+
+    private JSONObject getCountrys() {
+        JSONObject resultObj = null;
+        try {
+            JSONArray args1 = new JSONArray();
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.getCountrys", args1);
+            if (resultObj != null) {
+                Log.d(TAG, "getCountrys resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "getCountrys then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getCountrys Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    public List<String> getLangList() {
+        List<String> result = new ArrayList<String>();
+        try {
+            JSONObject resultObj = getCountryLangs(getCountryCodeByIndex(getIntParameters(KEY_DTVKIT_COUNTRY)));
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return result;
+                }
+                for (int i = 0; i < data.length(); i++) {
+                    String langIds = (String)(((JSONObject)(data.get(i))).get("lang_ids"));
+                    result.add(langIds);
+                }
+
+            } else {
+                Log.d(TAG, "getLangList then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getLangList Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    private JSONObject getCountryLangs(int countryCode) {
+        JSONObject resultObj = null;
+        try {
+            JSONArray args1 = new JSONArray();
+            args1.put(countryCode);
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.getCountryLangs", args1);
+            if (resultObj != null) {
+                Log.d(TAG, "getCountryLangs resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "getCountryLangs then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getCountryLangs Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    public JSONObject setCountryCodeByIndex(int index) {
+        JSONObject resultObj = null;
+        try {
+            resultObj = getCountrys();
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return resultObj;
+                }
+                resultObj = (JSONObject)(data.get(index));
+                if (resultObj != null) {
+                    Log.d(TAG, "setCountryCodeByIndex resultObj = " + resultObj.toString());
+                    setCountry((int)resultObj.get("country_code"));
+                }
+            } else {
+                Log.d(TAG, "setCountryCodeByIndex then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setCountryCodeByIndex Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    public int getCountryCodeByIndex(int index) {
+        int countrycode = 0;
+        JSONObject resultObj = null;
+        try {
+            resultObj = getCountrys();
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return countrycode;
+                }
+                resultObj = (JSONObject)(data.get(index));
+                if (resultObj != null) {
+                    Log.d(TAG, "getCountryCodeByIndex resultObj = " + resultObj.toString());
+                    countrycode = ((int)resultObj.get("country_code"));
+                }
+            } else {
+                Log.d(TAG, "getCountryCodeByIndex then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getCountryCodeByIndex Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return countrycode;
+    }
+
+    private JSONObject setCountry(int countryCode) {
+        JSONObject resultObj = null;
+        try {
+            JSONArray args1 = new JSONArray();
+            args1.put(countryCode);
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.setCountry", args1);
+            if (resultObj != null) {
+                Log.d(TAG, "setCountry resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setCountry then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setCountry Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    public int getLangIndexCodeByIndex(int index) {
+        int langIndex = 0;
+        try {
+            int currentCountryCode = getCountryCodeByIndex(getIntParameters(KEY_DTVKIT_COUNTRY));
+            JSONObject resultObj = getCountryLangs(currentCountryCode);
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return langIndex;
+                }
+                resultObj = (JSONObject)(data.get(index));
+                if (resultObj != null) {
+                    Log.d(TAG, "getLangIndexCodeByIndex resultObj = " + resultObj.toString());
+                    langIndex = ((int)resultObj.get("lang_index"));
+                }
+            } else {
+                Log.d(TAG, "getLangIndexCodeByIndex then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getLangIndexCodeByIndex Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return langIndex;
+    }
+
+    public JSONObject setPrimaryAudioLangByIndex(int index) {
+        JSONObject resultObj = null;
+        try {
+            int langIndex = getLangIndexCodeByIndex(index);
+            resultObj = setPrimaryAudioLangId(langIndex);
+            if (resultObj != null) {
+                Log.d(TAG, "setPrimaryAudioLangByIndex resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setPrimaryAudioLangByIndex then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setPrimaryAudioLangByIndex Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    private JSONObject setPrimaryAudioLangId(int langIndex) {
+        JSONObject resultObj = null;
+        try {
+            JSONArray args1 = new JSONArray();
+            args1.put(langIndex);
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.setPrimaryAudioLangId", args1);
+            if (resultObj != null) {
+                Log.d(TAG, "setPrimaryAudioLangId resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setPrimaryAudioLangId then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setPrimaryAudioLangId Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    public JSONObject setSecondaryAudioLangByIndex(int index) {
+        JSONObject resultObj = null;
+        try {
+            int langIndex = getLangIndexCodeByIndex(index);
+            resultObj = setSecondaryAudioLangId(langIndex);
+            if (resultObj != null) {
+                Log.d(TAG, "setSecondaryAudioLangByIndex resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setSecondaryAudioLangByIndex then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setSecondaryAudioLangByIndex Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    private JSONObject setSecondaryAudioLangId(int langIndex) {
+        JSONObject resultObj = null;
+        try {
+            JSONArray args1 = new JSONArray();
+            args1.put(langIndex);
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.setSecondaryAudioLangId", args1);
+            if (resultObj != null) {
+                Log.d(TAG, "setSecondaryAudioLangId resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setSecondaryAudioLangId then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setSecondaryAudioLangId Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    public JSONObject setPrimaryTextLangByIndex(int index) {
+        JSONObject resultObj = null;
+        try {
+            int langIndex = getLangIndexCodeByIndex(index);
+            resultObj = setPrimaryTextLangId(langIndex);
+            if (resultObj != null) {
+                Log.d(TAG, "setPrimaryTextLangByIndex resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setPrimaryTextLangByIndex then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setPrimaryTextLangByIndex Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    private JSONObject setPrimaryTextLangId(int langIndex) {
+        JSONObject resultObj = null;
+        try {
+            JSONArray args1 = new JSONArray();
+            args1.put(langIndex);
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.setPrimaryTextLangId", args1);
+            if (resultObj != null) {
+                Log.d(TAG, "setPrimaryTextLangId resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setPrimaryTextLangId then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setPrimaryTextLangId Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    public JSONObject setSecondaryTextLangByIndex(int index) {
+        JSONObject resultObj = null;
+        try {
+            int langIndex = getLangIndexCodeByIndex(index);
+            resultObj = setSecondaryTextLangId(langIndex);
+            if (resultObj != null) {
+                Log.d(TAG, "setSecondaryTextLangByIndex resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setSecondaryTextLangByIndex then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setSecondaryTextLangByIndex Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    private JSONObject setSecondaryTextLangId(int langIndex) {
+        JSONObject resultObj = null;
+        try {
+            JSONArray args1 = new JSONArray();
+            args1.put(langIndex);
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.setSecondaryTextLangId", args1);
+            if (resultObj != null) {
+                Log.d(TAG, "setSecondaryTextLangId resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setSecondaryTextLangId then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setSecondaryTextLangId Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
     }
 }

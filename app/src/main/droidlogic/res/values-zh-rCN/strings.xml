@@ -82,4 +82,12 @@
     <string name="dialog_parameter_not_complete">参数不完整!</string>
 
     <string name="search_activity_not_found">无可用的搜台应用!</string>
+    <string name="strSettings">选项设置</string>
+    <string name="strSettingsCountry">国家:</string>
+    <string name="strSettingsAudioLang">音频语言:</string>
+    <string name="strSettingsMainAudioLang">音频主语言:</string>
+    <string name="strSettingsAssistAudioLang">音频副语言:</string>
+    <string name="strSettingsSubtitleLang">字幕语言:</string>
+    <string name="strSettingsMainSubtitleLang">字幕主语言:</string>
+    <string name="strSettingsAssistSubtitleLang">字幕副语言:</string>
 </resources>

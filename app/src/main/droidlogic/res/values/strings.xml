@@ -83,4 +83,12 @@
     <string name="dialog_parameter_not_complete">Parameters not completed!</string>
 
     <string name="search_activity_not_found">Channel search activity is unavailable!</string>
+    <string name="strSettings">Option Settings</string>
+    <string name="strSettingsCountry">Country:</string>
+    <string name="strSettingsAudioLang">Audio Language:</string>
+    <string name="strSettingsMainAudioLang">Main Audio Language:</string>
+    <string name="strSettingsAssistAudioLang">Second Audio Language:</string>
+    <string name="strSettingsSubtitleLang">Subtitle Language:</string>
+    <string name="strSettingsMainSubtitleLang">Main Subtitle Language:</string>
+    <string name="strSettingsAssistSubtitleLang">Second Subtitle Language:</string>
 </resources>

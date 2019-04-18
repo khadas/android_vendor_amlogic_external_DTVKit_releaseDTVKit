@@ -19,13 +19,16 @@ public class DtvkitDvbScanSelect extends Activity {
     public static final int REQUEST_CODE_START_DVBC_ACTIVITY = 1;
     public static final int REQUEST_CODE_START_DVBT_ACTIVITY = 2;
     public static final int REQUEST_CODE_START_DVBS_ACTIVITY = 3;
+    public static final int REQUEST_CODE_START_SETTINGS_ACTIVITY = 4;
 
     private DataMananer mDataMananer;
+    private Intent mIntent = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.select_search_activity);
+        mIntent = getIntent();
         mDataMananer = new DataMananer(this);
         initLayout();
     }
@@ -42,6 +45,7 @@ public class DtvkitDvbScanSelect extends Activity {
             case REQUEST_CODE_START_DVBC_ACTIVITY:
             case REQUEST_CODE_START_DVBT_ACTIVITY:
             case REQUEST_CODE_START_DVBS_ACTIVITY:
+            case REQUEST_CODE_START_SETTINGS_ACTIVITY:
                 if (resultCode == RESULT_OK) {
                     setResult(RESULT_OK, data);
                     finish();
@@ -62,7 +66,7 @@ public class DtvkitDvbScanSelect extends Activity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent();
-                String inputId = getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
+                String inputId = mIntent.getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
                 if (inputId != null) {
                     intent.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);
                 }
@@ -78,7 +82,7 @@ public class DtvkitDvbScanSelect extends Activity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent();
-                String inputId = getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
+                String inputId = mIntent.getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
                 if (inputId != null) {
                     intent.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);
                 }
@@ -94,7 +98,7 @@ public class DtvkitDvbScanSelect extends Activity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent();
-                String inputId = getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
+                String inputId = mIntent.getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
                 if (inputId != null) {
                     intent.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);
                 }
@@ -102,6 +106,21 @@ public class DtvkitDvbScanSelect extends Activity {
                 startActivityForResult(intent, REQUEST_CODE_START_DVBS_ACTIVITY);
                 mDataMananer.saveIntParameters(DataMananer.KEY_SELECT_SEARCH_ACTIVITY, DataMananer.SELECT_DVBS);
                 Log.d(TAG, "select_dvbs inputId = " + inputId);
+            }
+        });
+        Button settings = (Button)findViewById(R.id.select_setting);
+        settings.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent();
+                String inputId = getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
+                if (inputId != null) {
+                    intent.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);
+                }
+                intent.setClassName(DataMananer.KEY_PACKAGE_NAME, DataMananer.KEY_ACTIVITY_SETTINGS);
+                startActivityForResult(intent, REQUEST_CODE_START_SETTINGS_ACTIVITY);
+                mDataMananer.saveIntParameters(DataMananer.KEY_SELECT_SEARCH_ACTIVITY, DataMananer.SELECT_SETTINGS);
+                Log.d(TAG, "start to set related language");
             }
         });
         switch (index) {
@@ -113,6 +132,9 @@ public class DtvkitDvbScanSelect extends Activity {
                 break;
             case DataMananer.SELECT_DVBS:
                 dvbs.requestFocus();
+                break;
+            case DataMananer.SELECT_SETTINGS:
+                settings.requestFocus();
                 break;
             default:
                 dvbs.requestFocus();

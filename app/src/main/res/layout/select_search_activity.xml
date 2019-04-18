@@ -43,5 +43,13 @@
             android:layout_margin="10dp"
             android:background="@drawable/selector"
             android:text="@string/strDvbs" />
+
+        <Button
+            android:id="@+id/select_setting"
+            android:layout_width="200dp"
+            android:layout_height="50dp"
+            android:layout_margin="10dp"
+            android:background="@drawable/selector"
+            android:text="@string/strSettings" />
     </LinearLayout>
 </LinearLayout>
