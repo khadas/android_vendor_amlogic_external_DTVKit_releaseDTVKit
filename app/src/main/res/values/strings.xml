@@ -79,5 +79,6 @@
     <string name="dvbc_search_mode">Mode:</string>
     <string name="dvbt_search_symbol_rate">Symbol Rate:</string>
     <string name="public_search_mode">Search Mode:</string>
+    <string name="public_search_channel_name">Channel Name:</string>
 
 </resources>

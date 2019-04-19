@@ -152,6 +152,9 @@ public class DataMananer {
     public static final int VALUE_DVBC_SYMBOL_RATE = 6900;
     public static final String KEY_PUBLIC_SEARCH_MODE = "public_search_mode";
     public static final int VALUE_PUBLIC_SEARCH_MODE_AUTO = 1;
+    public static final String KEY_SEARCH_DVBC_CHANNEL_NAME = "dvbc_channel_name";
+    public static final String KEY_SEARCH_DVBT_CHANNEL_NAME = "dvbt_channel_name";
+    public static final int VALUE_SEARCH_CHANNEL_NAME_INDEX_DEFAULT = 0;
 
     public DataMananer(Context context) {
         this.mContext = context;

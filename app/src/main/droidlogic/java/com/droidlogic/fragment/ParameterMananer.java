@@ -1218,6 +1218,12 @@ public class ParameterMananer {
         return resultObj;
     }
 
+    public int getCurrentCountryCode() {
+        int countrycode = 0;
+        countrycode = getCountryCodeByIndex(getIntParameters(KEY_DTVKIT_COUNTRY));
+        return countrycode;
+    }
+
     public int getCountryCodeByIndex(int index) {
         int countrycode = 0;
         JSONObject resultObj = null;
@@ -1426,5 +1432,42 @@ public class ParameterMananer {
             e.printStackTrace();
         }
         return resultObj;
+    }
+
+    public List<String> getChannelTable(int countryCode, boolean isDvbt, boolean isDvbt2) {
+        List<String> result = new ArrayList<String>();
+        try {
+            JSONObject resultObj = null;
+            JSONArray args = new JSONArray();
+            if (isDvbt) {
+                args.put(isDvbt2);
+                args.put(countryCode);
+                resultObj = DtvkitGlueClient.getInstance().request("Dvbt.getTerRfChannelTable", args);
+            } else {
+                args.put(countryCode);
+                resultObj = DtvkitGlueClient.getInstance().request("Dvbc.getCabRfChannelTable", args);
+            }
+
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return result;
+                }
+                for (int i = 0; i < data.length(); i++) {
+                    int index = (int)(((JSONObject)(data.get(i))).get("index"));
+                    String name = (String)(((JSONObject)(data.get(i))).get("name"));
+                    int frequency = (int)(((JSONObject)(data.get(i))).get("freq"));
+                    String collection = String.valueOf(index) + "," + name + "," + String.valueOf(frequency);
+                    result.add(collection);
+                }
+            } else {
+                Log.d(TAG, "getChannelTable then get null");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "getChannelTable Exception = " + e.getMessage());
+            return result;
+        }
+        return result;
     }
 }

@@ -22,18 +22,25 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
+import android.widget.ArrayAdapter;
 
 import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
 import java.util.Locale;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.droidlogic.fragment.ParameterMananer;
 
 public class DtvkitDvbtSetup extends Activity {
     private static final String TAG = "DtvkitDvbtSetup";
 
     private boolean mIsDvbt = false;
     private DataMananer mDataMananer;
+    private ParameterMananer mParameterMananer = null;
 
     private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
         @Override
@@ -83,7 +90,7 @@ public class DtvkitDvbtSetup extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.autosetup);
-
+        mParameterMananer = new ParameterMananer(this, DtvkitGlueClient.getInstance());
         final View startSearch = findViewById(R.id.terrestrialstartsearch);
         final View stopSearch = findViewById(R.id.terrestrialstopsearch);
 
@@ -140,15 +147,22 @@ public class DtvkitDvbtSetup extends Activity {
         Spinner public_search_mode_spinner = (Spinner)findViewById(R.id.public_search_mode_spinner);
         LinearLayout frequency_channel_container = (LinearLayout)findViewById(R.id.frequency_channel_container);
         Spinner frequency_channel_spinner = (Spinner)findViewById(R.id.frequency_channel_spinner);
+        LinearLayout public_search_channel_name_containner = (LinearLayout)findViewById(R.id.public_search_channel_containner);
+        Spinner public_search_channel_name_spinner = (Spinner)findViewById(R.id.public_search_channel_spinner);
         Button search = (Button)findViewById(R.id.terrestrialstartsearch);
 
         int isFrequencyMode = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
         if (isFrequencyMode == DataMananer.VALUE_FREQUENCY_MODE) {
             public_type_in.setText(R.string.search_frequency);
             public_type_edit.setHint(R.string.search_frequency_hint);
+            public_typein_containner.setVisibility(View.VISIBLE);
+            public_search_channel_name_containner.setVisibility(View.GONE);
         } else {
-            public_type_in.setText(R.string.search_number);
-            public_type_edit.setHint(R.string.search_number_hint);
+            //public_type_in.setText(R.string.search_number);
+            //public_type_edit.setHint(R.string.search_number_hint);//not needed
+            public_typein_containner.setVisibility(View.GONE);
+            public_search_channel_name_containner.setVisibility(View.VISIBLE);
+            updateChannelNameContainer();
         }
         public_type_edit.setText("");
         int value = mDataMananer.getIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE);
@@ -161,10 +175,17 @@ public class DtvkitDvbtSetup extends Activity {
             dvbc_mode_containner.setVisibility(View.GONE);
             dvbc_symbol_containner.setVisibility(View.GONE);
             frequency_channel_container.setVisibility(View.GONE);
+            public_search_channel_name_containner.setVisibility(View.GONE);
             search.setText(R.string.strAutoSearch);
         } else {
             search.setText(R.string.strManualSearch);
-            public_typein_containner.setVisibility(View.VISIBLE);
+            if (isFrequencyMode == DataMananer.VALUE_FREQUENCY_MODE) {
+                public_typein_containner.setVisibility(View.VISIBLE);
+                public_search_channel_name_containner.setVisibility(View.GONE);
+            } else {
+                public_typein_containner.setVisibility(View.GONE);
+                public_search_channel_name_containner.setVisibility(View.VISIBLE);
+            }
             frequency_channel_container.setVisibility(View.VISIBLE);
             frequency_channel_spinner.setSelection(mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY));
             if (mIsDvbt) {
@@ -214,8 +235,13 @@ public class DtvkitDvbtSetup extends Activity {
             dvbt_type_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    if (mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE) == position) {
+                        Log.d(TAG, "dvbt_type_spinner same position = " + position);
+                        return;
+                    }
                     Log.d(TAG, "dvbt_type_spinner onItemSelected position = " + position);
                     mDataMananer.saveIntParameters(DataMananer.KEY_DVBT_TYPE, position);
+                    initOrUpdateView(false);
                 }
 
                 @Override
@@ -269,7 +295,51 @@ public class DtvkitDvbtSetup extends Activity {
                     // TODO Auto-generated method stub
                 }
             });
+            public_search_channel_name_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    Log.d(TAG, "public_search_channel_name_spinner onItemSelected position = " + position);
+                    if (mIsDvbt) {
+                        mDataMananer.saveIntParameters(DataMananer.KEY_SEARCH_DVBT_CHANNEL_NAME, position);
+                    } else {
+                        mDataMananer.saveIntParameters(DataMananer.KEY_SEARCH_DVBC_CHANNEL_NAME, position);
+                    }
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {
+                    // TODO Auto-generated method stub
+                }
+            });
         }
+    }
+
+    private void updateChannelNameContainer() {
+        LinearLayout public_search_channel_name_containner = (LinearLayout)findViewById(R.id.public_search_channel_containner);
+        Spinner public_search_channel_name_spinner = (Spinner)findViewById(R.id.public_search_channel_spinner);
+
+        List<String> list = null;
+        List<String> newlist = new ArrayList<String>();
+        ArrayAdapter<String> adapter = null;
+        int select = mIsDvbt ? mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBT_CHANNEL_NAME) :
+                mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBC_CHANNEL_NAME);
+        list = mParameterMananer.getChannelTable(mParameterMananer.getCurrentCountryCode(), mIsDvbt, mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE) == 1);
+        for (String one : list) {
+            String[] parameter = one.split(",");//first number, second string, third number
+            if (parameter != null && parameter.length == 3) {
+                String result = "NO." + parameter[0] + "  " + parameter[1] + "  " + parameter[2] + "Hz";
+                newlist.add(result);
+            }
+        }
+        if (list == null) {
+            Log.d(TAG, "updateChannelNameContainer can't find channel freq table");
+            return;
+        }
+        adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, newlist);
+        adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
+        public_search_channel_name_spinner.setAdapter(adapter);
+        select = (select < list.size()) ? select : 0;
+        public_search_channel_name_spinner.setSelection(select);
     }
 
     private JSONArray initSearchParameter(JSONArray args) {
@@ -285,6 +355,11 @@ public class DtvkitDvbtSetup extends Activity {
                             args.put(DataMananer.VALUE_DVBT_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_MODE)]);
                             args.put(DataMananer.VALUE_DVBT_TYPE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE)]);
                         } else {
+                            parameter = getChannelIndex();
+                            if (parameter == null) {
+                                Log.d(TAG, "initSearchParameter dvbt search can't find channel index");
+                                return null;
+                            }
                             args.put(Integer.valueOf(parameter));
                         }
                     } else {
@@ -293,6 +368,11 @@ public class DtvkitDvbtSetup extends Activity {
                             args.put(DataMananer.VALUE_DVBC_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]);
                             args.put(mDataMananer.getIntParameters(DataMananer.KEY_DVBC_SYMBOL_RATE));
                         } else {
+                            parameter = getChannelIndex();
+                            if (parameter == null) {
+                                Log.d(TAG, "initSearchParameter dvbc search can't find channel index");
+                                return null;
+                            }
                             args.put(Integer.valueOf(parameter));
                         }
                     }
@@ -309,15 +389,35 @@ public class DtvkitDvbtSetup extends Activity {
     }
 
     private String getParameter() {
+        String parameter = null;
         EditText public_type_edit = (EditText)findViewById(R.id.public_typein_edit);
         Editable editable = public_type_edit.getText();
-        if (editable != null) {
+        int isfrequencysearch = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
+        if (DataMananer.VALUE_FREQUENCY_MODE != isfrequencysearch) {
+            parameter = getChannelIndex();
+        } else if (editable != null) {
             String value = editable.toString();
             if (!TextUtils.isEmpty(value) && TextUtils.isDigitsOnly(value)) {
-                return value;
+                parameter = value;
             }
         }
-        return null;
+
+        return parameter;
+    }
+
+    private String getChannelIndex() {
+        String result = null;
+        int index = mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBT_CHANNEL_NAME);
+        List<String> list = mParameterMananer.getChannelTable(mParameterMananer.getCurrentCountryCode(), mIsDvbt, mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE) == 1);
+        String channelInfo = (index < list.size()) ? list.get(index) : null;
+        if (channelInfo != null) {
+            String[] parameter = channelInfo.split(",");//first number, second string, third number
+            if (parameter != null && parameter.length == 3 && TextUtils.isDigitsOnly(parameter[0])) {
+                result = parameter[0];
+                Log.d(TAG, "getChannelIndex channel index = " + parameter[0] + ", name = " + parameter[1] + ", freq = " + parameter[2]);
+            }
+        }
+        return result;
     }
 
     private void startSearch() {

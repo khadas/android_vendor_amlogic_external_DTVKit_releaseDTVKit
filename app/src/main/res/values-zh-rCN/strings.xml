@@ -59,4 +59,5 @@
     <string name="dvbc_search_mode">模式:</string>
     <string name="dvbt_search_symbol_rate">符号率:</string>
     <string name="public_search_mode">搜索模式:</string>
+    <string name="public_search_channel_name">Channel Name:</string>
 </resources>
