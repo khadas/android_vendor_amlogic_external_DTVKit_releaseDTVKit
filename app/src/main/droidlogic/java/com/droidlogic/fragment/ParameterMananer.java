@@ -1090,7 +1090,7 @@ public class ParameterMananer {
         }
     }
 
-    public List<String> getCountryList() {
+    public List<String> getCountryDisplayList() {
         List<String> result = new ArrayList<String>();
         try {
             JSONObject resultObj = getCountrys();
@@ -1114,7 +1114,7 @@ public class ParameterMananer {
                                     break;
                                 }
                             } catch (Exception e1) {
-                                Log.e(TAG, "getCountryList ios3 country Exception " + e1.getMessage() + ", trace=" + e1.getStackTrace() + " continue");
+                                Log.e(TAG, "getCountryDisplayList ios3 country Exception " + e1.getMessage() + ", trace=" + e1.getStackTrace() + " continue");
                                 continue;
                             }
                         }
@@ -1123,10 +1123,36 @@ public class ParameterMananer {
                 }
 
             } else {
-                Log.d(TAG, "getCountryList then get null");
+                Log.d(TAG, "getCountryDisplayList then get null");
             }
         } catch (Exception e) {
-            Log.d(TAG, "getCountryList Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            Log.d(TAG, "getCountryDisplayList Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+
+        return result;
+    }
+
+    public List<Integer> getCountryCodeList() {
+        List<Integer> result = new ArrayList<Integer>();
+        try {
+            JSONObject resultObj = getCountrys();
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return result;
+                }
+                for (int i = 0; i < data.length(); i++) {
+                    int countryCode = (int)(((JSONObject)(data.get(i))).get("country_code"));
+                    result.add(countryCode);
+                }
+
+            } else {
+                Log.d(TAG, "getCountryCodeList then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getCountryCodeList Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
         }
 
@@ -1150,10 +1176,14 @@ public class ParameterMananer {
         return resultObj;
     }
 
-    public List<String> getLangList() {
+    public List<String> getCurrentLangNameList() {
+        return getLangNameList(getCountryCodeByIndex(getIntParameters(KEY_DTVKIT_COUNTRY)));
+    }
+
+    public List<String> getLangNameList(int countryCode) {
         List<String> result = new ArrayList<String>();
         try {
-            JSONObject resultObj = getCountryLangs(getCountryCodeByIndex(getIntParameters(KEY_DTVKIT_COUNTRY)));
+            JSONObject resultObj = getCountryLangs(countryCode);
             JSONArray data = null;
             if (resultObj != null) {
                 data = (JSONArray)resultObj.get("data");
@@ -1161,15 +1191,40 @@ public class ParameterMananer {
                     return result;
                 }
                 for (int i = 0; i < data.length(); i++) {
-                    String langIds = (String)(((JSONObject)(data.get(i))).get("lang_ids"));
+                    String langName = (String)(((JSONObject)(data.get(i))).get("lang_ids"));
+                    result.add(langName);
+                }
+
+            } else {
+                Log.d(TAG, "getLangIdList then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getLangIdList Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    public List<Integer> getLangIdList(int countryCode) {
+        List<Integer> result = new ArrayList<Integer>();
+        try {
+            JSONObject resultObj = getCountryLangs(countryCode);
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return result;
+                }
+                for (int i = 0; i < data.length(); i++) {
+                    int langIds = (int)(((JSONObject)(data.get(i))).get("lang_index"));
                     result.add(langIds);
                 }
 
             } else {
-                Log.d(TAG, "getLangList then get null");
+                Log.d(TAG, "getLangIdList then get null");
             }
         } catch (Exception e) {
-            Log.d(TAG, "getLangList Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            Log.d(TAG, "getLangIdList Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
         }
         return result;
@@ -1266,6 +1321,61 @@ public class ParameterMananer {
             e.printStackTrace();
         }
         return resultObj;
+    }
+
+    public int getCurrentMainAudioLangId() {
+        int id = 0;
+        id = getLangIndexCodeByIndex(getIntParameters(KEY_DTVKIT_MAIN_AUDIO_LANG));
+        return id;
+    }
+
+    public int getCurrentSecondAudioLangId() {
+        int id = 0;
+        id = getLangIndexCodeByIndex(getIntParameters(KEY_DTVKIT_ASSIST_AUDIO_LANG));
+        return id;
+    }
+
+    public int getCurrentMainSubLangId() {
+        int id = 0;
+        id = getLangIndexCodeByIndex(getIntParameters(KEY_DTVKIT_MAIN_SUBTITLE_LANG));
+        return id;
+    }
+
+    public int getCurrentSecondSubLangId() {
+        int id = 0;
+        id = getLangIndexCodeByIndex(getIntParameters(KEY_DTVKIT_ASSIST_SUBTITLE_LANG));
+        return id;
+    }
+
+    public int[] getCurrentLangParameter() {
+        int[] result = {-1, -1, -1, -1, -1};
+        JSONObject resultObj = null;
+        try {
+            JSONArray args1 = new JSONArray();
+            JSONObject data = null;
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.getcurrentCountryInfos", args1);
+            if (resultObj != null) {
+                data = (JSONObject)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return result;
+                }
+                resultObj = data;
+                if (resultObj != null) {
+                    Log.d(TAG, "getCurrentLangParameter resultObj = " + resultObj.toString());
+                    result[0] = (int)(resultObj.get("country_code"));
+                    result[1] = (int)(resultObj.get("a_pri_lang_id"));
+                    result[2] = (int)(resultObj.get("a_sec_lang_id"));
+                    result[3] = (int)(resultObj.get("t_pri_lang_id"));
+                    result[4] = (int)(resultObj.get("t_sec_lang_id"));
+                }
+            } else {
+                Log.d(TAG, "getCurrentLangParameter then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getCurrentLangParameter Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return result;
     }
 
     public int getLangIndexCodeByIndex(int index) {

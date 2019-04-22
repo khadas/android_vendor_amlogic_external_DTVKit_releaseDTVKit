@@ -36,6 +36,7 @@ public class DtvkitDvbSettings extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.lanuage_settings);
         mParameterMananer = new ParameterMananer(this, mDtvkitGlueClient);
+        updateFirstSettings();
         initLayout(false);
     }
 
@@ -157,14 +158,14 @@ public class DtvkitDvbSettings extends Activity {
         ArrayAdapter<String> adapter = null;
         int select = 0;
         //add country
-        list = mParameterMananer.getCountryList();
+        list = mParameterMananer.getCountryDisplayList();
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
         country.setAdapter(adapter);
         select = mParameterMananer.getIntParameters(ParameterMananer.KEY_DTVKIT_COUNTRY);
         country.setSelection(select);
         //add main audio
-        list = mParameterMananer.getLangList();
+        list = mParameterMananer.getCurrentLangNameList();
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
         adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice );
         main_audio.setAdapter(adapter);
@@ -182,5 +183,41 @@ public class DtvkitDvbSettings extends Activity {
         assist_subtitle.setAdapter(adapter);
         select = mParameterMananer.getIntParameters(ParameterMananer.KEY_DTVKIT_ASSIST_SUBTITLE_LANG);
         assist_subtitle.setSelection(select);
+    }
+
+    private void updateFirstSettings() {
+        int[] allLang = mParameterMananer.getCurrentLangParameter();
+        int[] value_list = new int[5];
+        List<Integer> countryCodeList = mParameterMananer.getCountryCodeList();
+        /*int currentCountryCode*/
+        value_list[0] = mParameterMananer.getCurrentCountryCode();
+        List<Integer> langIndexList = mParameterMananer.getLangIdList(value_list[0]);
+        /*int currentMainAudioId*/
+        value_list[1] = mParameterMananer.getCurrentMainAudioLangId();
+        /*int currentSecondAudioId*/
+        value_list[2] = mParameterMananer.getCurrentSecondAudioLangId();
+        /*int currentMainSubId*/
+        value_list[3] = mParameterMananer.getCurrentMainSubLangId();
+        /*int currentSecondSubId*/
+        value_list[4] = mParameterMananer.getCurrentSecondSubLangId();
+        final String[] KEY_LIST = {ParameterMananer.KEY_DTVKIT_COUNTRY, ParameterMananer.KEY_DTVKIT_MAIN_AUDIO_LANG, ParameterMananer.KEY_DTVKIT_ASSIST_AUDIO_LANG,
+                ParameterMananer.KEY_DTVKIT_MAIN_SUBTITLE_LANG, ParameterMananer.KEY_DTVKIT_ASSIST_SUBTITLE_LANG};
+        final String[] PRINT_TNFO_LIST = {"currentCountryCode", "currentMainAudioId", "currentSecondAudioId",
+                "currentMainSubId", "currentSecondSubId"};
+
+        for (int k = 0; k < 5; k++) {//deal five parameters in for
+            if (allLang[k] != -1 && allLang[k] != value_list[k] && countryCodeList != null && countryCodeList.size() > 0) {
+                for (int i = 0; i < countryCodeList.size(); i++) {
+                    if (countryCodeList.get(i) == allLang[k]) {
+                        Log.d(TAG, "updateFirstSettings find " + PRINT_TNFO_LIST[k] + " by index i = " + i);
+                        value_list[k] = allLang[k];
+                        mParameterMananer.saveIntParameters(KEY_LIST[i], i);
+                        break;
+                    }
+                }
+            } else {
+                Log.d(TAG, "updateFirstSettings use saved " + PRINT_TNFO_LIST[k] + " = " + value_list[k]);
+            }
+        }
     }
 }
