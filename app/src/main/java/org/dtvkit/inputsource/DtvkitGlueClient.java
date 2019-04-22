@@ -58,12 +58,16 @@ public class DtvkitGlueClient {
         for (SignalHandler handler :mHandlers) {
             handler.onSignal(resource, object);
         }
-
     }
 
    public void setDisplay(Surface sh) {
         nativeSetSurface(sh);
    }
+
+   public void disConnectDtvkitClient() {
+        nativedisconnectdtvkit();
+   }
+
 
 /*
     final class ServiceNotification extends IServiceNotification.Stub {

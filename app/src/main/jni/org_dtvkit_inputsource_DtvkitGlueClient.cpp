@@ -72,6 +72,13 @@ DTVKitClientJni::DTVKitClientJni()  {
     mDkSession->setListener(this);
 }
 
+DTVKitClientJni *DTVKitClientJni::mInstance = NULL;
+DTVKitClientJni *DTVKitClientJni::GetInstance() {
+    if (NULL == mInstance)
+         mInstance = new DTVKitClientJni();
+    return mInstance;
+}
+
 DTVKitClientJni::~DTVKitClientJni()  {
 
 }
@@ -124,7 +131,7 @@ void DTVKitClientJni::notify(const parcel_t &parcel) {
 static void connectdtvkit(JNIEnv *env, jclass clazz, jobject obj)
 {
     ALOGI("ref dtvkit");
-    mpDtvkitJni  = new DTVKitClientJni();
+    mpDtvkitJni  =  DTVKitClientJni::GetInstance();
     DtvkitObject = env->NewGlobalRef(obj);
 }
 
@@ -135,10 +142,12 @@ static void disconnectdtvkit(JNIEnv *env, jclass clazz)
 }
 
 static jstring request(JNIEnv *env, jclass clazz, jstring jresource, jstring jjson) {
-    //std::string resource = jstring2string(env, jresource);
-    //std::string json     = jstring2string(env, jjson);
     const char *resource = env->GetStringUTFChars(jresource, nullptr);
     const char *json = env->GetStringUTFChars(jjson, nullptr);
+    if (mpDtvkitJni == nullptr) {
+        ALOGE("dtvkitJni is null");
+        mpDtvkitJni  =  DTVKitClientJni::GetInstance();
+    }
     std::string result   = mpDtvkitJni->request(resource, json);
     env->ReleaseStringUTFChars(jresource, resource);
     env->ReleaseStringUTFChars(jjson, json);

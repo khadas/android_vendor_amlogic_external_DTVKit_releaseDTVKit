@@ -90,11 +90,14 @@ public:
     DTVKitClientJni();
     ~DTVKitClientJni();
     virtual void notify(const parcel_t &parcel);
+
+    static DTVKitClientJni *GetInstance();
     std::string request(const std::string& resource, const std::string& json);
 
 private:
     sp<DTVKitHidlClient> mDkSession;
     mutable Mutex mLock;
+    static DTVKitClientJni *mInstance;
 };
 
 #endif/*__ORG_DTVKIT_INPUTSOURCE_CLIENT_H__*/
