@@ -15,17 +15,13 @@ LOCAL_C_INCLUDES += $(JNI_H_INCLUDE) \
                     frameworks/native/libs/nativewindow \
                     external/skia/include/core \
                     hardware/amlogic/gralloc \
-                    $(call include-path-for, libhardware)/hardware \
-                    $(call include-path-for, libhardware_legacy)/hardware_legacy \
+                    vendor/amlogic/common/external/DTVKit/android-rpcservice/apps/binder/inc \
 
 LOCAL_MODULE := libdtvkit_jni
-
 LOCAL_SHARED_LIBRARIES :=  \
-    vendor.amlogic.hardware.dtvkitserver@1.0 \
     libhidlbase \
     libhidltransport \
     libhidlmemory \
-    android.hidl.allocator@1.0 \
     libcutils \
     libutils \
     libgui \
@@ -34,7 +30,7 @@ LOCAL_SHARED_LIBRARIES :=  \
     libhardware \
     libhardware_legacy \
     libnativehelper \
-    libdtvkithidlclient
+    lib_dtvkitserver
 
 LOCAL_STATIC_LIBRARIES := libamgralloc_ext_static
 LOCAL_PRELINK_MODULE := false

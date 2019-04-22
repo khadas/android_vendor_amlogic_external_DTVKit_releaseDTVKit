@@ -14,6 +14,9 @@ import android.view.SurfaceHolder;
 
 import java.util.ArrayList;
 
+import com.droidlogic.app.SystemControlManager;
+
+
 public class DtvkitGlueClient {
     private static final String TAG = "DtvkitGlueClient";
 
@@ -31,6 +34,12 @@ public class DtvkitGlueClient {
     private native void nativedisconnectdtvkit();
     private native void nativeSetSurface(Surface surface);
     private native String nativerequest(String resource, String json);
+
+    //Define file type
+    private final int SYSFS = 0;
+    private final int PROP = 1;
+
+    protected SystemControlManager mSystemControlManager;
 
     static {
         System.loadLibrary("dtvkit_jni");
@@ -146,6 +155,7 @@ public class DtvkitGlueClient {
 
     protected DtvkitGlueClient() {
         // Singleton
+        mSystemControlManager = SystemControlManager.getInstance();
         nativeconnectdtvkit(this);
     }
 
@@ -183,6 +193,32 @@ public class DtvkitGlueClient {
             }
         } catch (JSONException | RemoteException e) {
             throw new Exception(e.getMessage());
+        }
+    }
+
+    public String readBySysControl(int ftype, String name) {
+        String value = null;
+        if (mSystemControlManager != null) {
+            if (ftype == SYSFS) {
+                value = mSystemControlManager.readSysFs(name);
+            } else if (ftype == PROP) {
+                value = mSystemControlManager.getProperty(name);
+            } else {
+                //printf error log
+            }
+        }
+        return value;
+    }
+
+    public void writeBySysControl(int ftype, String name, String cmd) {
+        if (mSystemControlManager != null) {
+            if (ftype == SYSFS) {
+                mSystemControlManager.writeSysFs(name, cmd);
+            } else if (ftype == PROP) {
+                mSystemControlManager.setProperty(name, cmd);
+            } else {
+                //printf error log
+            }
         }
     }
 }
