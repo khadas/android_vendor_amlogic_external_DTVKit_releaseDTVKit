@@ -135,6 +135,7 @@ public abstract class EpgSyncJobService extends JobService {
     private static final int BATCH_OPERATION_COUNT = 100;
     private static final long OVERRIDE_DEADLINE_MILLIS = 1000;  // 1 second
     private static final String BUNDLE_KEY_SYNC_NOW_NEXT = "BUNDLE_KEY_SYNC_NOW_NEXT";
+    private static final String BUNDLE_KEY_SYNC_CHANNEL_ONLY = "BUNDLE_KEY_SYNC_CHANNEL_ONLY";
 
 
     private final SparseArray<EpgSyncTask> mTaskArray = new SparseArray<>();
@@ -322,7 +323,7 @@ public abstract class EpgSyncJobService extends JobService {
      * @param jobServiceComponent The {@link EpgSyncJobService} class that will run.
      */
     public static void requestImmediateSync(Context context, String inputId, boolean nowNext,
-            ComponentName jobServiceComponent) {
+            boolean channelOnly, ComponentName jobServiceComponent) {
         if (jobServiceComponent.getClass().isAssignableFrom(EpgSyncJobService.class)) {
             throw new IllegalArgumentException("This class does not extend EpgSyncJobService");
         }
@@ -332,6 +333,7 @@ public abstract class EpgSyncJobService extends JobService {
         persistableBundle.putBoolean(ContentResolver.SYNC_EXTRAS_EXPEDITED, true);
         persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_INPUT_ID, inputId);
         persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_NOW_NEXT, nowNext);
+        persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_CHANNEL_ONLY, channelOnly);
         JobInfo.Builder builder = new JobInfo.Builder(REQUEST_SYNC_JOB_ID, jobServiceComponent);
         JobInfo jobInfo = builder
                 .setExtras(persistableBundle)
@@ -342,6 +344,11 @@ public abstract class EpgSyncJobService extends JobService {
         if (DEBUG) {
             Log.d(TAG, "Single job scheduled");
         }
+    }
+
+    public static void requestImmediateSync(Context context, String inputId, boolean nowNext,
+            ComponentName jobServiceComponent) {
+        requestImmediateSync(context, inputId, nowNext, false, jobServiceComponent);
     }
 
     /**
@@ -392,6 +399,8 @@ public abstract class EpgSyncJobService extends JobService {
             /* Get which type of sync this is. Now next or updated event period sync */
             boolean nowNext = extras.getBoolean(BUNDLE_KEY_SYNC_NOW_NEXT, false);
 
+            boolean channelOnly = extras.getBoolean(BUNDLE_KEY_SYNC_CHANNEL_ONLY, false);
+
             /* Get the updated event periods if required for this type of sync */
             /*List<EventPeriod> eventPeriods = new ArrayList<>();
             if (!nowNext) {
@@ -410,27 +419,29 @@ public abstract class EpgSyncJobService extends JobService {
                     return null;
                 }
 
-                /* Get the programs */
-                List<Program> programs = new ArrayList<>();
-                programs.addAll(getAllProgramsForChannel(channelUri, channelMap.valueAt(i)));
+                if (!channelOnly) {
+                    /* Get the programs */
+                    List<Program> programs = new ArrayList<>();
+                    programs.addAll(getAllProgramsForChannel(channelUri, channelMap.valueAt(i)));
 
-                if (!programs.isEmpty()) {
-                    /* Set channel ids if not set */
-                    for (int index = 0; index < programs.size(); index++) {
-                        if (programs.get(index).getChannelId() == -1) {
-                            programs.set(index,
-                                    new Program.Builder(programs.get(index))
-                                            .setChannelId(channelMap.valueAt(i).getId())
-                                            .build());
+                    if (!programs.isEmpty()) {
+                        /* Set channel ids if not set */
+                        for (int index = 0; index < programs.size(); index++) {
+                            if (programs.get(index).getChannelId() == -1) {
+                                programs.set(index,
+                                        new Program.Builder(programs.get(index))
+                                                .setChannelId(channelMap.valueAt(i).getId())
+                                                .build());
+                            }
                         }
-                    }
 
-                    /* Double check whether the job has been cancelled */
-                    if (isCancelled()) {
-                        broadcastError(ERROR_EPG_SYNC_CANCELED);
-                        return null;
+                        /* Double check whether the job has been cancelled */
+                        if (isCancelled()) {
+                            broadcastError(ERROR_EPG_SYNC_CANCELED);
+                            return null;
+                        }
+                        updatePrograms(channelUri, programs);
                     }
-                    updatePrograms(channelUri, programs);
                 }
 
                 Intent intent = new Intent(ACTION_SYNC_STATUS_CHANGED);

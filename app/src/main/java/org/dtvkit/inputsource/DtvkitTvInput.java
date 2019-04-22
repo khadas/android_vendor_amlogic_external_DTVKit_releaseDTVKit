@@ -985,9 +985,11 @@ public class DtvkitTvInput extends TvInputService {
                                     if (mHandlerThreadHandle != null)
                                         mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);//check resolution later
                                 }
+                                Log.i(TAG, "audio track selected: " + playerGetSelectedAudioTrack());
                                 notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(playerGetSelectedAudioTrack()));
                                 if (playerGetSubtitlesOn()) {
-                                    notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, Integer.toString(playerGetSelectedSubtitleTrack()));
+                                    Log.i(TAG, "subtitle track selected: " + playerGetSelectedSubtitleTrackId());
+                                    notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, playerGetSelectedSubtitleTrackId());
                                 }
 
                                 if (timeshiftRecorderState == RecorderState.STOPPED) {
@@ -1143,6 +1145,26 @@ public class DtvkitTvInput extends TvInputService {
                     Log.i(TAG, "DvbUpdatedEventNow");
                     ComponentName sync = new ComponentName(mContext, DtvkitEpgSync.class);
                     EpgSyncJobService.requestImmediateSync(mContext, mInputId, true, sync);
+                }
+                else if (signal.equals("DvbUpdatedChannel"))
+                {
+                    Log.i(TAG, "DvbUpdatedChannel");
+                    ComponentName sync = new ComponentName(mContext, DtvkitEpgSync.class);
+                    EpgSyncJobService.requestImmediateSync(mContext, mInputId, false, true, sync);
+                }
+                else if (signal.equals("DvbUpdatedChannelData"))
+                {
+                    Log.i(TAG, "DvbUpdatedChannelData");
+                    List<TvTrackInfo> tracks = playerGetTracks();
+                    if (!tracks.equals(mTunedTracks)) {
+                        mTunedTracks = tracks;
+                        notifyTracksChanged(mTunedTracks);
+                    }
+                    Log.i(TAG, "audio track selected: " + playerGetSelectedAudioTrack());
+                    notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(playerGetSelectedAudioTrack()));
+                    if (playerGetSubtitlesOn())
+                        Log.i(TAG, "subtitle track selected: " + playerGetSelectedSubtitleTrackId());
+                        notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, playerGetSelectedSubtitleTrackId());
                 }
                 else if (signal.equals("MhegAppStarted"))
                 {
@@ -1622,6 +1644,30 @@ public class DtvkitTvInput extends TvInputService {
         }
         return index;
     }
+
+    private String playerGetSelectedSubtitleTrackId() {
+        String trackId = null;
+        try {
+            JSONArray args = new JSONArray();
+            JSONArray subtitleStreams = DtvkitGlueClient.getInstance().request("Player.getListOfSubtitleStreams", args).getJSONArray("data");
+            for (int i = 0; i < subtitleStreams.length(); i++)
+            {
+                JSONObject subtitleStream = subtitleStreams.getJSONObject(i);
+                if (subtitleStream.getBoolean("selected")) {
+                    if (subtitleStream.getBoolean("teletext")) {
+                        trackId = "id=" + Integer.toString(subtitleStream.getInt("index")) + "&" + "type=" + "6";//TYPE_DTV_TELETEXT_IMG
+                    } else {
+                        trackId = "id=" + Integer.toString(subtitleStream.getInt("index")) + "&" + "type=" + "4";//TYPE_DTV_CC
+                    }
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "playerGetSelectedSubtitleTrackId = " + e.getMessage());
+        }
+        return trackId;
+    }
+
 
     private int playerGetSelectedAudioTrack() {
         int index = 0xFFFF;
