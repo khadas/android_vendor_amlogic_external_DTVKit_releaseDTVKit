@@ -143,6 +143,7 @@ public class DtvkitTvInput extends TvInputService {
         Log.i(TAG, "onDestroy");
         mContentResolver.unregisterContentObserver(mContentObserver);
         mContentResolver.unregisterContentObserver(mRecordingsContentObserver);
+        DtvkitGlueClient.getInstance().disConnectDtvkitClient();
         super.onDestroy();
     }
 

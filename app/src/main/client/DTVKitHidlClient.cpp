@@ -34,8 +34,7 @@ using ::android::hidl::memory::V1_0::IMemory;
 Mutex DTVKitHidlClient::mLock;
 
 sp<IDTVKitServer> DTVKitHidlClient::getDTVKitService() {
-    Mutex::Autolock _l(mLock);
-
+    //Mutex::Autolock _l(mLock);
     sp<IDTVKitServer> DtvkitService = IDTVKitServer::tryGetService();
     while (DtvkitService == nullptr) {
          usleep(200*1000);//sleep 200ms
@@ -73,7 +72,7 @@ sp<DTVKitHidlClient> DTVKitHidlClient::connect(connect_type_t type)
 
 void DTVKitHidlClient::reconnect()
 {
-    ALOGI("share memory client reconnect");
+    ALOGI("dtvkit client reconnect");
     mDTVKitServer.clear();
     //reconnect to server
     mDTVKitServer = getDTVKitService();
@@ -91,6 +90,7 @@ void DTVKitHidlClient::setListener(const sp<DTVKitListener> &listener)
 }
 
 std::string DTVKitHidlClient::request(const std::string& resource, const std::string& json) {
+    Mutex::Autolock _l(mLock);
     std::string result;
     mDTVKitServer->request(resource, json, [&](const std::string& res) {
         result = res;
