@@ -32,6 +32,8 @@ LOCAL_REQUIRED_MODULES := libplatform
 LOCAL_CERTIFICATE := platform
 LOCAL_PROGUARD_ENABLED := disabled
 
+LOCAL_JAVA_LIBRARIES := droidlogic
+
 ifneq ($(BUILD_DTVKIT_IN_SYSTEM), true)
 LOCAL_PRODUCT_MODULE := true
 endif

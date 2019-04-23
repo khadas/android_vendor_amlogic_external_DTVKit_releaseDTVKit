@@ -27,6 +27,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Leanback"
         android:banner="@drawable/dtvkit">
+
+        <uses-library android:name="droidlogic.software.core" />
+
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
