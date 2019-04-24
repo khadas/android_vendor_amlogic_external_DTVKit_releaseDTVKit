@@ -322,7 +322,7 @@ public class DtvkitTvInput extends TvInputService {
 
         @Override
         public void onTune(Uri uri) {
-            Log.i(TAG, "onTune for recording " + uri);
+            Log.d(TAG, "onTune for recording " + uri);
             if (ContentUris.parseId(uri) == -1) {
                 Log.e(TAG, "DtvkitRecordingSession onTune invalid uri = " + uri);
                 notifyError(TvInputManager.RECORDING_ERROR_UNKNOWN);
@@ -341,7 +341,7 @@ public class DtvkitTvInput extends TvInputService {
 
         @Override
         public void onStartRecording(@Nullable Uri uri) {
-            Log.i(TAG, "onStartRecording " + uri);
+            Log.d(TAG, "onStartRecording " + uri);
             mProgram = uri;
 
             String dvbUri;
@@ -513,7 +513,7 @@ public class DtvkitTvInput extends TvInputService {
             };
 
             playerSetTimeshiftBufferSize(timeshiftBufferSizeMins);
-            recordingSetDefaultDisk("/data");
+            recordingSetDefaultDisk("/data/data/org.dtvkit.inputsource");
             mDtvkitTvInputSessionCount++;
             mCurrentDtvkitTvInputSessionIndex = mDtvkitTvInputSessionCount;
             initWorkThread();
@@ -1538,7 +1538,7 @@ public class DtvkitTvInput extends TvInputService {
 
     private boolean recordingSetDefaultDisk(String disk_mount_path) {
         try {
-            Log.i(TAG, "setDefaultDisk: " + disk_mount_path);
+            Log.d(TAG, "setDefaultDisk: " + disk_mount_path);
             JSONArray args = new JSONArray();
             args.put(disk_mount_path);
             DtvkitGlueClient.getInstance().request("Recording.setDefaultDisk", args);

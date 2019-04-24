@@ -22,10 +22,8 @@
 #include <utils/Log.h>
 #include <ScopedLocalRef.h>
 #include "android_runtime/Log.h"
-#include "../client/DTVKitHidlClient.h"
+
 using namespace android;
-using ::android::hardware::hidl_memory;
-using ::android::hardware::hidl_string;
 
 class CallbackEnv {
 public:
@@ -44,7 +42,7 @@ public:
   bool valid() const {
     JNIEnv *env = AndroidRuntime::getJNIEnv();
     if (!mCallbackEnv || (mCallbackEnv != env)) {
-        ALOGE("%s: Callback env fail: env: %p, callback: %p", mName, env, mCallbackEnv);
+        //ALOGE("%s: Callback env fail: env: %p, callback: %p", mName, env, mCallbackEnv);
         return false;
     }
     return true;
@@ -67,7 +65,13 @@ private:
 
 enum {
     REQUEST = 0,
-    DRAW = 1,
+    DRAW
+ = 1,
+};
+
+enum {
+    SYSFS = 0,
+    PROP = 1,
 };
 
 typedef struct datablock_s {
@@ -77,28 +81,13 @@ typedef struct datablock_s {
     int dst_y;
     int dst_width;
     int dst_height;
-    hidl_memory mem;
+    void * mem;
 } datablock_t;
 
 typedef struct dvbparam_s {
     std::string resource;
     std::string json;
 }dvbparam_t;
-
-class DTVKitClientJni : public DTVKitListener {
-public:
-    DTVKitClientJni();
-    ~DTVKitClientJni();
-    virtual void notify(const parcel_t &parcel);
-
-    static DTVKitClientJni *GetInstance();
-    std::string request(const std::string& resource, const std::string& json);
-
-private:
-    sp<DTVKitHidlClient> mDkSession;
-    mutable Mutex mLock;
-    static DTVKitClientJni *mInstance;
-};
 
 #endif/*__ORG_DTVKIT_INPUTSOURCE_CLIENT_H__*/
 
