@@ -623,7 +623,7 @@ public class DtvkitTvInput extends TvInputService {
                     return true;
                 }
             } else if (type == TvTrackInfo.TYPE_SUBTITLE) {
-                if (trackId != null && TextUtils.isDigitsOnly(trackId)) {
+                if (trackId != null && !TextUtils.isDigitsOnly(trackId)) {
                     String[] nameValuePairs = trackId.split("&");
                     if (nameValuePairs != null && nameValuePairs.length > 0) {
                         String[] nameValue = nameValuePairs[0].split("=");
@@ -631,6 +631,10 @@ public class DtvkitTvInput extends TvInputService {
                             trackId = nameValue[1];//parse id
                         }
                     }
+                }
+                if (!TextUtils.isDigitsOnly(trackId)) {
+                    Log.d(TAG, "need trackId that only contains number");
+                    return false;
                 }
                 if (playerSelectSubtitleTrack((null == trackId) ? 0xFFFF : Integer.parseInt(trackId))) {
                     notifyTrackSelected(type, trackId);
