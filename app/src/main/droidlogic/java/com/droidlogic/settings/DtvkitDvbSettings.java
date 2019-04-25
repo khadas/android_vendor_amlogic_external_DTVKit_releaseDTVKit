@@ -23,6 +23,11 @@ import com.droidlogic.fragment.ParameterMananer;
 import org.dtvkit.inputsource.DtvkitGlueClient;
 import org.dtvkit.inputsource.R;
 
+import android.content.ComponentName;
+import android.media.tv.TvInputInfo;
+import org.dtvkit.companionlibrary.EpgSyncJobService;
+import org.dtvkit.inputsource.DtvkitEpgSync;
+
 public class DtvkitDvbSettings extends Activity {
 
     private static final String TAG = "DtvkitDvbSettings";
@@ -38,6 +43,13 @@ public class DtvkitDvbSettings extends Activity {
         mParameterMananer = new ParameterMananer(this, mDtvkitGlueClient);
         updateFirstSettings();
         initLayout(false);
+    }
+
+    private void updatingGuide() {
+        EpgSyncJobService.cancelAllSyncRequests(this);
+        String inputId = this.getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
+        Log.i(TAG, String.format("inputId: %s", inputId));
+        EpgSyncJobService.requestImmediateSync(this, inputId, true, new ComponentName(this, DtvkitEpgSync.class));
     }
 
     private void initLayout(boolean update) {
@@ -71,6 +83,7 @@ public class DtvkitDvbSettings extends Activity {
                 mParameterMananer.setPrimaryTextLangByIndex(0);
                 mParameterMananer.setSecondaryTextLangByIndex(0);
                 initLayout(true);
+                updatingGuide();
             }
 
             @Override
@@ -88,6 +101,7 @@ public class DtvkitDvbSettings extends Activity {
                 }
                 mParameterMananer.saveIntParameters(ParameterMananer.KEY_DTVKIT_MAIN_AUDIO_LANG, position);
                 mParameterMananer.setPrimaryAudioLangByIndex(position);
+                updatingGuide();
             }
 
             @Override
@@ -105,6 +119,7 @@ public class DtvkitDvbSettings extends Activity {
                 }
                 mParameterMananer.saveIntParameters(ParameterMananer.KEY_DTVKIT_ASSIST_AUDIO_LANG, position);
                 mParameterMananer.setSecondaryAudioLangByIndex(position);
+                updatingGuide();
             }
 
             @Override
@@ -122,6 +137,7 @@ public class DtvkitDvbSettings extends Activity {
                 }
                 mParameterMananer.saveIntParameters(ParameterMananer.KEY_DTVKIT_MAIN_SUBTITLE_LANG, position);
                 mParameterMananer.setPrimaryTextLangByIndex(position);
+                updatingGuide();
             }
 
             @Override
@@ -139,6 +155,7 @@ public class DtvkitDvbSettings extends Activity {
                 }
                 mParameterMananer.saveIntParameters(ParameterMananer.KEY_DTVKIT_ASSIST_SUBTITLE_LANG, position);
                 mParameterMananer.setSecondaryTextLangByIndex(position);
+                updatingGuide();
             }
 
             @Override
