@@ -1344,11 +1344,23 @@ public class DtvkitTvInput extends TvInputService {
                 JSONObject audioStream = audioStreams.getJSONObject(i);
                 Log.d(TAG, "getListOfAudioStreams audioStream = " + audioStream.toString());
                 TvTrackInfo.Builder track = new TvTrackInfo.Builder(TvTrackInfo.TYPE_AUDIO, Integer.toString(audioStream.getInt("index")));
-                track.setLanguage(audioStream.getString("language"));
+                String audioLang = audioStream.getString("language");
+                if (TextUtils.isEmpty(audioLang)) {
+                    audioLang = "Audio" + (i + 1);
+                } else if (ConstantManager.CONSTANT_QAA.equalsIgnoreCase(audioLang)) {
+                    audioLang = ConstantManager.CONSTANT_ORIGINAL_AUDIO;
+                }
+                track.setLanguage(audioLang);
                 if (audioStream.getBoolean("ad")) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         track.setDescription("AD");
                     }
+                }
+                String codes = audioStream.getString("codec");
+                if (!TextUtils.isEmpty(codes)) {
+                    Bundle bundle = new Bundle();
+                    bundle.putString(ConstantManager.KEY_AUDIO_CODES_DES, codes);
+                    track.setExtra(bundle);
                 }
                 tracks.add(track.build());
             }
