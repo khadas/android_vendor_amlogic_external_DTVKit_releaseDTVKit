@@ -479,11 +479,12 @@ public class DtvkitTvInput extends TvInputService {
         private long mCurrentDtvkitTvInputSessionIndex = 0;
         protected HandlerThread mHandlerThread = null;
         protected Handler mHandlerThreadHandle = null;
+        private boolean mIsMain = false;
 
         DtvkitTvInputSession(Context context) {
             super(context);
             mContext = context;
-            Log.i(TAG, "DtvkitTvInputSession");
+            Log.i(TAG, "DtvkitTvInputSession creat");
             mDtvkitDvbScan.setScannerListener(this);
             setOverlayViewEnabled(true);
             numActiveRecordings = recordingGetNumActiveRecordings();
@@ -520,6 +521,12 @@ public class DtvkitTvInput extends TvInputService {
         }
 
         @Override
+        public void onSetMain(boolean isMain) {
+            Log.d(TAG, "onSetMain, isMain: " + isMain +" mCurrentDtvkitTvInputSessionIndex is " + mCurrentDtvkitTvInputSessionIndex);
+            mIsMain = isMain;
+        }
+
+        @Override
         public void onRelease() {
             Log.i(TAG, "onRelease");
             releaseWorkThread();
@@ -542,8 +549,9 @@ public class DtvkitTvInput extends TvInputService {
 
             if (null != mHardware && mConfigs.length > 0) {
                 if (null == surface) {
-                    if (mCurrentDtvkitTvInputSessionIndex == mDtvkitTvInputSessionCount) {
+                    if (mIsMain) {
                         doRelease();
+                        setOverlayViewEnabled(false);
                         mHardware.setSurface(null, null);
                         Log.d(TAG, "onSetSurface null");
                         mSurface = null;
@@ -559,8 +567,7 @@ public class DtvkitTvInput extends TvInputService {
                     Log.d(TAG, "onSetSurface ok");
                 }
             }
-
-            return false;
+            return true;
         }
 
         @Override
@@ -632,8 +639,7 @@ public class DtvkitTvInput extends TvInputService {
                             trackId = nameValue[1];//parse id
                         }
                     }
-                }
-                if (!TextUtils.isDigitsOnly(trackId)) {
+                    notifyTrackSelected(type, sourceTrackId);
                     Log.d(TAG, "need trackId that only contains number");
                     return false;
                 }
@@ -694,6 +700,7 @@ public class DtvkitTvInput extends TvInputService {
             recordedProgram = getRecordedProgram(uri);
             if (recordedProgram != null) {
                 playerState = PlayerState.PLAYING;
+                playerStop();
                 playerPlay(recordedProgram.getRecordingDataUri());
             }
         }
@@ -878,7 +885,8 @@ public class DtvkitTvInput extends TvInputService {
                                 notifyTracksChanged(mTunedTracks);
 
                                 if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO_VIDEO)) {
-                                    mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);//check resolution later
+                                    if (mHandlerThreadHandle != null)
+                                        mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);//check resolution later
                                 }
                                 notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(playerGetSelectedAudioTrack()));
                                 if (playerGetSubtitlesOn()) {
@@ -1119,6 +1127,7 @@ public class DtvkitTvInput extends TvInputService {
             Log.i(TAG, "onTuneByHandlerThreadHandle mhegStop");
             mhegStop();
             notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING);
+            playerStop();
             if (playerPlay(dvbUri)) {
                 DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
             } else {
