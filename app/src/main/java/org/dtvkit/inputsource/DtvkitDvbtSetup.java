@@ -23,6 +23,7 @@ import android.widget.LinearLayout;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
+import android.view.KeyEvent;
 
 import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.json.JSONArray;
@@ -85,6 +86,18 @@ public class DtvkitDvbtSetup extends Activity {
             }
         }
     };
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            stopMonitoringSearch();
+            stopSearch();
+            finish();
+            return true;
+        }
+
+        return super.onKeyDown(keyCode, event);
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -366,7 +379,7 @@ public class DtvkitDvbtSetup extends Activity {
                         if (DataMananer.VALUE_FREQUENCY_MODE == isfrequencysearch) {
                             args.put(Integer.valueOf(parameter) * 1000000);//mhz
                             args.put(DataMananer.VALUE_DVBC_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]);
-                            args.put(mDataMananer.getIntParameters(DataMananer.KEY_DVBC_SYMBOL_RATE));
+                            args.put(getUpdatedDvbcSymbolRate());
                         } else {
                             parameter = getChannelIndex();
                             if (parameter == null) {
@@ -400,6 +413,24 @@ public class DtvkitDvbtSetup extends Activity {
             if (!TextUtils.isEmpty(value) && TextUtils.isDigitsOnly(value)) {
                 parameter = value;
             }
+        }
+
+        return parameter;
+    }
+
+    private int getUpdatedDvbcSymbolRate() {
+        int parameter = DataMananer.VALUE_DVBC_SYMBOL_RATE;
+        EditText symbolRate = (EditText)findViewById(R.id.dvbc_symbol_edit);
+        Editable editable = symbolRate.getText();
+        int isfrequencysearch = mDataMananer.getIntParameters(DataMananer.KEY_DVBC_SYMBOL_RATE);
+        if (editable != null) {
+            String value = editable.toString();
+            if (!TextUtils.isEmpty(value) && TextUtils.isDigitsOnly(value)) {
+                parameter = Integer.valueOf(value);
+                mDataMananer.saveIntParameters(DataMananer.KEY_DVBC_SYMBOL_RATE, parameter);
+            }
+        } else {
+            mDataMananer.saveIntParameters(DataMananer.KEY_DVBC_SYMBOL_RATE, DataMananer.VALUE_DVBC_SYMBOL_RATE);
         }
 
         return parameter;

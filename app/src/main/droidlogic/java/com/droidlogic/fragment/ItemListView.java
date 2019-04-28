@@ -53,12 +53,12 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
 
     public static final String LIST_LEFT = "left";
     public static final String LIST_RIGHT = "right";
+    private String mCurrentListSide = LIST_LEFT;
 
     public ItemListView(Context context) {
         super(context);
         mContext = context;
         setRootView();
-        setOnItemSelectedListener(this);
         mParameterMananer = new ParameterMananer(mContext, null);
     }
     public ItemListView(Context context, AttributeSet attrs) {
@@ -73,7 +73,12 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
         mParameterMananer.setDtvkitGlueClient(client);
     }
 
+    public void setCurrentListSide(String currentListSide) {
+        mCurrentListSide = currentListSide;
+    }
+
     public boolean dispatchKeyEvent (KeyEvent event) {
+        Log.d(TAG, "dispatchKeyEvent mCurrentListSide = " + mCurrentListSide + ", event = " + event);
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
             switch (event.getKeyCode()) {
                 case KeyEvent.KEYCODE_PROG_RED:
@@ -133,20 +138,25 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
                 case KeyEvent.KEYCODE_DPAD_LEFT:
                     Log.d(TAG, "KEYCODE_DPAD_LEFT mListSwitchedListener = " + mListSwitchedListener + ", mListType = " + mListType);
                     if (isLeftList()) {
-                        switchListType(false);
-                        if (mListTypeSwitchedListener != null) {
-                            mListTypeSwitchedListener.onListTypeSwitched(mListType);
+                        String savedListType = mParameterMananer.getCurrentListType();
+                        String leftListType = TextUtils.isEmpty(savedListType) ? mListType : savedListType;
+                        String result = switchListType(leftListType);
+                        if (LIST_LEFT.equals(mCurrentListSide) && result != null) {
+                            mListType = result;
+                        }
+                        if (mListTypeSwitchedListener != null && result != null) {
+                            mListTypeSwitchedListener.onListTypeSwitched(result);
                         }
                         return true;
                     } else if (isRightList()) {
-                        LinkedList<ItemDetail> satellitelist = mParameterMananer.getSatelliteList();
+                        /*LinkedList<ItemDetail> satellitelist = mParameterMananer.getSatelliteList();
                         LinkedList<ItemDetail> transponderlist = mParameterMananer.getTransponderList();
                         String currentlist = mParameterMananer.getCurrentListType();
                         if (!((satellitelist != null && satellitelist.size() > 0) ||
                                 (transponderlist != null && transponderlist.size() > 0))) {
                             Log.d(TAG, "no satellite or transponder!");
                             return true;
-                        }
+                        }*/
                         if (mListSwitchedListener != null) {
                             mListSwitchedListener.onListSwitched(LIST_LEFT);
                         }
@@ -204,7 +214,7 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
 
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-        Log.d(TAG, "onItemSelected mListType = " + mListType +", position = " + position + ", id = " + id + ", view = " + view);
+        Log.d(TAG, "onItemSelected mCurrentListSide = " + mCurrentListSide + ", mListType = " + mListType +", position = " + position + ", id = " + id + ", view = " + view);
         selectedPosition = position;
         if (view != null) {
             /*if (hasFocus()) {
@@ -367,14 +377,14 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
         return false;
     }
 
-    private void switchListType(boolean isRight) {
-        if (!isRight) {
-            if (ITEM_SATALLITE.equals(mListType)) {
-                mListType = ITEM_TRANSPONDER;
-            } else {
-                mListType = ITEM_SATALLITE;
-            }
+    private String switchListType(String leftListType) {
+        String result = null;
+        if (ITEM_SATALLITE.equals(leftListType)) {
+            result = ITEM_TRANSPONDER;
+        } else if (ITEM_TRANSPONDER.equals(leftListType)) {
+            result = ITEM_SATALLITE;
         }
+        return result;
     }
 }
 

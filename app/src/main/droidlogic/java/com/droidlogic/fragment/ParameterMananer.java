@@ -20,12 +20,15 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import org.dtvkit.inputsource.DtvkitGlueClient;
+import org.dtvkit.inputsource.DataMananer;
+
 
 public class ParameterMananer {
 
     private static final String TAG = "ParameterMananer";
     private Context mContext;
     private DtvkitGlueClient mDtvkitGlueClient;
+    private DataMananer mDataMananer;
 
     public static final String ITEM_SATALLITE              = "satellite";
     public static final String ITEM_TRANSPONDER            = "transponder";
@@ -129,6 +132,7 @@ public class ParameterMananer {
     public ParameterMananer(Context context, DtvkitGlueClient client) {
         this.mContext = context;
         this.mDtvkitGlueClient = client;
+        this.mDataMananer = new DataMananer(context);
     }
 
     public void setDtvkitGlueClient(DtvkitGlueClient client) {
@@ -295,7 +299,7 @@ public class ParameterMananer {
                 transpondervalue = (int)(((JSONObject)(data.get(i))).get("frequency")) + "/";
                 transpondervalue += (String)(((JSONObject)(data.get(i))).get("polarity")) + "/";
                 transpondervalue += (int)(((JSONObject)(data.get(i))).get("symbol_rate"));
-                if (TextUtils.equals(transpondervalue, current)) {
+                if (TextUtils.equals(transpondervalue, current) && mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_MODE) == 2) {//only enable select in transponder search mode
                     type = ItemDetail.SELECT_EDIT;
                 } else {
                     type = ItemDetail.NOT_SELECT_EDIT;
@@ -413,8 +417,13 @@ public class ParameterMananer {
         int size = parametertype.size();
         for (int i = 0; i < parametertype.size(); i++) {
             Log.d(TAG, "parametertype " + parametertype.get(i) + ", parametervalue = " + parametervalue.get(i));
-            if (i == 0 || i ==1) {
-                list.add(new ItemDetail(ItemDetail.NONE_EDIT, parametertype.get(i), parametervalue.get(i), false));
+            if (i == 0 || i == 1) {
+                String value = parametervalue.get(i);
+                //search all transponder except transponder search mode
+                if (i == 1 && mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_MODE) != 2) {
+                    value = "---";
+                }
+                list.add(new ItemDetail(ItemDetail.NONE_EDIT, parametertype.get(i), value, false));
             } else {
                 list.add(new ItemDetail(ItemDetail.SWITCH_EDIT, parametertype.get(i), parametervalue.get(i), false));
             }

@@ -79,7 +79,7 @@ public class ScanDishSetupFragment extends Fragment {
         mItemDetailItem.addAll(mParameterMananer.getItemList(currentlist));
         mItemAdapterItem = new ItemAdapter(mItemDetailItem, getActivity());
         mListViewItem.setAdapter(mItemAdapterItem);
-        mListViewItem.setTag(ItemListView.ITEM_SATALLITE);
+        mListViewItem.setCurrentListSide(ItemListView.LIST_LEFT);
 
         mItemTitleTextView = (TextView) rootView.findViewById(R.id.listview_item_title);
         mItemTitleTextView.setText(ItemListView.ITEM_SATALLITE.equals(currentlist) ? R.string.list_type_satellite : R.string.list_type_transponder);
@@ -107,7 +107,7 @@ public class ScanDishSetupFragment extends Fragment {
         mItemDetailOption.addAll(mParameterMananer.getCompleteParameterList(mParameterMananer.getCurrentListType(), mParameterMananer.getCurrentSatelliteIndex()));
         mItemAdapterOption = new ItemAdapter(mItemDetailOption, getActivity());
         mListViewOption.setAdapter(mItemAdapterOption);
-        mListViewItem.setTag(ParameterMananer.ITEM_SATALLITE_OPTION);
+        mListViewOption.setCurrentListSide(ItemListView.LIST_RIGHT);
         mListViewItem.setSelection(ItemListView.ITEM_SATALLITE.equals(mParameterMananer.getCurrentListType()) ? mParameterMananer.getCurrentSatelliteIndex() : mParameterMananer.getCurrentTransponderIndex());
 
         //mOptionTitleItemTextView = (TextView) rootView.findViewById(R.id.listview_option_title);
@@ -131,6 +131,8 @@ public class ScanDishSetupFragment extends Fragment {
         } else {
             mListViewOption.cleanChoosed();
         }*/
+        mListViewOption.setOnItemSelectedListener(mListViewOption);
+        mListViewItem.setOnItemSelectedListener(mListViewItem);
         return rootView;
     }
 
@@ -497,13 +499,13 @@ public class ScanDishSetupFragment extends Fragment {
                                 }
                                 break;
                             case "scan":
-                                Intent intent = new Intent();
+                                /*Intent intent = new Intent();
                                 intent.setClassName("org.dtvkit.inputsource", "org.dtvkit.inputsource.DtvkitDvbsSetup");
                                 String inputId = getActivity().getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
                                 if (inputId != null) {
                                     intent.putExtra(TvInputInfo.EXTRA_INPUT_ID, inputId);
                                 }
-                                getActivity().startActivity(intent);
+                                getActivity().startActivity(intent);*/
                                 //getActivity().startActivityForResult(intent, ScanMainActivity.REQUEST_CODE_START_SETUP_ACTIVITY);
                                 getActivity().finish();
                                 break;
@@ -519,6 +521,7 @@ public class ScanDishSetupFragment extends Fragment {
                         int position_add = Integer.valueOf(data.getString("value3"));
                         mParameterMananer.addSatellite(name_add, iseast_add, position_add);
                         mItemAdapterItem.reFill(mParameterMananer.getItemList(mParameterMananer.getCurrentListType()));
+                        switchtoLeftList();
                     }
                     break;
                 case ParameterMananer.KEY_EDIT_SATELLITE:
@@ -545,6 +548,7 @@ public class ScanDishSetupFragment extends Fragment {
                         int symbol_add_t = Integer.valueOf(data.getString("value4"));
                         mParameterMananer.addTransponder(name_add_t, frequency_add_t, polarity_add_t, symbol_add_t);
                         mItemAdapterItem.reFill(mParameterMananer.getItemList(mParameterMananer.getCurrentListType()));
+                        switchtoLeftList();
                     }
                     break;
                 case ParameterMananer.KEY_EDIT_TRANSPONDER:
@@ -573,6 +577,23 @@ public class ScanDishSetupFragment extends Fragment {
         }
     };
 
+    private void switchtoLeftList() {
+        if (ItemListView.LIST_RIGHT.equals(mCurrentListFocus)) {
+            mCurrentListFocus = ItemListView.LIST_LEFT;
+        }
+        if (ItemListView.LIST_LEFT.equals(mCurrentListFocus)) {
+            mListViewOption.cleanChoosed();
+            mListViewItem.cleanChoosed();
+            mListViewItem.requestFocus();
+            if (mListViewItem.getSelectedView() != null) {
+                mListViewItem.setChoosed(mListViewItem.getSelectedView());
+            }
+            creatFour1();
+            creatFour2();
+            mParameterMananer.setCurrentListDirection(ItemListView.LIST_LEFT);
+        }
+    }
+
     ListItemSelectedListener mListItemSelectedListener = new ListItemSelectedListener() {
 
         @Override
@@ -584,6 +605,7 @@ public class ScanDishSetupFragment extends Fragment {
                     LinkedList<ItemDetail> items = mParameterMananer.getSatelliteList();
                     if (items != null && position < items.size()) {
                         mParameterMananer.setCurrentSatellite(items != null ? items.get(position).getFirstText() : "null");
+                        mParameterMananer.setCurrentTransponder("null");
                     } else {
                         Log.e(TAG, "onListItemSelected setCurrentSatellite erro position index");
                     }
@@ -672,8 +694,10 @@ public class ScanDishSetupFragment extends Fragment {
                 }*/
                 mListViewItem.cleanChoosed();
                 mListViewOption.cleanChoosed();
-                if (mListViewItem.getSelectedView() != null) {
-                    mListViewItem.setChoosed(mListViewItem.getSelectedView());
+                View selectedView = mListViewItem.getSelectedView();
+                if (selectedView != null) {
+                    selectedView.requestFocus();
+                    mListViewItem.setChoosed(selectedView);
                 }
             } else if (ItemListView.LIST_RIGHT.equals(mCurrentListFocus)) {
                 mListViewItem.cleanChoosed();
@@ -717,6 +741,7 @@ public class ScanDishSetupFragment extends Fragment {
     ListTypeSwitchedListener mListTypeSwitchedListener = new ListTypeSwitchedListener() {
         @Override
         public void onListTypeSwitched(String listtype) {
+            Log.d(TAG, "onListTypeSwitched listtype = " + listtype);
             mCurrentListType = listtype;
             mParameterMananer.setCurrentListType(mCurrentListType);
             mListViewItem.cleanChoosed();
@@ -725,12 +750,14 @@ public class ScanDishSetupFragment extends Fragment {
                 mListViewItem.setSelection(mParameterMananer.getCurrentSatelliteIndex());
                 View selectedView = mListViewItem.getSelectedView();
                 if (selectedView != null) {
+                    selectedView.requestFocus();
                     mListViewItem.setChoosed(selectedView);
                 }
             } else {
                 mListViewItem.setSelection(mParameterMananer.getCurrentTransponderIndex());
                 View selectedView = mListViewItem.getSelectedView();
                 if (selectedView != null) {
+                    selectedView.requestFocus();
                     mListViewItem.setChoosed(selectedView);
                 }
             }

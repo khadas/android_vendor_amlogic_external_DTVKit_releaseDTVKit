@@ -25,6 +25,7 @@ import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.LinearLayout;
 import android.text.Editable;
 import android.text.TextUtils;
+import android.view.KeyEvent;
 
 import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.json.JSONArray;
@@ -58,19 +59,30 @@ public class DtvkitDvbsSetup extends Activity {
         }
     };
 
-   private final BroadcastReceiver mReceiver = new BroadcastReceiver()
-   {
-      @Override
-      public void onReceive(Context context, final Intent intent)
-      {
-         String status = intent.getStringExtra(EpgSyncJobService.SYNC_STATUS);
-         if (status.equals(EpgSyncJobService.SYNC_FINISHED))
-         {
-            setSearchStatus("Finished");
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+       @Override
+       public void onReceive(Context context, final Intent intent)
+       {
+          String status = intent.getStringExtra(EpgSyncJobService.SYNC_STATUS);
+          if (status.equals(EpgSyncJobService.SYNC_FINISHED))
+          {
+             setSearchStatus("Finished");
+             finish();
+          }
+       }
+    };
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            stopMonitoringSearch();
+            stopSearch();
             finish();
-         }
-      }
-   };
+            return true;
+        }
+
+        return super.onKeyDown(keyCode, event);
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
