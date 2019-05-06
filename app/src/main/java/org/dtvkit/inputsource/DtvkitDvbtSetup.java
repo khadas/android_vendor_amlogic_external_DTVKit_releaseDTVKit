@@ -438,7 +438,8 @@ public class DtvkitDvbtSetup extends Activity {
 
     private String getChannelIndex() {
         String result = null;
-        int index = mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBT_CHANNEL_NAME);
+        int index = mIsDvbt ? mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBT_CHANNEL_NAME) :
+                mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_DVBC_CHANNEL_NAME);
         List<String> list = mParameterMananer.getChannelTable(mParameterMananer.getCurrentCountryCode(), mIsDvbt, mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE) == 1);
         String channelInfo = (index < list.size()) ? list.get(index) : null;
         if (channelInfo != null) {
