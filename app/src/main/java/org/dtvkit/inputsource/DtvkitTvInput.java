@@ -9,7 +9,6 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.graphics.PorterDuff;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.database.Cursor;
 import android.media.PlaybackParams;
@@ -49,6 +48,7 @@ import android.view.View;
 import android.view.KeyEvent;
 import android.os.HandlerThread;
 import android.text.TextUtils;
+import android.widget.FrameLayout;
 
 import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.dtvkit.companionlibrary.model.Channel;
@@ -164,10 +164,79 @@ public class DtvkitTvInput extends TvInputService {
         Log.d(TAG, "set input id to " + mInputId);
     }
 
-    // We do not indicate recording capabilities. TODO for recording.
-    //public TvInputService.RecordingSession onCreateRecordingSession(String inputId)
+    private class DtvkitOverlayView extends FrameLayout {
 
-    class OverlayView extends View
+        private NativeOverlayView nativeOverlayView;
+        private CiMenuView ciOverlayView;
+
+        private boolean mhegTookKey = false;
+
+        public DtvkitOverlayView(Context context) {
+            super(context);
+
+            Log.i(TAG, "onCreateDtvkitOverlayView");
+
+            nativeOverlayView = new NativeOverlayView(getContext());
+            ciOverlayView = new CiMenuView(getContext());
+
+            this.addView(nativeOverlayView);
+            this.addView(ciOverlayView);
+        }
+
+        public void destroy() {
+            ciOverlayView.destroy();
+        }
+
+        public void setSize(int width, int height) {
+            nativeOverlayView.setSize(width, height);
+        }
+
+        public boolean handleKeyDown(int keyCode, KeyEvent event) {
+            boolean result;
+            if (ciOverlayView.handleKeyDown(keyCode, event)) {
+                mhegTookKey = false;
+                result = true;
+            }
+            else if (mhegKeypress(keyCode)){
+                mhegTookKey = true;
+                result = true;
+            }
+            else {
+                mhegTookKey = false;
+                result = false;
+            }
+            return result;
+        }
+
+        public boolean handleKeyUp(int keyCode, KeyEvent event) {
+            boolean result;
+
+            if (ciOverlayView.handleKeyUp(keyCode, event) || mhegTookKey) {
+                result = true;
+            }
+            else {
+                result = false;
+            }
+            mhegTookKey = false;
+
+            return result;
+        }
+
+        private boolean mhegKeypress(int keyCode) {
+            boolean used=false;
+            try {
+                JSONArray args = new JSONArray();
+                args.put(keyCode);
+                used = DtvkitGlueClient.getInstance().request("Mheg.notifyKeypress", args).getBoolean("data");
+                Log.i(TAG, "Mheg keypress, used:" + used);
+            } catch (Exception e) {
+                Log.e(TAG, e.getMessage());
+            }
+            return used;
+        }
+    }
+
+    class NativeOverlayView extends View
     {
         Bitmap overlay1 = null;
         Bitmap overlay2 = null;
@@ -180,6 +249,8 @@ public class DtvkitTvInput extends TvInputService {
         int top = 0;
         int width = 0;
         int height = 0;
+        Rect src, dst;
+
         Semaphore sem = new Semaphore(1);
 
         private final DtvkitGlueClient.OverlayTarget mTarget = new DtvkitGlueClient.OverlayTarget() {
@@ -213,6 +284,7 @@ public class DtvkitTvInput extends TvInputService {
                         sem.acquireUninterruptibly();
                         Bitmap temp = overlay_draw;
                         overlay_draw = overlay_update;
+                        src = new Rect(0, 0, overlay_draw.getWidth(), overlay_draw.getHeight());
                         overlay_update = temp;
                         sem.release();
                         postInvalidate();
@@ -263,22 +335,23 @@ public class DtvkitTvInput extends TvInputService {
             }
         };
 
-        public OverlayView(Context context) {
+        public NativeOverlayView(Context context) {
             super(context);
             DtvkitGlueClient.getInstance().setOverlayTarget(mTarget);
+        }
+
+        public void setSize(int width, int height) {
+            dst = new Rect(0, 0, width, height);
         }
 
         @Override
         protected void onDraw(Canvas canvas)
         {
             super.onDraw(canvas);
-
             sem.acquireUninterruptibly();
-
             if (overlay_draw != null) {
-                canvas.drawBitmap(overlay_draw, 0, 0, null);
+                canvas.drawBitmap(overlay_draw, src, dst, null);
             }
-
             sem.release();
         }
     }
@@ -322,7 +395,7 @@ public class DtvkitTvInput extends TvInputService {
 
         @Override
         public void onTune(Uri uri) {
-            Log.d(TAG, "onTune for recording " + uri);
+            Log.i(TAG, "onTune for recording " + uri);
             if (ContentUris.parseId(uri) == -1) {
                 Log.e(TAG, "DtvkitRecordingSession onTune invalid uri = " + uri);
                 notifyError(TvInputManager.RECORDING_ERROR_UNKNOWN);
@@ -341,7 +414,7 @@ public class DtvkitTvInput extends TvInputService {
 
         @Override
         public void onStartRecording(@Nullable Uri uri) {
-            Log.d(TAG, "onStartRecording " + uri);
+            Log.i(TAG, "onStartRecording " + uri);
             mProgram = uri;
 
             String dvbUri;
@@ -465,7 +538,7 @@ public class DtvkitTvInput extends TvInputService {
         private static final int ADEC_SET_PRE_GAIN = 9;
         private static final int ADEC_SET_PRE_MUTE = 10;
         private boolean mhegTookKey = false;
-        private Channel mTunedChannel;
+        private Channel mTunedChannel = null;
         private List<TvTrackInfo> mTunedTracks = null;
         protected final Context mContext;
         private RecordedProgram recordedProgram = null;
@@ -476,6 +549,7 @@ public class DtvkitTvInput extends TvInputService {
         private PlayerState playerState = PlayerState.STOPPED;
         private boolean timeshiftAvailable = false;
         private int timeshiftBufferSizeMins = 60;
+        DtvkitOverlayView mView = null;
         private long mCurrentDtvkitTvInputSessionIndex = 0;
         protected HandlerThread mHandlerThread = null;
         protected Handler mHandlerThreadHandle = null;
@@ -534,9 +608,9 @@ public class DtvkitTvInput extends TvInputService {
 
         public void doRelease() {
             Log.i(TAG, "doRelease");
-            mhegStop();
             removeScheduleTimeshiftRecordingTask();
             scheduleTimeshiftRecording = false;
+            mhegStop();
             playerStopTimeshiftRecording(false);
             playerStop();
             DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
@@ -573,18 +647,25 @@ public class DtvkitTvInput extends TvInputService {
         @Override
         public void onSurfaceChanged(int format, int width, int height) {
             Log.i(TAG, "onSurfaceChanged " + format + ", " + width + ", " + height);
+            playerSetRectangle(0, 0, width, height);
         }
 
         public View onCreateOverlayView() {
-            OverlayView view = new OverlayView(mContext);
-            return view;
+            if (mView == null) {
+                mView = new DtvkitOverlayView(mContext);
+            }
+            return mView;
         }
 
         @Override
         public void onOverlayViewSizeChanged(int width, int height) {
             Log.i(TAG, "onOverlayViewSizeChanged " + width + ", " + height);
+            if (mView == null) {
+                mView = new DtvkitOverlayView(mContext);
+            }
             //Platform platform = new Platform();
             //playerSetRectangle(platform.getSurfaceX(), platform.getSurfaceY(), width, height);
+            mView.setSize(width, height);
         }
 
         @RequiresApi(api = Build.VERSION_CODES.M)
@@ -616,9 +697,6 @@ public class DtvkitTvInput extends TvInputService {
             Log.i(TAG, "onSetCaptionEnabled " + enabled);
             // TODO CaptioningManager.getLocale()
             playerSetSubtitlesOn(enabled);
-            if (enabled) {
-                notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, Integer.toString(playerGetSelectedSubtitleTrack()));
-            }
         }
 
         @Override
@@ -735,6 +813,7 @@ public class DtvkitTvInput extends TvInputService {
             if (timeshiftRecorderState == RecorderState.RECORDING && !timeshifting) /* Watching live tv while recording */ {
                 timeshifting = true;
                 boolean seekToBeginning = false;
+
                 if (timeMs == startPosition) {
                     seekToBeginning = true;
                 }
@@ -825,25 +904,44 @@ public class DtvkitTvInput extends TvInputService {
 
         @Override
         public boolean onKeyDown(int keyCode, KeyEvent event) {
-            Log.e(TAG, "onKeyDown " + keyCode);
-            if (mhegKeypress(keyCode)) {
-               mhegTookKey = true;
-               return true;
-            } else {
-               mhegTookKey = false;
-               return super.onKeyDown(keyCode, event);
+            boolean used;
+
+            Log.i(TAG, "onKeyDown " + keyCode);
+
+            /* It's possible for a keypress to be registered before the overlay is created */
+            if (mView == null) {
+                used = super.onKeyDown(keyCode, event);
             }
+            else {
+                if (mView.handleKeyDown(keyCode, event)) {
+                    used = true;
+                } else {
+                   used = super.onKeyDown(keyCode, event);
+                }
+            }
+
+            return used;
         }
 
         @Override
         public boolean onKeyUp(int keyCode, KeyEvent event) {
-            Log.e(TAG, "onKeyUp " + keyCode);
-            if (mhegTookKey) {
-               mhegTookKey = false;
-               return true;
-            } else {
-               return super.onKeyUp(keyCode, event);
+            boolean used;
+
+            Log.i(TAG, "onKeyUp " + keyCode);
+
+            /* It's possible for a keypress to be registered before the overlay is created */
+            if (mView == null) {
+                used = super.onKeyUp(keyCode, event);
             }
+            else {
+                if (mView.handleKeyUp(keyCode, event)) {
+                    used = true;
+                } else {
+                    used = super.onKeyUp(keyCode, event);
+                }
+            }
+
+            return used;
         }
 
         private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
@@ -851,7 +949,6 @@ public class DtvkitTvInput extends TvInputService {
             @Override
             public void onSignal(String signal, JSONObject data) {
                 Log.i(TAG, "onSignal: " + signal + " : " + data.toString());
-                // TODO notifyChannelRetuned(Uri channelUri)
                 // TODO notifyTracksChanged(List<TvTrackInfo> tracks)
                 if (signal.equals("PlayerStatusChanged")) {
                     String state = "off";
@@ -1047,15 +1144,70 @@ public class DtvkitTvInput extends TvInputService {
                     ComponentName sync = new ComponentName(mContext, DtvkitEpgSync.class);
                     EpgSyncJobService.requestImmediateSync(mContext, mInputId, true, sync);
                 }
-                else if (signal.equals("DvbUpdatedEventPeriods"))
-                {
-                    ComponentName sync = new ComponentName(mContext, DtvkitEpgSync.class);
-                    EpgSyncJobService.requestImmediateSync(mContext, mInputId, false, sync);
-                }
                 else if (signal.equals("MhegAppStarted"))
                 {
                    Log.i(TAG, "MhegAppStarted");
                    notifyVideoAvailable();
+                }
+                else if (signal.equals("AppVideoPosition"))
+                {
+                   Log.i(TAG, "AppVideoPosition");
+                   int left,top,right,bottom;
+                   left = 0;
+                   top = 0;
+                   right = 1920;
+                   bottom = 1080;
+                   try {
+                      left = data.getInt("left");
+                      top = data.getInt("top");
+                      right = data.getInt("right");
+                      bottom = data.getInt("bottom");
+                   } catch (JSONException e) {
+                      Log.e(TAG, e.getMessage());
+                   }
+                   //due to the incorrect Surface size passed in onSurfaceChanged(),
+                   //close this feature temporarily, will affect all video layout requests.(eg. mheg, afd)
+                   //layoutSurface(left,top,right,bottom);
+                }
+                else if (signal.equals("ServiceRetuned"))
+                {
+                   String dvbUri = "";
+                   Channel channel;
+                   Uri retuneUri;
+                   boolean found = false;
+                   int i;
+                   long id=0;
+                   try {
+                      dvbUri= data.getString("uri");
+                   } catch (JSONException ignore) {
+                   }
+                   Log.i(TAG, "ServiceRetuned " + dvbUri);
+                   //find the channel URI that matches the dvb uri of the retune
+                   for (i = 0;i < mChannels.size();i++)
+                   {
+                      channel = mChannels.get(mChannels.keyAt(i));
+                      if (dvbUri.equals(getChannelInternalDvbUri(channel))) {
+                         found = true;
+                         id = mChannels.keyAt(i);
+                         break;
+                      }
+                   }
+                   if (found)
+                   {
+                      //rebuild the Channel URI from the current channel + the new ID
+                      retuneUri = Uri.parse("content://android.media.tv/channel");
+                      retuneUri = ContentUris.withAppendedId(retuneUri,id);
+                      Log.i(TAG, "Retuning to " + retuneUri);
+
+                      mHandlerThreadHandle.obtainMessage(MSG_ON_TUNE, 1/*mhegTune*/, 0, retuneUri).sendToTarget();
+                   }
+                   else
+                   {
+                      //if we couldn't find the channel uri for some reason,
+                      // try restarting MHEG on the new service anyway
+                      mhegSuspend();
+                      mhegStartService(dvbUri);
+                   }
                 }
             }
         };
@@ -1077,8 +1229,9 @@ public class DtvkitTvInput extends TvInputService {
                         switch (msg.what) {
                             case MSG_ON_TUNE:
                                 Uri channelUri = (Uri)msg.obj;
+                                boolean mhegTune = msg.arg1 == 0 ? false : true;
                                 if (channelUri != null) {
-                                    onTuneByHandlerThreadHandle(channelUri);
+                                    onTuneByHandlerThreadHandle(channelUri, mhegTune);
                                 }
                                 break;
                             case MSG_CHECK_RESOLUTION:
@@ -1108,7 +1261,7 @@ public class DtvkitTvInput extends TvInputService {
             mHandlerThreadHandle = null;
         }
 
-        protected boolean onTuneByHandlerThreadHandle(Uri channelUri) {
+        protected boolean onTuneByHandlerThreadHandle(Uri channelUri, boolean mhegTune) {
             Log.i(TAG, "onTuneByHandlerThreadHandle " + channelUri);
             if (ContentUris.parseId(channelUri) == -1) {
                 Log.e(TAG, "onTuneByHandlerThreadHandle invalid channelUri = " + channelUri);
@@ -1124,8 +1277,15 @@ public class DtvkitTvInput extends TvInputService {
 
             mTunedChannel = getChannel(channelUri);
             final String dvbUri = getChannelInternalDvbUri(mTunedChannel);
-            Log.i(TAG, "onTuneByHandlerThreadHandle mhegStop");
-            mhegStop();
+
+            if (mhegTune) {
+                mhegSuspend();
+                if (mhegGetNextTuneInfo(dvbUri) == 0)
+                    notifyChannelRetuned(channelUri);
+            } else {
+                mhegStop();
+            }
+
             notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING);
             playerStop();
             if (playerPlay(dvbUri)) {
@@ -1491,6 +1651,30 @@ public class DtvkitTvInput extends TvInputService {
             Log.e(TAG, "playerGetSubtitlesOn = " + e.getMessage());
         }
         return on;
+    }
+
+    private void mhegSuspend() {
+        Log.e(TAG, "Mheg suspending");
+        try {
+            JSONArray args = new JSONArray();
+            DtvkitGlueClient.getInstance().request("Mheg.suspend", args);
+            Log.e(TAG, "Mheg suspended");
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
+    }
+
+    private int mhegGetNextTuneInfo(String dvbUri) {
+        int quiet = -1;
+        try {
+            JSONArray args = new JSONArray();
+            args.put(dvbUri);
+            quiet = DtvkitGlueClient.getInstance().request("Mheg.getTuneInfo", args).getInt("data");
+            Log.e(TAG, "Tune info: "+ quiet);
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
+        return quiet;
     }
 
     private JSONObject playerGetStatus() {
