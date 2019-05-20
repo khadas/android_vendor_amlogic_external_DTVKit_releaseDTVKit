@@ -537,6 +537,12 @@ public class ScanDishSetupFragment extends Fragment {
                     if (data != null && "ok".equals(data.getString("button"))) {
                         String name_remove = data.getString("value1");
                         mParameterMananer.removeSatellite(name_remove);
+                        //Log.d(TAG, "KEY_REMOVE_SATELLITE = " + mParameterMananer.getCurrentSatellite());
+                        if (TextUtils.equals(name_remove, mParameterMananer.getCurrentSatellite())) {
+                            mParameterMananer.setCurrentSatellite("null");
+                            mParameterMananer.setCurrentTransponder("null");
+                            mItemAdapterOption.reFill(mParameterMananer.getCompleteParameterList(mParameterMananer.getCurrentListType(), mParameterMananer.getCurrentSatelliteIndex()));
+                        }
                         mItemAdapterItem.reFill(mParameterMananer.getItemList(mParameterMananer.getCurrentListType()));
                     }
                     break;
@@ -568,6 +574,14 @@ public class ScanDishSetupFragment extends Fragment {
                         String name_polarity_t = data.getString("value3");
                         int name_symbol_t = Integer.valueOf(data.getString("value4"));
                         mParameterMananer.removeTransponder(name_remove_t, name_frequency_t, name_polarity_t, name_symbol_t);
+                        //Log.d(TAG, "KEY_REMOVE_TRANSPONDER = " + mParameterMananer.getCurrentSatellite() + ", trans = " + mParameterMananer.getCurrentTransponder());
+                        if (TextUtils.equals(name_remove_t, mParameterMananer.getCurrentSatellite())) {
+                            String removeTrans = name_frequency_t + "/" + name_polarity_t + "/" + name_symbol_t;
+                            if (TextUtils.equals(removeTrans, mParameterMananer.getCurrentTransponder())) {
+                                mParameterMananer.setCurrentTransponder("null");
+                                mItemAdapterOption.reFill(mParameterMananer.getCompleteParameterList(mParameterMananer.getCurrentListType(), mParameterMananer.getCurrentSatelliteIndex()));
+                            }
+                        }
                         mItemAdapterItem.reFill(mParameterMananer.getItemList(mParameterMananer.getCurrentListType()));
                     }
                     break;
@@ -744,8 +758,9 @@ public class ScanDishSetupFragment extends Fragment {
             Log.d(TAG, "onListTypeSwitched listtype = " + listtype);
             mCurrentListType = listtype;
             mParameterMananer.setCurrentListType(mCurrentListType);
-            mListViewItem.cleanChoosed();
             mItemAdapterItem.reFill(mParameterMananer.getItemList(mParameterMananer.getCurrentListType()));
+            mListViewItem.setAdapter(mItemAdapterItem);
+            mListViewItem.cleanChoosed();
             if (ItemListView.ITEM_SATALLITE.equals(mCurrentListType)) {
                 mListViewItem.setSelection(mParameterMananer.getCurrentSatelliteIndex());
                 View selectedView = mListViewItem.getSelectedView();
@@ -753,7 +768,7 @@ public class ScanDishSetupFragment extends Fragment {
                     selectedView.requestFocus();
                     mListViewItem.setChoosed(selectedView);
                 }
-            } else {
+            } else if ((ItemListView.ITEM_TRANSPONDER.equals(mCurrentListType))) {
                 mListViewItem.setSelection(mParameterMananer.getCurrentTransponderIndex());
                 View selectedView = mListViewItem.getSelectedView();
                 if (selectedView != null) {

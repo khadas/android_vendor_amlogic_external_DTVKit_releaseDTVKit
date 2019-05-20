@@ -414,6 +414,7 @@ public class DtvkitDvbsSetup extends Activity {
         } catch (Exception e) {
             obj = null;
             Log.d(TAG, "initLbnData Exception " + e.getMessage());
+            e.printStackTrace();
         }
         return obj;
     }

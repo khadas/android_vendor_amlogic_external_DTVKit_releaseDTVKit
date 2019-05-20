@@ -289,6 +289,7 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
         int color_text_item = mContext.getResources().getColor(R.color.common_item_background);
         for (int i = 0; i < getChildCount(); i ++) {
             View view = getChildAt(i);
+            //Log.d(TAG, "cleanChoosed all view = " + view + ", i = " + i);
             view.setBackgroundColor(color_text_item);
         }
     }
