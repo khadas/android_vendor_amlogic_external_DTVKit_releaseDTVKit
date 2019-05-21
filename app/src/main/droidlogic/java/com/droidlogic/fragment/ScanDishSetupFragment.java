@@ -83,19 +83,6 @@ public class ScanDishSetupFragment extends Fragment {
 
         mItemTitleTextView = (TextView) rootView.findViewById(R.id.listview_item_title);
         mItemTitleTextView.setText(ItemListView.ITEM_SATALLITE.equals(currentlist) ? R.string.list_type_satellite : R.string.list_type_transponder);
-        if ((TextUtils.equals(currentlist, ItemListView.ITEM_SATALLITE) && satellitelist != null && satellitelist.size() > 0) ||
-                (TextUtils.equals(currentlist, ItemListView.ITEM_TRANSPONDER) && transponderlist != null && transponderlist.size() > 0)) {
-            mListViewItem.requestFocus();
-            View selectedView = mListViewItem.getSelectedView();
-            if (selectedView != null) {
-                mListViewItem.setChoosed(selectedView);
-            }
-            mListViewItem.setListType(mParameterMananer.getCurrentListType());
-        } else {
-            mListViewItem.cleanChoosed();
-            mCurrentListFocus = "right";
-            mParameterMananer.setCurrentListDirection("right");
-        }
 
         mListViewItem.setListItemSelectedListener(mListItemSelectedListener);
         mListViewItem.setListItemFocusedListener(mListItemFocusedListener);
@@ -120,7 +107,7 @@ public class ScanDishSetupFragment extends Fragment {
         mListViewOption.setListTypeSwitchedListener(mListTypeSwitchedListener);
         mListViewOption.setListType(ItemListView.ITEM_OPTION);
         mListViewOption.setDataCallBack(mSingleSelectDialogCallBack);
-        mListViewOption.cleanChoosed();
+        //mListViewOption.cleanChoosed();
         /*if (!((TextUtils.equals(currentlist, ItemListView.ITEM_SATALLITE) && satellitelist != null && satellitelist.size() > 0) ||
                 (TextUtils.equals(currentlist, ItemListView.ITEM_TRANSPONDER) && transponderlist != null && transponderlist.size() > 0))) {
             mListViewOption.requestFocus();
@@ -131,8 +118,30 @@ public class ScanDishSetupFragment extends Fragment {
         } else {
             mListViewOption.cleanChoosed();
         }*/
+
+        if ((TextUtils.equals(currentlist, ItemListView.ITEM_SATALLITE) && satellitelist != null && satellitelist.size() > 0) ||
+                (TextUtils.equals(currentlist, ItemListView.ITEM_TRANSPONDER) && transponderlist != null && transponderlist.size() > 0)) {
+            mListViewItem.requestFocus();
+            mListViewOption.cleanChoosed();
+            mParameterMananer.setCurrentListDirection("left");
+            View selectedView = mListViewItem.getSelectedView();
+            if (selectedView != null) {
+                mListViewItem.setChoosed(selectedView);
+            }
+            mListViewItem.setListType(mParameterMananer.getCurrentListType());
+        } else {
+            mListViewItem.cleanChoosed();
+            mCurrentListFocus = "right";
+            mParameterMananer.setCurrentListDirection("right");
+            View selectedView = mListViewOption.getSelectedView();
+            if (selectedView != null) {
+                mListViewOption.setChoosed(selectedView);
+            }
+        }
+
         mListViewOption.setOnItemSelectedListener(mListViewOption);
         mListViewItem.setOnItemSelectedListener(mListViewItem);
+
         return rootView;
     }
 

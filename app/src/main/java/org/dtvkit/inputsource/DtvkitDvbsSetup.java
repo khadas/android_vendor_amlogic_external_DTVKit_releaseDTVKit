@@ -169,8 +169,11 @@ public class DtvkitDvbsSetup extends Activity {
                 mDataMananer.saveIntParameters(DataMananer.KEY_SEARCH_MODE, position);
                 if (position == DataMananer.VALUE_SEARCH_MODE_BLIND) {
                     blindContainer.setVisibility(View.VISIBLE);
+                    nit.setVisibility(View.GONE);
+                    mDataMananer.saveStringParameters(DataMananer.KEY_TRANSPONDER, "null");
                 } else {
                     blindContainer.setVisibility(View.GONE);
+                    nit.setVisibility(View.VISIBLE);
                 }
             }
 
@@ -207,8 +210,10 @@ public class DtvkitDvbsSetup extends Activity {
         searchmode.setSelection(searchmodeValue);
         if (searchmodeValue == DataMananer.VALUE_SEARCH_MODE_BLIND) {
             blindContainer.setVisibility(View.VISIBLE);
+            nit.setVisibility(View.GONE);
         } else {
             blindContainer.setVisibility(View.GONE);
+            nit.setVisibility(View.VISIBLE);
         }
         fecmode.setSelection(mDataMananer.getIntParameters(DataMananer.KEY_FEC_MODE));
         modulationmode.setSelection(mDataMananer.getIntParameters(DataMananer.KEY_MODULATION_MODE));
@@ -280,6 +285,7 @@ public class DtvkitDvbsSetup extends Activity {
             args.put(result[1]);//"end_freq" khz //arg6
         } catch (Exception e) {
             args = null;
+            Toast.makeText(this, R.string.dialog_parameter_set_blind, Toast.LENGTH_SHORT).show();
             Log.d(TAG, "initBlindSearch Exception " + e.getMessage());
         }
         return args;
@@ -312,6 +318,7 @@ public class DtvkitDvbsSetup extends Activity {
             args.put(mDataMananer.getStringParameters(DataMananer.KEY_SATALLITE));//arg6
         } catch (Exception e) {
             args = null;
+            Toast.makeText(this, R.string.dialog_parameter_select_satellite, Toast.LENGTH_SHORT).show();
             Log.d(TAG, "initSatelliteSearch Exception " + e.getMessage());
         }
         return args;
@@ -330,9 +337,11 @@ public class DtvkitDvbsSetup extends Activity {
                     args.put(singleParameter[1]);//arg8
                     args.put(Integer.valueOf(singleParameter[2]));//arg9
                 } else {
+                    Toast.makeText(this, R.string.dialog_parameter_select_transponer, Toast.LENGTH_SHORT).show();
                     return null;
                 }
             } else {
+                Toast.makeText(this, R.string.dialog_parameter_select_transponer, Toast.LENGTH_SHORT).show();
                 return null;
             }
             args.put(DataMananer.KEY_FEC_ARRAY_VALUE[mDataMananer.getIntParameters(DataMananer.KEY_FEC_MODE)]);//arg10
@@ -372,6 +381,10 @@ public class DtvkitDvbsSetup extends Activity {
             int lnbtype = mDataMananer.getIntParameters(DataMananer.KEY_LNB_TYPE);
             int lowlnb = 0;
             int highlnb = 0;
+            int lowMin = 0;
+            int lowMax = 11750;
+            int highMin = 0;
+            int highMax = 11750;
             switch (lnbtype) {
                 case 0:
                     lowlnb = 5150;
@@ -382,26 +395,40 @@ public class DtvkitDvbsSetup extends Activity {
                     break;
                 case 2:
                     String customlnb = mDataMananer.getStringParameters(DataMananer.KEY_LNB_CUSTOM);
+                    if (TextUtils.isEmpty(customlnb)) {
+                        Log.d(TAG, "customlnb null!");
+                        Toast.makeText(this, R.string.dialog_parameter_set_lnb, Toast.LENGTH_SHORT).show();
+                        return null;
+                    }
                     String[] customlnbvalue = null;
                     if (customlnb != null) {
                         customlnbvalue = customlnb.split(",");
                     }
                     if (customlnbvalue != null && customlnbvalue.length == 1) {
                         lowlnb = Integer.valueOf(customlnbvalue[0]);
+                        lowMin = mDataMananer.getIntParameters(DataMananer.KEY_LNB_CUSTOM_LOW_MIN);
+                        lowMax = mDataMananer.getIntParameters(DataMananer.KEY_LNB_CUSTOM_LOW_MAX);
                     } else if (customlnbvalue != null && customlnbvalue.length == 2) {
                         lowlnb = Integer.valueOf(customlnbvalue[0]);
                         highlnb = Integer.valueOf(customlnbvalue[1]);
+                        lowMin = mDataMananer.getIntParameters(DataMananer.KEY_LNB_CUSTOM_LOW_MIN);
+                        lowMax = mDataMananer.getIntParameters(DataMananer.KEY_LNB_CUSTOM_LOW_MAX);
+                        highMin = mDataMananer.getIntParameters(DataMananer.KEY_LNB_CUSTOM_HIGH_MIN);
+                        highMax = mDataMananer.getIntParameters(DataMananer.KEY_LNB_CUSTOM_HIGH_MAX);
                     } else {
                         Log.d(TAG, "null lnb customized data!");
+                        Toast.makeText(this, R.string.dialog_parameter_set_lnb, Toast.LENGTH_SHORT).show();
+                        return null;
                     }
+                    break;
             }
-            lowband_obj.put("min_freq", 0);
-            lowband_obj.put("max_freq", 11750);
+            lowband_obj.put("min_freq", lowMin);
+            lowband_obj.put("max_freq", lowMax);
             lowband_obj.put("local_oscillator_frequency", lowlnb);
             lowband_obj.put("lnb_voltage", DataMananer.DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER_LIST[mDataMananer.getIntParameters(DataMananer.KEY_LNB_POWER)]);
             lowband_obj.put("tone_22k", mDataMananer.getIntParameters(DataMananer.KEY_22_KHZ) == 1);
-            highband_obj.put("min_freq", 0);
-            highband_obj.put("max_freq", 11750);
+            highband_obj.put("min_freq", highMin);
+            highband_obj.put("max_freq", highMax);
             highband_obj.put("local_oscillator_frequency", highlnb);
             highband_obj.put("lnb_voltage", DataMananer.DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER_LIST[mDataMananer.getIntParameters(DataMananer.KEY_LNB_POWER)]);
             highband_obj.put("tone_22k", mDataMananer.getIntParameters(DataMananer.KEY_22_KHZ) == 1);
@@ -413,6 +440,7 @@ public class DtvkitDvbsSetup extends Activity {
             obj.put("lnb", lnbobj);
         } catch (Exception e) {
             obj = null;
+            Toast.makeText(this, R.string.dialog_parameter_set_lnb, Toast.LENGTH_SHORT).show();
             Log.d(TAG, "initLbnData Exception " + e.getMessage());
             e.printStackTrace();
         }
@@ -512,8 +540,9 @@ public class DtvkitDvbsSetup extends Activity {
 
     private void stopSearch() {
         enableSearchButton(true);
+        enableStopButton(false);
         setSearchStatus("Finishing search");
-        getProgressBar().setIndeterminate(true);
+        getProgressBar().setIndeterminate(false);
         stopMonitoringSearch();
         try {
             JSONArray args = new JSONArray();

@@ -47,6 +47,7 @@ public class ParameterMananer {
     public static final String KEY_CURRENT_DIRECTION = "key_current_direction";
     public static final String KEY_LNB_TYPE = "key_lnb_type";
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_LNB_TYPE_LIST = {"5150", "9750/10600", "Customize"};
+    public static final int VALUE_LNB_TYPE_CUSTOM = 2;
     //unicable
     public static final String KEY_UNICABLE = "key_unicable";
     public static final String KEY_UNICABLE_SWITCH = "key_unicable_switch";
@@ -76,10 +77,19 @@ public class ParameterMananer {
     public static final String[] ID_DIALOG_KEY_COLLECTOR = {KEY_SATALLITE, KEY_TRANSPONDER, KEY_LNB_TYPE, KEY_UNICABLE_SWITCH/*KEY_UNICABLE*/, KEY_LNB_POWER,
             KEY_22_KHZ, KEY_TONE_BURST, KEY_DISEQC1_0, KEY_DISEQC1_1, KEY_MOTOR};
     public static final String KEY_LNB_CUSTOM = "key_lnb_custom";
+    public static final String KEY_LNB_CUSTOM_SINGLE_DOUBLE = "key_lnb_custom_single_double";
+    public static final int DEFAULT_LNB_CUSTOM_SINGLE_DOUBLE = 0;//SINGLE
+    public static final String KEY_LNB_CUSTOM_LOW_MIN = "key_lnb_low_band_min";
+    public static final String KEY_LNB_CUSTOM_LOW_MAX = "key_lnb_low_band_max";
+    public static final String KEY_LNB_CUSTOM_HIGH_MIN = "key_lnb_high_band_min";
+    public static final String KEY_LNB_CUSTOM_HIGH_MAX = "key_lnb_high_band_max";
+    public static final int VALUE_LNB_CUSTOM_MIN = 0;
+    public static final int VALUE_LNB_CUSTOM_MAX = 11750;
     //default value
     public static final String KEY_SATALLITE_DEFAULT_VALUE = "null";
     public static final String KEY_TRANSPONDER_DEFAULT_VALUE = "null";
     public static final String KEY_LNB_TYPE_DEFAULT_VALUE = "9750/10600";
+    public static final String KEY_LNB_TYPE_DEFAULT_SINGLE_VALUE = "9750";
     //unicable
     public static final String KEY_UNICABLE_DEFAULT_VALUE = "off";
     public static final String KEY_UNICABLE_SWITCH_DEFAULT_VALUE = "off";
@@ -374,7 +384,8 @@ public class ParameterMananer {
                     result = getStringParameters(ParameterMananer.ID_DIALOG_KEY_COLLECTOR[i]);
                     break;
                 case KEY_LNB_TYPE:
-                    result = mContext.getString(CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_LNB_TYPE_LIST[(getIntParameters(ParameterMananer.ID_DIALOG_KEY_COLLECTOR[i]))]);
+                    int index = getIntParameters(ParameterMananer.ID_DIALOG_KEY_COLLECTOR[i]);
+                    result = mContext.getString(CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_LNB_TYPE_LIST[index]);
                     break;
                 case KEY_UNICABLE:
                     result = mContext.getString(CustomDialog.DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_LIST[(getIntParameters(ParameterMananer.ID_DIALOG_KEY_COLLECTOR[i]))]);
@@ -496,6 +507,14 @@ public class ParameterMananer {
                 break;
             case KEY_DISEQC1_2_DISH_CURRENT_POSITION:
                 defValue = 0;
+                break;
+            case KEY_LNB_CUSTOM_LOW_MIN:
+            case KEY_LNB_CUSTOM_HIGH_MIN:
+                defValue = VALUE_LNB_CUSTOM_MIN;
+                break;
+            case KEY_LNB_CUSTOM_LOW_MAX:
+            case KEY_LNB_CUSTOM_HIGH_MAX:
+                defValue = VALUE_LNB_CUSTOM_MAX;
                 break;
             default:
                 defValue = 0;

@@ -15,4 +15,9 @@
         <item>卫星</item>
         <item>转发器</item>
     </string-array>
+
+    <string-array name="custom_single_double_entries">
+        <item>单本振</item>
+        <item>双本振</item>
+    </string-array>
 </resources>

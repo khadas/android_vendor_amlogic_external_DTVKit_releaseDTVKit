@@ -31,4 +31,14 @@
         <item>1</item>
         <item>2</item>
     </string-array>
+
+    <string-array name="custom_single_double_entries">
+        <item>Single</item>
+        <item>Double</item>
+    </string-array>
+
+    <string-array name="custom_single_double_entry_values" translatable="false">
+        <item>0</item>
+        <item>1</item>
+    </string-array>
 </resources>

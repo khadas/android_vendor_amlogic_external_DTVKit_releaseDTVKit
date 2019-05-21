@@ -34,8 +34,13 @@
     <string name="parameter_lnb_type_5150">5150</string>
     <string name="parameter_lnb_type_9750">9750/10600</string>
     <string name="parameter_lnb_custom">自定义</string>
-    <string name="parameter_lnb_custom_frequency1">频率1</string>
-    <string name="parameter_lnb_custom_frequency2">频率2</string>
+    <string name="parameter_lnb_custom_frequency1">低本振:</string>
+    <string name="parameter_lnb_custom_frequency2">高本振:</string>
+    <string name="parameter_lnb_custom_band_min">最低频率:</string>
+    <string name="parameter_lnb_custom_band_max">最高频率:</string>
+    <string name="parameter_lnb_custom_band_type">本振类型:</string>
+    <string name="parameter_lnb_custom_single_band_type">单本振</string>
+    <string name="parameter_lnb_custom_double_band_type">双本振</string>
     <string name="parameter_unicable">Unicable</string>
     <string name="parameter_unicable_switch">Unicable开关</string>
     <string name="parameter_unicable_switch_on">开</string>
@@ -80,6 +85,10 @@
     <string name="dialog_add_satellite_direction">方向</string>
     <string name="dialog_add_satellite_longitude">经度</string>
     <string name="dialog_parameter_not_complete">参数不完整!</string>
+    <string name="dialog_parameter_select_transponer">请选择转发器!</string>
+    <string name="dialog_parameter_select_satellite">请选择卫星!</string>
+    <string name="dialog_parameter_set_blind">请设置盲扫频点!</string>
+    <string name="dialog_parameter_set_lnb">请设置完的LNB!</string>
 
     <string name="search_activity_not_found">无可用的搜台应用!</string>
     <string name="strSettings">选项设置</string>

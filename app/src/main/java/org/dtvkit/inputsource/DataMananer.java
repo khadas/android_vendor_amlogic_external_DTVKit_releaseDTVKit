@@ -50,6 +50,12 @@ public class DataMananer {
     public static final String[] ID_DIALOG_KEY_COLLECTOR = {KEY_SATALLITE, KEY_TRANSPONDER, KEY_LNB_TYPE, KEY_UNICABLE, KEY_LNB_POWER,
             KEY_22_KHZ, KEY_TONE_BURST, KEY_DISEQC1_0, KEY_DISEQC1_1, KEY_MOTOR};
     public static final String KEY_LNB_CUSTOM = "key_lnb_custom";
+    public static final String KEY_LNB_CUSTOM_SINGLE_DOUBLE = "key_lnb_custom_single_double";
+    public static final int DEFAULT_LNB_CUSTOM_SINGLE_DOUBLE = 0;//SINGLE
+    public static final String KEY_LNB_CUSTOM_LOW_MIN = "key_lnb_low_band_min";
+    public static final String KEY_LNB_CUSTOM_LOW_MAX = "key_lnb_low_band_max";
+    public static final String KEY_LNB_CUSTOM_HIGH_MIN = "key_lnb_high_band_min";
+    public static final String KEY_LNB_CUSTOM_HIGH_MAX = "key_lnb_high_band_max";
     //default value
     public static final String KEY_SATALLITE_DEFAULT_VALUE = "null";
     public static final String KEY_TRANSPONDER_DEFAULT_VALUE = "null";
@@ -146,7 +152,7 @@ public class DataMananer {
     public static final String[] VALUE_DVBT_TYPE_LIST = {"DVB-T", "DVB-T2"};
     public static final int VALUE_DVBT_MODE_DVBT = 0;
     public static final String KEY_DVBC_MODE = "dvbc_mode";
-    public static final String[] VALUE_DVBC_MODE_LIST = {"QAM4", "QAM8", "QAM16", "QAM32", "QAM64", "QAM128", "QAM256", "AUTO"};
+    public static final String[] VALUE_DVBC_MODE_LIST = {/*"QAM4", "QAM8", */"QAM16", "QAM32", "QAM64", "QAM128", "QAM256", "AUTO"};
     public static final int VALUE_DVBC_MODE_QAM16 = 2;
     public static final String KEY_DVBC_SYMBOL_RATE = "dvbc_symbol_rate";
     public static final int VALUE_DVBC_SYMBOL_RATE = 6900;
@@ -281,10 +287,10 @@ public class DataMananer {
                 defValue = "";
                 break;
             case KEY_SATALLITE:
-                defValue = "null";
+                defValue = KEY_SATALLITE_DEFAULT_VALUE;
                 break;
             case KEY_TRANSPONDER:
-                defValue = "";
+                defValue = KEY_TRANSPONDER_DEFAULT_VALUE;
                 break;
             case KEY_LNB_TYPE:
                 defValue = KEY_LNB_TYPE_DEFAULT_VALUE;

@@ -19,6 +19,7 @@ import android.text.TextUtils;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
@@ -163,6 +164,7 @@ public class DtvkitDvbtSetup extends Activity {
         LinearLayout public_search_channel_name_containner = (LinearLayout)findViewById(R.id.public_search_channel_containner);
         Spinner public_search_channel_name_spinner = (Spinner)findViewById(R.id.public_search_channel_spinner);
         Button search = (Button)findViewById(R.id.terrestrialstartsearch);
+        CheckBox nit = (CheckBox)findViewById(R.id.network);
 
         int isFrequencyMode = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
         if (isFrequencyMode == DataMananer.VALUE_FREQUENCY_MODE) {
@@ -180,6 +182,7 @@ public class DtvkitDvbtSetup extends Activity {
         public_type_edit.setText("");
         int value = mDataMananer.getIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE);
         public_search_mode_spinner.setSelection(value);
+        nit.setChecked(mDataMananer.getIntParameters(DataMananer.KEY_NIT) == 1 ? true : false);
         if (DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == value) {
             public_typein_containner.setVisibility(View.GONE);
             dvbt_bandwidth_containner.setVisibility(View.GONE);
@@ -189,15 +192,18 @@ public class DtvkitDvbtSetup extends Activity {
             dvbc_symbol_containner.setVisibility(View.GONE);
             frequency_channel_container.setVisibility(View.GONE);
             public_search_channel_name_containner.setVisibility(View.GONE);
+            nit.setVisibility(View.VISIBLE);
             search.setText(R.string.strAutoSearch);
         } else {
             search.setText(R.string.strManualSearch);
             if (isFrequencyMode == DataMananer.VALUE_FREQUENCY_MODE) {
                 public_typein_containner.setVisibility(View.VISIBLE);
                 public_search_channel_name_containner.setVisibility(View.GONE);
+                nit.setVisibility(View.VISIBLE);
             } else {
                 public_typein_containner.setVisibility(View.GONE);
                 public_search_channel_name_containner.setVisibility(View.VISIBLE);
+                nit.setVisibility(View.GONE);
             }
             frequency_channel_container.setVisibility(View.VISIBLE);
             frequency_channel_spinner.setSelection(mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY));
@@ -324,6 +330,15 @@ public class DtvkitDvbtSetup extends Activity {
                     // TODO Auto-generated method stub
                 }
             });
+            nit.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    if (nit.isChecked()) {
+                        mDataMananer.saveIntParameters(DataMananer.KEY_NIT, 1);
+                    } else {
+                        mDataMananer.saveIntParameters(DataMananer.KEY_NIT, 0);
+                    }
+                }
+            });
         }
     }
 
@@ -363,6 +378,7 @@ public class DtvkitDvbtSetup extends Activity {
                     int isfrequencysearch = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
                     if (mIsDvbt) {
                         if (DataMananer.VALUE_FREQUENCY_MODE == isfrequencysearch) {
+                            //args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) > 0);
                             args.put(Integer.valueOf(parameter) * 1000000);//mhz
                             args.put(DataMananer.VALUE_DVBT_BANDWIDTH_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_BANDWIDTH)]);
                             args.put(DataMananer.VALUE_DVBT_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_MODE)]);
@@ -377,6 +393,7 @@ public class DtvkitDvbtSetup extends Activity {
                         }
                     } else {
                         if (DataMananer.VALUE_FREQUENCY_MODE == isfrequencysearch) {
+                            //args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) > 0);
                             args.put(Integer.valueOf(parameter) * 1000000);//mhz
                             args.put(DataMananer.VALUE_DVBC_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]);
                             args.put(getUpdatedDvbcSymbolRate());

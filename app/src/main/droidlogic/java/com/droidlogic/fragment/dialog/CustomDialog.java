@@ -9,6 +9,7 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -453,8 +454,20 @@ public class CustomDialog/* extends AlertDialog*/ {
 
         mDialogTitle.setText(DIALOG_SET_SELECT_SINGLE_ITEM_LNB_TYPE_LIST[2]);
         final EditText editText1 = (EditText)mDialogView.findViewById(R.id.edittext_frequency1);
+        final EditText lowMineditText = (EditText)mDialogView.findViewById(R.id.edittext_low_min_frequency);
+        final EditText lowMaxeditText = (EditText)mDialogView.findViewById(R.id.edittext_low_max_frequency);
         final EditText editText2 = (EditText)mDialogView.findViewById(R.id.edittext_frequency2);
+        final EditText highMineditText = (EditText)mDialogView.findViewById(R.id.edittext_high_min_frequency);
+        final EditText highMaxeditText = (EditText)mDialogView.findViewById(R.id.edittext_high_max_frequency);
+        final LinearLayout lowBandContainer = (LinearLayout)mDialogView.findViewById(R.id.low_band_container);
+        final LinearLayout highBandContainer = (LinearLayout)mDialogView.findViewById(R.id.high_band_container);
+        final Spinner lowHighBandSpinner = (Spinner)mDialogView.findViewById(R.id.spinner_band_type);
         String customlnb = mParameterMananer.getStringParameters(ParameterMananer.KEY_LNB_CUSTOM);
+        boolean customSingle = mParameterMananer.getIntParameters(ParameterMananer.KEY_LNB_CUSTOM_SINGLE_DOUBLE) == ParameterMananer.DEFAULT_LNB_CUSTOM_SINGLE_DOUBLE;
+        int customLowBandMin = mParameterMananer.getIntParameters(ParameterMananer.KEY_LNB_CUSTOM_LOW_MIN);
+        int customLowBandMax = mParameterMananer.getIntParameters(ParameterMananer.KEY_LNB_CUSTOM_LOW_MAX);
+        int customHighBandMin = mParameterMananer.getIntParameters(ParameterMananer.KEY_LNB_CUSTOM_HIGH_MIN);
+        int customHighBandMax = mParameterMananer.getIntParameters(ParameterMananer.KEY_LNB_CUSTOM_HIGH_MAX);
         String[] customlnbvalue = null;
         int lowlnb = 0;
         int highlnb = 0;
@@ -469,16 +482,70 @@ public class CustomDialog/* extends AlertDialog*/ {
         } else {
             Log.d(TAG, "null lnb customized data!");
         }
-        if (lowlnb > 0) {
-            editText1.setHint(lowlnb + "");
+        if (lowlnb >= 0) {
+            editText1.setText(lowlnb + "");
         } else {
-            editText1.setHint("");
+            editText1.setText("");
         }
-        if (highlnb > 0) {
-            editText2.setHint(highlnb + "");
+        if (highlnb >= 0) {
+            editText2.setText(highlnb + "");
         } else {
-            editText2.setHint("");
+            editText2.setText("");
         }
+        if (customLowBandMin >= 0) {
+            lowMineditText.setText(customLowBandMin + "");
+        } else {
+            lowMineditText.setText("");
+        }
+        if (customLowBandMax >= 0) {
+            lowMaxeditText.setText(customLowBandMax + "");
+        } else {
+            lowMaxeditText.setText("");
+        }
+        if (customHighBandMin >= 0) {
+            highMineditText.setText(customHighBandMin + "");
+        } else {
+            highMineditText.setText("");
+        }
+        if (customHighBandMax >= 0) {
+            highMaxeditText.setText(customHighBandMax + "");
+        } else {
+            highMaxeditText.setText("");
+        }
+
+        if (customSingle) {
+            highBandContainer.setVisibility(View.GONE);
+        } else {
+            highBandContainer.setVisibility(View.VISIBLE);
+        }
+        lowHighBandSpinner.setSelection(mParameterMananer.getIntParameters(ParameterMananer.KEY_LNB_CUSTOM_SINGLE_DOUBLE));
+        lowHighBandSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (position == mParameterMananer.getIntParameters(ParameterMananer.KEY_LNB_CUSTOM_SINGLE_DOUBLE)) {
+                    Log.d(TAG, "lowHighBandSpinner onItemSelected same position = " + position);
+                    return;
+                }
+                Log.d(TAG, "lowHighBandSpinner onItemSelected position = " + position);
+                mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_SINGLE_DOUBLE, position);
+                if (position == ParameterMananer.DEFAULT_LNB_CUSTOM_SINGLE_DOUBLE) {
+                    highBandContainer.setVisibility(View.GONE);
+                    //mParameterMananer.saveStringParameters(ParameterMananer.KEY_LNB_CUSTOM, ParameterMananer.KEY_LNB_TYPE_DEFAULT_SINGLE_VALUE);
+                } else {
+                    highBandContainer.setVisibility(View.VISIBLE);
+                    //mParameterMananer.saveStringParameters(ParameterMananer.KEY_LNB_CUSTOM, ParameterMananer.KEY_LNB_TYPE_DEFAULT_VALUE);
+                }
+                /*mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_LOW_MIN, ParameterMananer.VALUE_LNB_CUSTOM_MIN);
+                mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_LOW_MAX, ParameterMananer.VALUE_LNB_CUSTOM_MAX);
+                mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_HIGH_MIN, ParameterMananer.VALUE_LNB_CUSTOM_MIN);
+                mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_HIGH_MAX, ParameterMananer.VALUE_LNB_CUSTOM_MAX);*/
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // TODO Auto-generated method stub
+            }
+        });
 
         final Button ok = (Button) mDialogView.findViewById(R.id.button1);
         final Button cancel = (Button) mDialogView.findViewById(R.id.button2);
@@ -492,10 +559,37 @@ public class CustomDialog/* extends AlertDialog*/ {
                     bundle.putString("key", ParameterMananer.KEY_LNB_CUSTOM);
                     bundle.putString("button", "ok");
                     bundle.putString("value1", editText1.getText() != null ? editText1.getText().toString() : "");
-                    bundle.putString("value2", editText2.getText() != null ? editText2.getText().toString() : "");
-                    if (editText1.getText() == null) {
+                    boolean isSingle = (mParameterMananer.getIntParameters(ParameterMananer.KEY_LNB_CUSTOM_SINGLE_DOUBLE) == ParameterMananer.DEFAULT_LNB_CUSTOM_SINGLE_DOUBLE);
+                    String lowMinstr = (!TextUtils.isEmpty(lowMineditText.getText()) ? lowMineditText.getText().toString() : "");
+                    String lowMaxstr = (!TextUtils.isEmpty(lowMaxeditText.getText()) ? lowMaxeditText.getText().toString() : "");
+                    String highMaxstr = (!TextUtils.isEmpty(highMaxeditText.getText()) ? highMaxeditText.getText().toString() : "");
+                    String highMinstr = (!TextUtils.isEmpty(highMineditText.getText()) ? highMineditText.getText().toString() : "");
+                    Log.d(TAG, "initLnbCustomedItemDialog lowMinstr = " + lowMinstr + ", lowMaxstr = " + lowMaxstr + ",highMinstr = " + highMinstr + ", highMaxstr = " + highMaxstr);
+                    /*bundle.putBoolean("isSingle", isSingle);
+                    bundle.putInt("value1_min", Integer.valueOf(lowMinstr));
+                    bundle.putInt("value1_max", Integer.valueOf(lowMaxstr));
+                    bundle.putInt("value2_min", Integer.valueOf(highMinstr));
+                    bundle.putInt("value2_max", Integer.valueOf(highMaxstr));*/
+                    if ((TextUtils.isEmpty(editText1.getText()) || TextUtils.isEmpty(lowMineditText.getText()) || TextUtils.isEmpty(lowMaxeditText.getText())) ||
+                            (!isSingle && (TextUtils.isEmpty(editText2.getText()) || TextUtils.isEmpty(highMineditText.getText()) || TextUtils.isEmpty(highMaxeditText.getText())))) {
                         Toast.makeText(mContext, R.string.dialog_parameter_not_complete, Toast.LENGTH_SHORT).show();
                         return;
+                    }
+                    if (!isSingle) {
+                        bundle.putString("value2", editText2.getText() != null ? editText2.getText().toString() : "");
+                        if (!TextUtils.isEmpty(lowMaxstr) && !TextUtils.isEmpty(lowMinstr) &&
+                                !TextUtils.isEmpty(highMaxstr) && !TextUtils.isEmpty(highMinstr)) {
+                            mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_LOW_MIN, Integer.valueOf(lowMinstr));
+                            mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_LOW_MAX, Integer.valueOf(lowMaxstr));
+                            mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_HIGH_MIN, Integer.valueOf(highMinstr));
+                            mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_HIGH_MAX, Integer.valueOf(highMaxstr));
+                        }
+                    } else {
+                        bundle.putString("value2", "");
+                        if (!TextUtils.isEmpty(lowMaxstr) && !TextUtils.isEmpty(lowMinstr)) {
+                            mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_LOW_MIN, Integer.valueOf(lowMinstr));
+                            mParameterMananer.saveIntParameters(ParameterMananer.KEY_LNB_CUSTOM_LOW_MAX, Integer.valueOf(lowMaxstr));
+                        }
                     }
                     mDialogCallBack.onStatusChange(ok, ParameterMananer.KEY_LNB_CUSTOM, bundle);
                     if (mAlertDialog != null) {
@@ -1039,21 +1133,19 @@ public class CustomDialog/* extends AlertDialog*/ {
             String frequency1 = "";
             String polarity1 = "";
             String symbolrate1 = "";
-            String[] list = parameter.split(",");
-            if (list != null && list.length > 0) {
+            String[] list = parameter.split("/");
+            if (list != null && list.length == 3) {
+                satellitename1 = mParameterMananer.getCurrentSatellite();
                 for (int i = 0; i < list.length; i++) {
                     switch (i) {
                         case 0:
-                            satellitename1 = list[0];
+                            frequency1 = list[0];
                             break;
                         case 1:
-                            frequency1 = list[1];
+                            polarity1 = list[1];
                             break;
                         case 2:
-                            polarity1 = list[2];
-                            break;
-                        case 3:
-                            symbolrate1 = list[3];
+                            symbolrate1 = list[2];
                             break;
                         default:
                             Log.d(TAG, "erro part");

@@ -35,8 +35,13 @@
     <string name="parameter_lnb_type_5150">5150</string>
     <string name="parameter_lnb_type_9750">9750/10600</string>
     <string name="parameter_lnb_custom">Customize</string>
-    <string name="parameter_lnb_custom_frequency1">Frequency1</string>
-    <string name="parameter_lnb_custom_frequency2">Frequency2</string>
+    <string name="parameter_lnb_custom_frequency1">Low Band:</string>
+    <string name="parameter_lnb_custom_frequency2">High Band:</string>
+    <string name="parameter_lnb_custom_band_min">Min Freq:</string>
+    <string name="parameter_lnb_custom_band_max">Max Freq:</string>
+    <string name="parameter_lnb_custom_band_type">Band Type:</string>
+    <string name="parameter_lnb_custom_single_band_type">Single</string>
+    <string name="parameter_lnb_custom_double_band_type">Double</string>
     <string name="parameter_unicable">Unicable</string>
     <string name="parameter_unicable_switch">Unicable Switch</string>
     <string name="parameter_unicable_switch_on">on</string>
@@ -81,6 +86,10 @@
     <string name="dialog_add_satellite_direction">Direction</string>
     <string name="dialog_add_satellite_longitude">Longitude</string>
     <string name="dialog_parameter_not_complete">Parameters not completed!</string>
+    <string name="dialog_parameter_select_transponer">please select a transponder before search it!</string>
+    <string name="dialog_parameter_select_satellite">please select a satellite before search it!</string>
+    <string name="dialog_parameter_set_blind">please set blind frequency before search it!</string>
+    <string name="dialog_parameter_set_lnb">please set LNB before search it!</string>
 
     <string name="search_activity_not_found">Channel search activity is unavailable!</string>
     <string name="strSettings">Option Settings</string>
