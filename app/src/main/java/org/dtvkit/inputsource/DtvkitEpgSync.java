@@ -131,6 +131,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                         .setStartTimeUtcMillis(event.getLong("startutc") * 1000)
                         .setEndTimeUtcMillis(event.getLong("endutc") * 1000)
                         .setDescription(event.getString("description"))
+                        .setLongDescription(event.getString("description_extern"))
                         .setCanonicalGenres(getGenres(event.getString("genre")))
                         .setInternalProviderData(data)
                         .build();
