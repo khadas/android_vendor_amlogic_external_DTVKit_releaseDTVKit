@@ -378,7 +378,7 @@ public class DtvkitDvbtSetup extends Activity {
                     int isfrequencysearch = mDataMananer.getIntParameters(DataMananer.KEY_IS_FREQUENCY);
                     if (mIsDvbt) {
                         if (DataMananer.VALUE_FREQUENCY_MODE == isfrequencysearch) {
-                            //args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) > 0);
+                            args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) > 0);
                             args.put(Integer.valueOf(parameter) * 1000000);//mhz
                             args.put(DataMananer.VALUE_DVBT_BANDWIDTH_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_BANDWIDTH)]);
                             args.put(DataMananer.VALUE_DVBT_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_MODE)]);
@@ -393,7 +393,7 @@ public class DtvkitDvbtSetup extends Activity {
                         }
                     } else {
                         if (DataMananer.VALUE_FREQUENCY_MODE == isfrequencysearch) {
-                            //args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) > 0);
+                            args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) > 0);
                             args.put(Integer.valueOf(parameter) * 1000000);//mhz
                             args.put(DataMananer.VALUE_DVBC_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]);
                             args.put(getUpdatedDvbcSymbolRate());
@@ -411,6 +411,7 @@ public class DtvkitDvbtSetup extends Activity {
                     return null;
                 }
             } else {
+                args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) > 0);
                 return args;
             }
         } else {
