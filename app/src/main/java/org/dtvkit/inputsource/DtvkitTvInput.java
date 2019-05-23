@@ -694,9 +694,13 @@ public class DtvkitTvInput extends TvInputService {
 
         @Override
         public void onSetCaptionEnabled(boolean enabled) {
+            if (true) {
+                Log.i(TAG, "onSetCaptionEnabled no need again, start it in select track or gettracks in onsignal");
+                return;
+            }
             Log.i(TAG, "onSetCaptionEnabled " + enabled);
             // TODO CaptioningManager.getLocale()
-            playerSetSubtitlesOn(enabled);
+            playerSetSubtitlesOn(enabled);//start it in select track or gettracks in onsignal
         }
 
         @Override
@@ -709,7 +713,7 @@ public class DtvkitTvInput extends TvInputService {
                 }
             } else if (type == TvTrackInfo.TYPE_SUBTITLE) {
                 String sourceTrackId = trackId;
-                if (trackId != null && !TextUtils.isDigitsOnly(trackId)) {
+                if (!TextUtils.isEmpty(trackId) && !TextUtils.isDigitsOnly(trackId)) {
                     String[] nameValuePairs = trackId.split("&");
                     if (nameValuePairs != null && nameValuePairs.length > 0) {
                         String[] nameValue = nameValuePairs[0].split("=");
@@ -717,11 +721,22 @@ public class DtvkitTvInput extends TvInputService {
                             trackId = nameValue[1];//parse id
                         }
                     }
-                    notifyTrackSelected(type, sourceTrackId);
-                    Log.d(TAG, "need trackId that only contains number");
-                    return false;
+                    if (TextUtils.isEmpty(trackId) || !TextUtils.isDigitsOnly(trackId)) {
+                        //notifyTrackSelected(type, sourceTrackId);
+                        Log.d(TAG, "need trackId that only contains number sourceTrackId = " + sourceTrackId + ", trackId = " + trackId);
+                        return false;
+                    }
                 }
                 if (playerSelectSubtitleTrack(TextUtils.isEmpty(trackId) ? 0xFFFF : Integer.parseInt(trackId))) {
+                    if (TextUtils.isEmpty(trackId)) {
+                        if (playerGetSubtitlesOn()) {
+                            playerSetSubtitlesOn(false);//close if opened
+                        }
+                    } else {
+                        if (!playerGetSubtitlesOn()) {
+                            playerSetSubtitlesOn(true);//open if closed
+                        }
+                    }
                     notifyTrackSelected(type, sourceTrackId);
                     return true;
                 }
@@ -988,8 +1003,21 @@ public class DtvkitTvInput extends TvInputService {
                                 Log.i(TAG, "audio track selected: " + playerGetSelectedAudioTrack());
                                 notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(playerGetSelectedAudioTrack()));
                                 if (playerGetSubtitlesOn()) {
-                                    Log.i(TAG, "subtitle track selected: " + playerGetSelectedSubtitleTrackId());
+                                    String selectId = playerGetSelectedSubtitleTrackId();
+                                    Log.i(TAG, "subtitle track selected: " + selectId);
+                                    if (TextUtils.isEmpty(selectId)) {
+                                        playerSetSubtitlesOn(false);
+                                    }
                                     notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, playerGetSelectedSubtitleTrackId());
+                                } else {
+                                    String selectId = playerGetSelectedSubtitleTrackId();
+                                    Log.i(TAG, "subtitle track off selected = " + selectId);
+                                    if (!TextUtils.isEmpty(selectId)) {
+                                        playerSetSubtitlesOn(true);
+                                        notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, selectId);
+                                    } else {
+                                        notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, null);
+                                    }
                                 }
 
                                 if (timeshiftRecorderState == RecorderState.STOPPED) {
@@ -1162,9 +1190,23 @@ public class DtvkitTvInput extends TvInputService {
                     }
                     Log.i(TAG, "audio track selected: " + playerGetSelectedAudioTrack());
                     notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(playerGetSelectedAudioTrack()));
-                    if (playerGetSubtitlesOn())
-                        Log.i(TAG, "subtitle track selected: " + playerGetSelectedSubtitleTrackId());
+                    if (playerGetSubtitlesOn()) {
+                        String selectId = playerGetSelectedSubtitleTrackId();
+                        Log.i(TAG, "DvbUpdatedChannelData track selected: " + selectId);
+                        if (TextUtils.isEmpty(selectId)) {
+                            playerSetSubtitlesOn(false);
+                        }
                         notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, playerGetSelectedSubtitleTrackId());
+                    } else {
+                        String selectId = playerGetSelectedSubtitleTrackId();
+                        Log.i(TAG, "DvbUpdatedChannelData track off selected = " + selectId);
+                        if (!TextUtils.isEmpty(selectId)) {
+                            playerSetSubtitlesOn(true);
+                            notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, selectId);
+                        } else {
+                            notifyTrackSelected(TvTrackInfo.TYPE_SUBTITLE, null);
+                        }
+                    }
                 }
                 else if (signal.equals("MhegAppStarted"))
                 {
@@ -1384,6 +1426,7 @@ public class DtvkitTvInput extends TvInputService {
             JSONArray args = new JSONArray();
             args.put(on);
             DtvkitGlueClient.getInstance().request("Player.setSubtitlesOn", args);
+            Log.i(TAG, "playerSetSubtitlesOn on =  " + on);
         } catch (Exception e) {
             Log.e(TAG, "playerSetSubtitlesOn=  " + e.getMessage());
         }
@@ -1636,6 +1679,7 @@ public class DtvkitTvInput extends TvInputService {
                 JSONObject subtitleStream = subtitleStreams.getJSONObject(i);
                 if (subtitleStream.getBoolean("selected")) {
                     index = subtitleStream.getInt("index");
+                    Log.i(TAG, "playerGetSelectedSubtitleTrack index = " + index);
                     break;
                 }
             }
@@ -1659,6 +1703,7 @@ public class DtvkitTvInput extends TvInputService {
                     } else {
                         trackId = "id=" + Integer.toString(subtitleStream.getInt("index")) + "&" + "type=" + "4";//TYPE_DTV_CC
                     }
+                    Log.i(TAG, "playerGetSelectedSubtitleTrack trackId = " + trackId);
                     break;
                 }
             }
@@ -1679,6 +1724,7 @@ public class DtvkitTvInput extends TvInputService {
                 JSONObject audioStream = audioStreams.getJSONObject(i);
                 if (audioStream.getBoolean("selected")) {
                     index = audioStream.getInt("index");
+                    Log.i(TAG, "playerGetSelectedAudioTrack index = " + index);
                     break;
                 }
             }
@@ -1696,6 +1742,7 @@ public class DtvkitTvInput extends TvInputService {
         } catch (Exception e) {
             Log.e(TAG, "playerGetSubtitlesOn = " + e.getMessage());
         }
+        Log.i(TAG, "playerGetSubtitlesOn on = " + on);
         return on;
     }
 
