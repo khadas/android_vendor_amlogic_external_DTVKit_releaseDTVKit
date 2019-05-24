@@ -1,6 +1,7 @@
 package org.dtvkit.inputsource;
 
 import android.media.tv.TvContract;
+import android.media.tv.TvContentRating;
 import android.net.Uri;
 import android.util.Log;
 
@@ -62,6 +63,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
     public List<Program> getProgramsForChannel(Uri channelUri, Channel channel, long startMs, long endMs) {
         List<Program> programs = new ArrayList<>();
         long starttime, endtime;
+        int parental_rating;
         try {
         String dvbUri = String.format("dvb://%04x.%04x.%04x", channel.getOriginalNetworkId(), channel.getTransportStreamId(), channel.getServiceId());
 
@@ -82,6 +84,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 data.put("dvbUri", dvbUri);
                 starttime = event.getLong("startutc") * 1000;
                 endtime = event.getLong("endutc") * 1000;
+                parental_rating = event.getInt("rating");
                 if (starttime >= endMs || endtime <= startMs) {
                     Log.i(TAG, "Skip##  startMs:endMs=["+startMs+":"+endMs+"]  event:startT:endT=["+starttime+":"+endtime+"]");
                     continue;
@@ -94,6 +97,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                             .setDescription(event.getString("description"))
                             .setCanonicalGenres(getGenres(event.getString("genre")))
                             .setInternalProviderData(data)
+                            .setContentRatings(parental_rating == 0 ? null : parseParentalRatings(parental_rating, event.getString("name")))
                             .build();
                     programs.add(pro);
                 }
@@ -108,6 +112,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
     @Override
     public List<Program> getAllProgramsForChannel(Uri channelUri, Channel channel) {
         List<Program> programs = new ArrayList<>();
+        int parental_rating;
 
         try {
         String dvbUri = String.format("dvb://%04x.%04x.%04x", channel.getOriginalNetworkId(), channel.getTransportStreamId(), channel.getServiceId());
@@ -125,6 +130,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
 
                 InternalProviderData data = new InternalProviderData();
                 data.put("dvbUri", dvbUri);
+                parental_rating = event.getInt("rating");
                 Program pro = new Program.Builder()
                         .setChannelId(channel.getId())
                         .setTitle(event.getString("name"))
@@ -134,6 +140,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                         .setLongDescription(event.getString("description_extern"))
                         .setCanonicalGenres(getGenres(event.getString("genre")))
                         .setInternalProviderData(data)
+                        .setContentRatings(parental_rating == 0 ? null : parseParentalRatings(parental_rating, event.getString("name")))
                         .build();
                 programs.add(pro);
                 Log.i("cz_debug", "## get pro by event:"+ pro.toString()+ " ##");
@@ -246,5 +253,28 @@ public class DtvkitEpgSync extends EpgSyncJobService {
             default:
                 return new String[]{};
         }
+    }
+
+    private TvContentRating[] parseParentalRatings(int parentalRating, String title)
+    {
+        TvContentRating ratings_arry[];
+        String ratingSystemDefinition = "DVB";
+        String ratingDomain = "com.android.tv";
+        String DVB_ContentRating[] = {"DVB_4", "DVB_5", "DVB_6", "DVB_7", "DVB_8", "DVB_9", "DVB_10", "DVB_11", "DVB_12", "DVB_13", "DVB_14", "DVB_15", "DVB_16", "DVB_17", "DVB_18"};
+
+        ratings_arry = new TvContentRating[1];
+        parentalRating += 3; //minimum age = rating + 3 years
+        Log.d(TAG, "parseParentalRatings parentalRating:"+ parentalRating + ", title = " + title);
+        if (parentalRating >= 4 && parentalRating <= 18) {
+            TvContentRating r = TvContentRating.createRating(ratingDomain, ratingSystemDefinition, DVB_ContentRating[parentalRating-4], null);
+            if (r != null) {
+                ratings_arry[0] = r;
+                Log.d(TAG, "parse ratings add rating:"+r.flattenToString()  + ", title = " + title);
+            }
+        }else {
+            ratings_arry = null;
+        }
+
+        return ratings_arry;
     }
 }

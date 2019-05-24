@@ -19,6 +19,8 @@ import android.media.tv.TvInputManager;
 import android.media.tv.TvInputService;
 import android.media.tv.TvTrackInfo;
 
+import android.content.IntentFilter;
+import android.content.BroadcastReceiver;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
@@ -119,6 +121,105 @@ public class DtvkitTvInput extends TvInputService {
         Log.i(TAG, "DtvkitTvInput");
     }
 
+    protected final BroadcastReceiver mParentalControlsBroadcastReceiver = new BroadcastReceiver() {
+
+        private int getParentalControlAge() {
+            int age = 0;
+
+            try {
+                JSONArray args = new JSONArray();
+                age = DtvkitGlueClient.getInstance().request("Dvb.getParentalControlAge", args).getInt("data");
+                Log.i(TAG, "getParentalControlAge:" + age);
+            } catch (Exception e) {
+                Log.e(TAG, e.getMessage());
+            }
+            return age;
+        }
+
+        private void setParentalControlAge(int age) {
+
+            try {
+                JSONArray args = new JSONArray();
+                args.put(age);
+                DtvkitGlueClient.getInstance().request("Dvb.setParentalControlAge", args);
+                Log.i(TAG, "setParentalControlAge:" + age);
+            } catch (Exception e) {
+                Log.e(TAG, e.getMessage());
+            }
+        }
+
+        private boolean getParentalControlOn() {
+            boolean parentalctrl_enabled = false;
+            try {
+                JSONArray args = new JSONArray();
+                parentalctrl_enabled = DtvkitGlueClient.getInstance().request("Dvb.getParentalControlOn", args).getBoolean("data");;
+                Log.i(TAG, "getParentalControlOn:" + parentalctrl_enabled);
+            } catch (Exception e) {
+                Log.e(TAG, e.getMessage());
+            }
+            return parentalctrl_enabled;
+        }
+
+        private void setParentalControlOn(boolean parentalctrl_enabled) {
+
+            try {
+                JSONArray args = new JSONArray();
+                args.put(parentalctrl_enabled);
+                DtvkitGlueClient.getInstance().request("Dvb.setParentalControlOn", args);
+                Log.i(TAG, "setParentalControlOn:" + parentalctrl_enabled);
+            } catch (Exception e) {
+                Log.e(TAG, e.getMessage());
+            }
+        }
+
+        private int getCurrentMinAgeByBlockedRatings() {
+            List<TvContentRating> ratingList = mTvInputManager.getBlockedRatings();
+            String rating_system;
+            String parentcontrol_rating;
+            int min_age = 18;
+            for (int i = 0; i < ratingList.size(); i++)
+            {
+                Log.d(TAG, "TvContentRating:"+ratingList.get(i).flattenToString());
+                parentcontrol_rating = ratingList.get(i).getMainRating();
+                rating_system = ratingList.get(i).getRatingSystem();
+                Log.d(TAG, "TvContentRating: " +rating_system+ "/" + parentcontrol_rating);
+                if (rating_system.equals("DVB"))
+                {
+                    String[] ageArry = parentcontrol_rating.split("_", 2);
+                    if (ageArry[0].equals("DVB"))
+                    {
+                       int age_temp = Integer.valueOf(ageArry[1]);
+                       Log.d(TAG, "age_temp:" + age_temp);
+                       min_age = min_age < age_temp ? min_age : age_temp;
+                    }
+                }
+            }
+            return min_age;
+        }
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (action.equals(TvInputManager.ACTION_BLOCKED_RATINGS_CHANGED)
+                   || action.equals(TvInputManager.ACTION_PARENTAL_CONTROLS_ENABLED_CHANGED)) {
+               boolean isParentControlEnabled = mTvInputManager.isParentalControlsEnabled();
+               Log.d(TAG, "BLOCKED_RATINGS_CHANGED isParentControlEnabled = " + isParentControlEnabled);
+               if (isParentControlEnabled != getParentalControlOn())
+               {
+                  setParentalControlOn(isParentControlEnabled);
+               }
+               if (isParentControlEnabled) {
+                  int min_age = 4;
+                  min_age = getCurrentMinAgeByBlockedRatings();
+                  if (min_age != getParentalControlAge())
+                  {
+                      setParentalControlAge(min_age);
+                  }
+               }
+            }
+        }
+    };
+
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void onCreate() {
@@ -129,6 +230,11 @@ public class DtvkitTvInput extends TvInputService {
         mContentResolver = getContentResolver();
         mContentResolver.registerContentObserver(TvContract.Channels.CONTENT_URI, true, mContentObserver);
         onChannelsChanged();
+
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(TvInputManager.ACTION_BLOCKED_RATINGS_CHANGED);
+        intentFilter.addAction(TvInputManager.ACTION_PARENTAL_CONTROLS_ENABLED_CHANGED);
+        registerReceiver(mParentalControlsBroadcastReceiver, intentFilter);
 
         TvInputInfo.Builder builder = new TvInputInfo.Builder(getApplicationContext(), new ComponentName(getApplicationContext(), DtvkitTvInput.class));
         numRecorders = recordingGetNumRecorders();
@@ -148,6 +254,7 @@ public class DtvkitTvInput extends TvInputService {
     @Override
     public void onDestroy() {
         Log.i(TAG, "onDestroy");
+        unregisterReceiver(mParentalControlsBroadcastReceiver);
         mContentResolver.unregisterContentObserver(mContentObserver);
         mContentResolver.unregisterContentObserver(mRecordingsContentObserver);
         DtvkitGlueClient.getInstance().disConnectDtvkitClient();
@@ -1159,7 +1266,13 @@ public class DtvkitTvInput extends TvInputService {
                             playerState = PlayerState.PLAYING;
                             break;
                         case "blocked":
-                            notifyContentBlocked(TvContentRating.createRating("com.android.tv", "DVB", "DVB_18"));
+                            String Rating = "";
+                            try {
+                                Rating = String.format("DVB_%d", data.getInt("rating"));
+                            } catch (JSONException ignore) {
+                                Log.e(TAG, ignore.getMessage());
+                            }
+                            notifyContentBlocked(TvContentRating.createRating("com.android.tv", "DVB", Rating));
                             break;
                         case "badsignal":
                             notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_WEAK_SIGNAL);
