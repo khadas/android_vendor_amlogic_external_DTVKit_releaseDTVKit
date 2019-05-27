@@ -25,48 +25,9 @@
 
 using namespace android;
 
-class CallbackEnv {
-public:
-  CallbackEnv(const char *methodName) : mName(methodName) {
-      mCallbackEnv = AndroidRuntime::getJNIEnv();
-  }
-
-  ~CallbackEnv() {
-    if (mCallbackEnv && mCallbackEnv->ExceptionCheck()) {
-        ALOGE("An exception was thrown by callback '%s'.", mName);
-        LOGE_EX(mCallbackEnv);
-        mCallbackEnv->ExceptionClear();
-    }
-  }
-
-  bool valid() const {
-    JNIEnv *env = AndroidRuntime::getJNIEnv();
-    if (!mCallbackEnv || (mCallbackEnv != env)) {
-        //ALOGE("%s: Callback env fail: env: %p, callback: %p", mName, env, mCallbackEnv);
-        return false;
-    }
-    return true;
-  }
-
-  JNIEnv *operator-> () const {
-      return mCallbackEnv;
-  }
-
-  JNIEnv *get() const {
-      return mCallbackEnv;
-  }
-
-private:
-  JNIEnv *mCallbackEnv;
-  const char *mName;
-
-  DISALLOW_COPY_AND_ASSIGN(CallbackEnv);
-};
-
 enum {
     REQUEST = 0,
-    DRAW
- = 1,
+    DRAW = 1,
 };
 
 enum {
