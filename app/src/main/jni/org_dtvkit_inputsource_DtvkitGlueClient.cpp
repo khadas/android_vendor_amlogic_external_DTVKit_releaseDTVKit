@@ -27,42 +27,46 @@
 #include "amlogic/am_gralloc_ext.h"
 
 #include "glue_client.h"
-
-
 #include "org_dtvkit_inputsource_DtvkitGlueClient.h"
 
 using namespace android;
 
 static JavaVM   *gJavaVM = NULL;
-
-
 static jmethodID notifySubtitleCallback;
 static jmethodID notifyDvbCallback;
 static jmethodID gReadSysfsID;
 static jmethodID gWriteSysfsID;
-
 static jobject DtvkitObject;
+
+static JNIEnv* getJniEnv(bool *needDetach) {
+    int ret = -1;
+    JNIEnv *env = NULL;
+    ret = gJavaVM->GetEnv((void **) &env, JNI_VERSION_1_4);
+    if (ret < 0) {
+        ret = gJavaVM->AttachCurrentThread(&env, NULL);
+        if (ret < 0) {
+            ALOGE("Can't attach thread ret = %d", ret);
+            return NULL;
+        }
+        *needDetach = true;
+    }
+    return env;
+}
+
+static void DetachJniEnv() {
+    int result = gJavaVM->DetachCurrentThread();
+    if (result != JNI_OK) {
+        ALOGE("thread detach failed: %#x", result);
+    }
+}
+
 
 static void sendSubtitleData(int width, int height, int dst_x, int dst_y, int dst_width, int dst_height, uint8_t* data)
 {
     //ALOGD("callback sendSubtitleData data = %p", data);
-    CallbackEnv sCallbackEnv(__func__);
-    if (!sCallbackEnv.valid()) {
-       ALOGD("-callback event get error");
-    }
-    JNIEnv *env;
-    int ret;
-    int attached = 0;
+    bool attached = false;
+    JNIEnv *env = getJniEnv(&attached);
 
-    ret = (gJavaVM)->GetEnv((void**) &env, JNI_VERSION_1_4);
-    if (ret <0) {
-        ret = (gJavaVM)->AttachCurrentThread(&env,NULL);
-        if (ret <0) {
-            ALOGD("callback handler:failed to attach current thread");
-            return;
-        }
-        attached = 1;
-    }
     if (env != NULL) {
         if (width != 0 || height != 0) {
             ScopedLocalRef<jbyteArray> array (env, env->NewByteArray(width * height * 4));
@@ -75,81 +79,39 @@ static void sendSubtitleData(int width, int height, int dst_x, int dst_y, int ds
         } else {
             env->CallVoidMethod(DtvkitObject, notifySubtitleCallback, width, height, dst_x, dst_y, dst_width, dst_height, NULL);
         }
-    } else {
-        if (width != 0 || height != 0) {
-            ScopedLocalRef<jbyteArray> array (sCallbackEnv.get(), sCallbackEnv->NewByteArray(width * height * 4));
-            if (!array.get()) {
-                ALOGE("Fail to new jbyteArray sharememory addr");
-                return;
-            }
-            sCallbackEnv->SetByteArrayRegion(array.get(), 0, width * height * 4, (jbyte*)data);
-            sCallbackEnv->CallVoidMethod(DtvkitObject, notifySubtitleCallback, width, height, dst_x, dst_y, dst_width, dst_height, array.get());
-        } else {
-            sCallbackEnv->CallVoidMethod(DtvkitObject, notifySubtitleCallback, width, height, dst_x, dst_y, dst_width, dst_height, NULL);
-        }
     }
     if (attached) {
-        (gJavaVM)->DetachCurrentThread();
+        DetachJniEnv();
     }
 }
 
 static void sendDvbParam(const std::string& resource, const std::string json) {
     ALOGD("-callback senddvbparam resource:%s, json:%s", resource.c_str(), json.c_str());
-    CallbackEnv sCallbackEnv(__func__);
-    if (!sCallbackEnv.valid()) {
-        //ALOGD("-callback event get error");
-    }
-    JNIEnv *env;
-    int ret;
-    int attached = 0;
+    bool attached = false;
+    JNIEnv *env = getJniEnv(&attached);
 
-    ret = (gJavaVM)->GetEnv((void**) &env, JNI_VERSION_1_4);
-    if (ret <0) {
-        ret = (gJavaVM)->AttachCurrentThread(&env,NULL);
-        if (ret <0) {
-            ALOGD("callback handler:failed to attach current thread");
-            return;
-        }
-        attached = 1;
-    }
     if (env != NULL) {
         //ALOGD("-callback event get ok");
         ScopedLocalRef<jstring> jresource((env), (env)->NewStringUTF(resource.c_str()));
         ScopedLocalRef<jstring> jjson((env),  (env)->NewStringUTF(json.c_str()));
         (env)->CallVoidMethod(DtvkitObject, notifyDvbCallback, jresource.get(), jjson.get());
-    } else {
-        //ALOGD("-callback event not get env");
-        ScopedLocalRef<jstring> jresource(sCallbackEnv.get(), sCallbackEnv->NewStringUTF(resource.c_str()));
-        ScopedLocalRef<jstring> jjson(sCallbackEnv.get(),  sCallbackEnv->NewStringUTF(json.c_str()));
-        sCallbackEnv->CallVoidMethod(DtvkitObject, notifyDvbCallback, jresource.get(), jjson.get());
     }
-
     if (attached) {
-        (gJavaVM)->DetachCurrentThread();
+        DetachJniEnv();
     }
 }
 
 //notify java read sysfs
-void readBySysControl(int ftype, const char *name, char *buf, int len)
+void readBySysControl(int ftype, const char *name, char *buf, unsigned int len)
 {
-    JNIEnv *env;
-    int ret;
-    int attached = 0;
     jint f_type = ftype;
-    ret = gJavaVM->GetEnv((void **) &env, JNI_VERSION_1_4);
+    bool attached = false;
+    JNIEnv *env = getJniEnv(&attached);
 
-    if (ret < 0) {
-        ret = gJavaVM->AttachCurrentThread(&env, NULL);
-        if (ret < 0) {
-            ALOGD("Can't attach thread read");
-            return;
-        }
-        attached = 1;
-    }
     jstring jvalue = NULL;
     const char *utf_chars = NULL;
     jstring jname = env->NewStringUTF(name);
-    jvalue = (jstring)env->CallObjectMethod(DtvkitObject, gReadSysfsID,f_type,  jname);
+    jvalue = (jstring)env->CallObjectMethod(DtvkitObject, gReadSysfsID, f_type, jname);
     if (jvalue) {
         utf_chars = env->GetStringUTFChars(jvalue, NULL);
         if (utf_chars) {
@@ -167,34 +129,23 @@ void readBySysControl(int ftype, const char *name, char *buf, int len)
     env->DeleteLocalRef(jname);
 
     if (attached) {
-        gJavaVM->DetachCurrentThread();
+        DetachJniEnv();
     }
 }
 
 //notify java write sysfs
 void writeBySysControl(int ftype, const char *name, const char *cmd)
 {
-    JNIEnv *env;
-    int ret;
-    int attached = 0;
     jint f_type = ftype;
-    ret = gJavaVM->GetEnv((void **) &env, JNI_VERSION_1_4);
-
-    if (ret < 0) {
-        ret = gJavaVM->AttachCurrentThread(&env, NULL);
-        if (ret < 0) {
-            ALOGD("Can't attach thread write");
-            return;
-        }
-        attached = 1;
-    }
+    bool attached = false;
+    JNIEnv *env = getJniEnv(&attached);
     jstring jname = env->NewStringUTF(name);
     jstring jcmd = env->NewStringUTF(cmd);
     env->CallVoidMethod(DtvkitObject, gWriteSysfsID,f_type, jname, jcmd);
     env->DeleteLocalRef(jname);
     env->DeleteLocalRef(jcmd);
     if (attached) {
-        gJavaVM->DetachCurrentThread();
+        DetachJniEnv();
     }
 }
 
@@ -222,7 +173,7 @@ void read_prop_cb(const char *name, char *buf, int len)
     readBySysControl(PROP, name, buf, len);
 }
 
-static void connectdtvkit(JNIEnv *env, jclass clazz, jobject obj)
+static void connectdtvkit(JNIEnv *env, jclass clazz __unused, jobject obj)
 {
     ALOGD("connect dtvkit");
     DtvkitObject = env->NewGlobalRef(obj);
@@ -233,7 +184,7 @@ static void connectdtvkit(JNIEnv *env, jclass clazz, jobject obj)
     Glue_client::getInstance()->addInterface();
 }
 
-static void disconnectdtvkit(JNIEnv *env, jclass clazz)
+static void disconnectdtvkit(JNIEnv *env, jclass clazz __unused)
 {
     ALOGD("disconnect dtvkit");
     Glue_client::getInstance()->UnRegisterRWSysfsCallback();
@@ -241,7 +192,7 @@ static void disconnectdtvkit(JNIEnv *env, jclass clazz)
     env->DeleteGlobalRef(DtvkitObject);
 }
 
-static jstring request(JNIEnv *env, jclass clazz, jstring jresource, jstring jjson) {
+static jstring request(JNIEnv *env, jclass clazz __unused, jstring jresource, jstring jjson) {
     const char *resource = env->GetStringUTFChars(jresource, nullptr);
     const char *json = env->GetStringUTFChars(jjson, nullptr);
 
@@ -253,8 +204,6 @@ static jstring request(JNIEnv *env, jclass clazz, jstring jresource, jstring jjs
 }
 
 static int updateNative(sp<ANativeWindow> nativeWin) {
-    char* vaddr;
-    int ret = 0;
     ANativeWindowBuffer* buf;
 
     if (nativeWin.get() == NULL) {
@@ -271,7 +220,7 @@ static int updateNative(sp<ANativeWindow> nativeWin) {
     return nativeWin->queueBuffer_DEPRECATED(nativeWin.get(), buf);
 }
 
-static void SetSurface(JNIEnv *env, jclass thiz, jobject jsurface) {
+static void SetSurface(JNIEnv *env, jclass thiz __unused, jobject jsurface) {
     sp<IGraphicBufferProducer> new_st = NULL;
     ALOGD("SetSurface");
     if (jsurface) {
@@ -342,17 +291,30 @@ int register_org_dtvkit_inputsource_DtvkitGlueClient(JNIEnv *env)
 {
     static const char *const kClassPathName = "org/dtvkit/inputsource/DtvkitGlueClient";
     jclass clazz;
+    int rc;
     FIND_CLASS(clazz, kClassPathName);
+    if (clazz == NULL) {
+        ALOGE("Native registration unable to find class '%s'\n", kClassPathName);
+        return -1;
+    }
+
+    rc = (env->RegisterNatives(clazz, gMethods, NELEM(gMethods)));
+    if (rc < 0) {
+        env->DeleteLocalRef(clazz);
+        ALOGE("RegisterNatives failed for '%s' %d\n", kClassPathName, rc);
+        return -1;
+    }
+
     GET_METHOD_ID(notifyDvbCallback, clazz, "notifyDvbCallback", "(Ljava/lang/String;Ljava/lang/String;)V");
     GET_METHOD_ID(notifySubtitleCallback, clazz, "notifySubtitleCallback", "(IIIIII[B)V");
 
-    GET_METHOD_ID(gReadSysfsID,clazz, "readBySysControl", "(ILjava/lang/String;)Ljava/lang/String;");
-    GET_METHOD_ID(gWriteSysfsID,clazz, "writeBySysControl", "(ILjava/lang/String;Ljava/lang/String;)V");
+    GET_METHOD_ID(gReadSysfsID, clazz, "readBySysControl", "(ILjava/lang/String;)Ljava/lang/String;");
+    GET_METHOD_ID(gWriteSysfsID, clazz, "writeBySysControl", "(ILjava/lang/String;Ljava/lang/String;)V");
 
-    return jniRegisterNativeMethods(env, kClassPathName, gMethods, sizeof(gMethods) / sizeof(gMethods[0]));
+    return rc;
 }
 
-jint JNI_OnLoad(JavaVM *vm, void *reserved)
+jint JNI_OnLoad(JavaVM *vm, void *reserved __unused)
 {
     JNIEnv *env = NULL;
     jint result = -1;
