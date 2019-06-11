@@ -1435,6 +1435,8 @@ public class DtvkitTvInput extends TvInputService {
                    } catch (JSONException e) {
                       Log.e(TAG, e.getMessage());
                    }
+                   if (mHandlerThreadHandle != null)
+                       mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);
                    //due to the incorrect Surface size passed in onSurfaceChanged(),
                    //close this feature temporarily, will affect all video layout requests.(eg. mheg, afd)
                    //layoutSurface(left,top,right,bottom);
