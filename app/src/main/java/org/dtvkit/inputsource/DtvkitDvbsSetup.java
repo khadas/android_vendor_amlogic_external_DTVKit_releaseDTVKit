@@ -132,15 +132,15 @@ public class DtvkitDvbsSetup extends Activity {
         edit_start_freq.setText(DataMananer.VALUE_BLIND_DEFAULT_START_FREQUENCY + "");
         edit_end_freq.setText(DataMananer.VALUE_BLIND_DEFAULT_END_FREQUENCY + "");
 
-        nit.setChecked(mDataMananer.getIntParameters(DataMananer.KEY_NIT) == 1 ? true : false);
+        nit.setChecked(mDataMananer.getIntParameters(DataMananer.KEY_DVBS_NIT) == 1 ? true : false);
         clear.setChecked(mDataMananer.getIntParameters(DataMananer.KEY_CLEAR) == 1 ? true : false);
         dvbs2.setChecked(mDataMananer.getIntParameters(DataMananer.KEY_DVBS2) == 1 ? true : false);
         nit.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 if (nit.isChecked()) {
-                    mDataMananer.saveIntParameters(DataMananer.KEY_NIT, 1);
+                    mDataMananer.saveIntParameters(DataMananer.KEY_DVBS_NIT, 1);
                 } else {
-                    mDataMananer.saveIntParameters(DataMananer.KEY_NIT, 0);
+                    mDataMananer.saveIntParameters(DataMananer.KEY_DVBS_NIT, 0);
                 }
             }
         });
@@ -314,7 +314,7 @@ public class DtvkitDvbsSetup extends Activity {
 
     private JSONArray initSatelliteSearch(JSONArray args) {
         try {
-            args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) == 1 ? true : false);//arg5
+            args.put(mDataMananer.getIntParameters(DataMananer.KEY_DVBS_NIT) == 1 ? true : false);//arg5
             args.put(mDataMananer.getStringParameters(DataMananer.KEY_SATALLITE));//arg6
         } catch (Exception e) {
             args = null;
@@ -326,7 +326,7 @@ public class DtvkitDvbsSetup extends Activity {
 
     private JSONArray initTransponderSearch(JSONArray args) {
         try {
-            args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) == 1);//arg5
+            args.put(mDataMananer.getIntParameters(DataMananer.KEY_DVBS_NIT) == 1);//arg5
             args.put(mDataMananer.getStringParameters(DataMananer.KEY_SATALLITE));//arg6
             String[] singleParameter = null;
             String parameter = mDataMananer.getStringParameters(DataMananer.KEY_TRANSPONDER);

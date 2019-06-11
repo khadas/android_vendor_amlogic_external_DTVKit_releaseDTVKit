@@ -111,12 +111,16 @@ public class DataMananer {
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_22KHZ_LIST = {"on", "off"/*, "auto"*/};
 
     public static final String KEY_NIT = "network_search";
+    public static final String KEY_DVBS_NIT = "dvbs_network_search";
     public static final String KEY_CLEAR = "clear_old_search";
     public static final String KEY_DVBS2 = "dvbs_enable";
     public static final String KEY_SEARCH_MODE = "search_mode";
     public static final int VALUE_BLIND_DEFAULT_START_FREQUENCY = 950;//MHZ
     public static final int VALUE_BLIND_DEFAULT_END_FREQUENCY = 2150;//MHZ
+    public static final int VALUE_SEARCH_NIT_DISABLE = 0;
+    public static final int VALUE_SEARCH_NIT_ENABLE = 1;
     public static final int VALUE_SEARCH_MODE_BLIND = 0;
+    public static final int VALUE_SEARCH_MODE_SATELLITE = 1;
     public static final String KEY_FEC_MODE = "forward_error_correction";
     public static final String KEY_MODULATION_MODE = "modulation";
     public static final String[] KEY_SEARCH_MODE_LIST = {"blind", "satellite", "transponder"};
@@ -228,7 +232,7 @@ public class DataMananer {
                 defValue = 0;
                 break;
             case KEY_NIT:
-                defValue = 0;
+                defValue = VALUE_SEARCH_NIT_DISABLE;
                 break;
             case KEY_CLEAR:
                 defValue = 1;
@@ -266,11 +270,19 @@ public class DataMananer {
             case KEY_PUBLIC_SEARCH_MODE:
                 defValue = VALUE_PUBLIC_SEARCH_MODE_AUTO;
                 break;
+            case KEY_DVBS_NIT:
+                defValue = VALUE_SEARCH_NIT_ENABLE;
+                break;
+            case KEY_SEARCH_MODE:
+                defValue = VALUE_SEARCH_MODE_SATELLITE;
+                break;
             default:
                 defValue = 0;
                 break;
         }
-        return Settings.Global.getInt(mContext.getContentResolver(), key, defValue);
+        int result = Settings.Global.getInt(mContext.getContentResolver(), key, defValue);
+        //Log.d(TAG, "getIntParameters key = " + key + ", defValue = " + defValue);
+        return result;
     }
 
     public void saveStringParameters(String key, String value) {
