@@ -29,9 +29,6 @@ LOCAL_C_INCLUDES += \
 LOCAL_CPPFLAGS += -std=c++14
 
 LOCAL_MODULE:= libdtvkithidlclient
-
-ifneq ($(BUILD_DTVKIT_IN_SYSTEM), true)
 LOCAL_PRODUCT_MODULE := true
-endif
 
 include $(BUILD_SHARED_LIBRARY)
