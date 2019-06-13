@@ -1323,6 +1323,10 @@ public class DtvkitTvInput extends TvInputService {
                     Log.i(TAG, "DvbUpdatedEventNow");
                     ComponentName sync = new ComponentName(mContext, DtvkitEpgSync.class);
                     EpgSyncJobService.requestImmediateSync(mContext, mInputId, true, sync);
+                    //notify update parent contrl
+                    if (mHandlerThreadHandle != null)
+                        mHandlerThreadHandle.removeMessages(MSG_CHECK_PARENTAL_CONTROL);
+                        mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_PARENTAL_CONTROL, MSG_CHECK_PARENTAL_CONTROL_PERIOD);
                 }
                 else if (signal.equals("DvbUpdatedChannel"))
                 {
@@ -1414,8 +1418,10 @@ public class DtvkitTvInput extends TvInputService {
 
         protected static final int MSG_ON_TUNE = 1;
         protected static final int MSG_CHECK_RESOLUTION = 2;
+        protected static final int MSG_CHECK_PARENTAL_CONTROL = 3;
 
         protected static final int MSG_CHECK_RESOLUTION_PERIOD = 1000;//MS
+        protected static final int MSG_CHECK_PARENTAL_CONTROL_PERIOD = 500;//MS
 
         protected void initWorkThread() {
             Log.d(TAG, "initWorkThread");
@@ -1439,6 +1445,9 @@ public class DtvkitTvInput extends TvInputService {
                                     mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);
                                 }
                                 break;
+                            case MSG_CHECK_PARENTAL_CONTROL:
+                                updateParentalControl();
+                                break;
                             default:
                                 Log.d(TAG, "initWorkThread default");
                                 break;
@@ -1450,6 +1459,34 @@ public class DtvkitTvInput extends TvInputService {
             }
         }
 
+        private void updateParentalControl() {
+            int age = 0;
+            boolean isParentControlEnabled = mTvInputManager.isParentalControlsEnabled();
+            if (isParentControlEnabled) {
+                try {
+                    JSONArray args = new JSONArray();
+                    age = DtvkitGlueClient.getInstance().request("Player.getCurrentProgramRatingAge", args).getInt("data");
+                    if (getParentalControlOn()) {
+                       if (age == 0) {
+                          Log.e(TAG, "P_C true, but age is 0, so set P_C disbale");
+                          setParentalControlOn(false);
+                          notifyContentAllowed();
+                       }else if (age != getParentalControlAge()) {
+                          Log.e(TAG, "P_C true, age isn't 0, but age["+ getParentalControlAge() +"] changed, so set P_C new age["+age+"]");
+                          setParentalControlAge(age);
+                       }
+                    }else {
+                       if (age != 0) {
+                          Log.e(TAG, "P_C false, but age isn't 0, so set P_C enbale, set age["+ age +"]");
+                          setParentalControlOn(true);
+                          setParentalControlAge(age);
+                       }
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "updateParentalControl = " + e.getMessage());
+                }
+            }
+        }
         private class MainHandler extends Handler {
             public void handleMessage(Message msg) {
                 Log.d(TAG, "MainHandler handleMessage:"+msg.what);
