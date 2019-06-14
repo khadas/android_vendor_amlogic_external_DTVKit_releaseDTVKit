@@ -1542,8 +1542,9 @@ public class DtvkitTvInput extends TvInputService {
                 String realtimeVideoFormat = mSysSettingManager.getVideoFormatFromSys();
                 result = !TextUtils.isEmpty(realtimeVideoFormat);
                 if (result) {
-                    notifyTrackSelected(TvTrackInfo.TYPE_VIDEO, realtimeVideoFormat);//notify default video
-                    notifyTrackSelected(TvTrackInfo.TYPE_VIDEO, null);//reset video trackid
+                    Bundle formatbundle = new Bundle();
+                    formatbundle.putString(ConstantManager.PI_FORMAT_KEY, realtimeVideoFormat);
+                    notifySessionEvent(ConstantManager.EVENT_STREAM_PI_FORMAT, formatbundle);
                     Log.d(TAG, "checkRealTimeResolution notify realtimeVideoFormat = " + realtimeVideoFormat + ", videoSize width = " + videoSize[0] + ", height = " + videoSize[1]);
                 }
             }
@@ -1740,14 +1741,16 @@ public class DtvkitTvInput extends TvInputService {
         try {
             JSONArray args = new JSONArray();
             JSONArray audioStreams = DtvkitGlueClient.getInstance().request("Player.getListOfAudioStreams", args).getJSONArray("data");
+            int undefinedIndex = 1;
             for (int i = 0; i < audioStreams.length(); i++)
             {
                 JSONObject audioStream = audioStreams.getJSONObject(i);
                 Log.d(TAG, "getListOfAudioStreams audioStream = " + audioStream.toString());
                 TvTrackInfo.Builder track = new TvTrackInfo.Builder(TvTrackInfo.TYPE_AUDIO, Integer.toString(audioStream.getInt("index")));
                 String audioLang = audioStream.getString("language");
-                if (TextUtils.isEmpty(audioLang)) {
-                    audioLang = "Audio" + (i + 1);
+                if (TextUtils.isEmpty(audioLang) || ConstantManager.CONSTANT_UND_FLAG.equals(audioLang)) {
+                    audioLang = ConstantManager.CONSTANT_UND_VALUE + undefinedIndex;
+                    undefinedIndex++;
                 } else if (ConstantManager.CONSTANT_QAA.equalsIgnoreCase(audioLang)) {
                     audioLang = ConstantManager.CONSTANT_ORIGINAL_AUDIO;
                 }
@@ -1771,6 +1774,7 @@ public class DtvkitTvInput extends TvInputService {
         try {
             JSONArray args = new JSONArray();
             JSONArray subtitleStreams = DtvkitGlueClient.getInstance().request("Player.getListOfSubtitleStreams", args).getJSONArray("data");
+            int undefinedIndex = 1;
             for (int i = 0; i < subtitleStreams.length(); i++)
             {
                 JSONObject subtitleStream = subtitleStreams.getJSONObject(i);
@@ -1787,11 +1791,17 @@ public class DtvkitTvInput extends TvInputService {
                     trackId = "id=" + Integer.toString(subtitleStream.getInt("index")) + "&" + "type=" + "4" + "&teletext=0";//TYPE_DTV_CC
                 }
                 TvTrackInfo.Builder track = new TvTrackInfo.Builder(TvTrackInfo.TYPE_SUBTITLE, trackId);
-                track.setLanguage(subtitleStream.getString("language"));
+                String subLang = subtitleStream.getString("language");
+                if (TextUtils.isEmpty(subLang) || ConstantManager.CONSTANT_UND_FLAG.equals(subLang)) {
+                    subLang = ConstantManager.CONSTANT_UND_VALUE + undefinedIndex;
+                    undefinedIndex++;
+                }
+                track.setLanguage(subLang);
                 tracks.add(track.build());
             }
             JSONArray args1 = new JSONArray();
             JSONArray teletextStreams = DtvkitGlueClient.getInstance().request("Player.getListOfTeletextStreams", args1).getJSONArray("data");
+            undefinedIndex = 1;
             for (int i = 0; i < teletextStreams.length(); i++)
             {
                 JSONObject teletextStream = teletextStreams.getJSONObject(i);
@@ -1804,7 +1814,12 @@ public class DtvkitTvInput extends TvInputService {
                     continue;
                 }
                 TvTrackInfo.Builder track = new TvTrackInfo.Builder(TvTrackInfo.TYPE_SUBTITLE, trackId);
-                track.setLanguage(teletextStream.getString("language"));
+                String teleLang = teletextStream.getString("language");
+                if (TextUtils.isEmpty(teleLang) || ConstantManager.CONSTANT_UND_FLAG.equals(teleLang)) {
+                    teleLang = ConstantManager.CONSTANT_UND_VALUE + undefinedIndex;
+                    undefinedIndex++;
+                }
+                track.setLanguage(teleLang);
                 tracks.add(track.build());
             }
         } catch (Exception e) {
