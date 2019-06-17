@@ -74,8 +74,8 @@ public class ParameterMananer {
     public static final String KEY_DISEQC1_2_DISH_SAVE_POSITION = "key_dish_save_to_position";
     public static final String KEY_DISEQC1_2_DISH_MOVE_TO_POSITION = "key_dish_move_to_position";
 
-    public static final String[] ID_DIALOG_KEY_COLLECTOR = {KEY_SATALLITE, KEY_TRANSPONDER, KEY_LNB_TYPE, KEY_UNICABLE_SWITCH/*KEY_UNICABLE*/, KEY_LNB_POWER,
-            KEY_22_KHZ, KEY_TONE_BURST, KEY_DISEQC1_0, KEY_DISEQC1_1, KEY_MOTOR};
+    public static final String[] ID_DIALOG_KEY_COLLECTOR = {KEY_SATALLITE, KEY_TRANSPONDER, KEY_LNB_TYPE, KEY_UNICABLE_SWITCH/*KEY_UNICABLE*/, /*KEY_LNB_POWER,
+            KEY_22_KHZ, */KEY_TONE_BURST, KEY_DISEQC1_0, KEY_DISEQC1_1, KEY_MOTOR};
     public static final String KEY_LNB_CUSTOM = "key_lnb_custom";
     public static final String KEY_LNB_CUSTOM_SINGLE_DOUBLE = "key_lnb_custom_single_double";
     public static final int DEFAULT_LNB_CUSTOM_SINGLE_DOUBLE = 0;//SINGLE
@@ -133,11 +133,11 @@ public class ParameterMananer {
 
     public static final String[] DIALOG_SET_ITEM_UNICABLE_KEY_LIST = {KEY_UNICABLE_SWITCH, KEY_USER_BAND, KEY_UB_FREQUENCY, KEY_POSITION};
 
-    public static final String KEY_DTVKIT_COUNTRY = "dtvkit_country";
+    /*public static final String KEY_DTVKIT_COUNTRY = "dtvkit_country";
     public static final String KEY_DTVKIT_MAIN_AUDIO_LANG = "main_audio_lang";
     public static final String KEY_DTVKIT_ASSIST_AUDIO_LANG = "assist_audio_lang";
     public static final String KEY_DTVKIT_MAIN_SUBTITLE_LANG = "main_subtitle_lang";
-    public static final String KEY_DTVKIT_ASSIST_SUBTITLE_LANG = "assist_subtitle_lang";
+    public static final String KEY_DTVKIT_ASSIST_SUBTITLE_LANG = "assist_subtitle_lang";*///save in dtvkit
 
     public ParameterMananer(Context context, DtvkitGlueClient client) {
         this.mContext = context;
@@ -1142,7 +1142,7 @@ public class ParameterMananer {
                                     break;
                                 }
                             } catch (Exception e1) {
-                                Log.e(TAG, "getCountryDisplayList ios3 country Exception " + e1.getMessage() + ", trace=" + e1.getStackTrace() + " continue");
+                                //Log.e(TAG, "getCountryDisplayList ios3 country Exception " + e1.getMessage() + ", trace=" + e1.getStackTrace() + " continue");
                                 continue;
                             }
                         }
@@ -1187,6 +1187,15 @@ public class ParameterMananer {
         return result;
     }
 
+    public int getCurrentCountryCode() {
+        int result = -1;//-1 means can't find
+        int[] currentInfo = getCurrentLangParameter();
+        if (currentInfo != null && currentInfo[0] != -1) {
+            result = currentInfo[0];
+        }
+        return result;
+    }
+
     private JSONObject getCountrys() {
         JSONObject resultObj = null;
         try {
@@ -1205,10 +1214,24 @@ public class ParameterMananer {
     }
 
     public List<String> getCurrentLangNameList() {
-        return getLangNameList(getCountryCodeByIndex(getIntParameters(KEY_DTVKIT_COUNTRY)));
+        List<String> result = new ArrayList<String>();
+        int[] currentInfo = getCurrentLangParameter();
+        if (currentInfo != null && currentInfo[0] != -1) {
+            result = getLangNameList(currentInfo[0]);
+        }
+        return result;
     }
 
-    public List<String> getLangNameList(int countryCode) {
+    public List<String> getCurrentSecondLangNameList() {
+        List<String> result = new ArrayList<String>();
+        int[] currentInfo = getCurrentLangParameter();
+        if (currentInfo != null && currentInfo[0] != -1) {
+            result = getSecondLangNameList(currentInfo[0]);
+        }
+        return result;
+    }
+
+    private List<String> getLangNameList(int countryCode) {
         List<String> result = new ArrayList<String>();
         try {
             JSONObject resultObj = getCountryLangs(countryCode);
@@ -1222,18 +1245,17 @@ public class ParameterMananer {
                     String langName = (String)(((JSONObject)(data.get(i))).get("lang_ids"));
                     result.add(langName);
                 }
-
             } else {
-                Log.d(TAG, "getLangIdList then get null");
+                Log.d(TAG, "getLangNameList then get null");
             }
         } catch (Exception e) {
-            Log.d(TAG, "getLangIdList Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            Log.d(TAG, "getLangNameList Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
         }
         return result;
     }
 
-    public List<Integer> getLangIdList(int countryCode) {
+    /*private List<Integer> getLangIdList(int countryCode) {
         List<Integer> result = new ArrayList<Integer>();
         try {
             JSONObject resultObj = getCountryLangs(countryCode);
@@ -1247,7 +1269,6 @@ public class ParameterMananer {
                     int langIds = (int)(((JSONObject)(data.get(i))).get("lang_index"));
                     result.add(langIds);
                 }
-
             } else {
                 Log.d(TAG, "getLangIdList then get null");
             }
@@ -1256,7 +1277,57 @@ public class ParameterMananer {
             e.printStackTrace();
         }
         return result;
+    }*/
+
+    private List<String> getSecondLangNameList(int countryCode) {
+        List<String> result = new ArrayList<String>();
+        try {
+            JSONObject resultObj = getCountryLangs(countryCode);
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return result;
+                }
+                for (int i = 0; i < data.length(); i++) {
+                    String langName = (String)(((JSONObject)(data.get(i))).get("lang_ids"));
+                    result.add(langName);
+                }
+                result.add("None");
+            } else {
+                Log.d(TAG, "getSecondLangNameList then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getSecondLangNameList Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return result;
     }
+
+    /*private List<Integer> getSecondLangIdList(int countryCode) {
+        List<Integer> result = new ArrayList<Integer>();
+        try {
+            JSONObject resultObj = getCountryLangs(countryCode);
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return result;
+                }
+                for (int i = 0; i < data.length(); i++) {
+                    int langIds = (int)(((JSONObject)(data.get(i))).get("lang_index"));
+                    result.add(langIds);
+                }
+                result.add(255);
+            } else {
+                Log.d(TAG, "getSecondLangIdList then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getSecondLangIdList Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return result;
+    }*/
 
     private JSONObject getCountryLangs(int countryCode) {
         JSONObject resultObj = null;
@@ -1301,10 +1372,33 @@ public class ParameterMananer {
         return resultObj;
     }
 
-    public int getCurrentCountryCode() {
-        int countrycode = 0;
-        countrycode = getCountryCodeByIndex(getIntParameters(KEY_DTVKIT_COUNTRY));
-        return countrycode;
+    public int getCurrentCountryIndex() {
+        int result = 0;
+        int currentcountrycode = getCurrentCountryCode();
+        try {
+            JSONObject resultObj = getCountrys();
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return result;
+                }
+                for (int i = 0; i < data.length(); i++) {
+                    int countryCode = (int)(((JSONObject)(data.get(i))).get("country_code"));
+                    if (countryCode == currentcountrycode) {
+                        result = i;
+                        break;
+                    }
+                }
+
+            } else {
+                Log.d(TAG, "getCurrentCountryIndex then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getCurrentCountryIndex Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return result;
     }
 
     public int getCountryCodeByIndex(int index) {
@@ -1351,27 +1445,95 @@ public class ParameterMananer {
         return resultObj;
     }
 
+    private int getLangPositionByIndex(int index) {
+        int result = 0;
+        try {
+            JSONObject resultObj = getCountryLangs(getCurrentCountryCode());
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return result;
+                }
+                for (int i = 0; i < data.length(); i++) {
+                    int langIndex = (int)(((JSONObject)(data.get(i))).get("lang_index"));
+                    if (index == langIndex) {
+                        result = i;
+                    }
+                }
+            } else {
+                Log.d(TAG, "getLangPositionByIndex then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getLangPositionByIndex Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    private int getSecondLangPositionByIndex(int index) {
+        int result = 0;
+        try {
+            JSONObject resultObj = getCountryLangs(getCurrentCountryCode());
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return result;
+                }
+                if (index >= data.length()) {
+                    result = data.length();
+                } else {
+                    for (int i = 0; i < data.length(); i++) {
+                        int langIndex = (int)(((JSONObject)(data.get(i))).get("lang_index"));
+                        if (index == langIndex) {
+                            result = i;
+                        }
+                    }
+                }
+            } else {
+                Log.d(TAG, "getSecondLangPositionByIndex then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getSecondLangPositionByIndex Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return result;
+    }
+
     public int getCurrentMainAudioLangId() {
         int id = 0;
-        id = getLangIndexCodeByIndex(getIntParameters(KEY_DTVKIT_MAIN_AUDIO_LANG));
+        int[] currentInfo = getCurrentLangParameter();
+        if (currentInfo != null && currentInfo[1] != -1) {
+            id = getLangPositionByIndex(currentInfo[1]);
+        }
         return id;
     }
 
     public int getCurrentSecondAudioLangId() {
         int id = 0;
-        id = getLangIndexCodeByIndex(getIntParameters(KEY_DTVKIT_ASSIST_AUDIO_LANG));
+        int[] currentInfo = getCurrentLangParameter();
+        if (currentInfo != null && currentInfo[2] != -1) {
+            id = getSecondLangPositionByIndex(currentInfo[2]);
+        }
         return id;
     }
 
     public int getCurrentMainSubLangId() {
         int id = 0;
-        id = getLangIndexCodeByIndex(getIntParameters(KEY_DTVKIT_MAIN_SUBTITLE_LANG));
+        int[] currentInfo = getCurrentLangParameter();
+        if (currentInfo != null && currentInfo[3] != -1) {
+            id = getLangPositionByIndex(currentInfo[3]);
+        }
         return id;
     }
 
     public int getCurrentSecondSubLangId() {
         int id = 0;
-        id = getLangIndexCodeByIndex(getIntParameters(KEY_DTVKIT_ASSIST_SUBTITLE_LANG));
+        int[] currentInfo = getCurrentLangParameter();
+        if (currentInfo != null && currentInfo[4] != -1) {
+            id = getSecondLangPositionByIndex(currentInfo[4]);
+        }
         return id;
     }
 
@@ -1406,10 +1568,10 @@ public class ParameterMananer {
         return result;
     }
 
-    public int getLangIndexCodeByIndex(int index) {
+    public int getLangIndexCodeByPosition(int position) {
         int langIndex = 0;
         try {
-            int currentCountryCode = getCountryCodeByIndex(getIntParameters(KEY_DTVKIT_COUNTRY));
+            int currentCountryCode = getCurrentCountryCode();
             JSONObject resultObj = getCountryLangs(currentCountryCode);
             JSONArray data = null;
             if (resultObj != null) {
@@ -1417,25 +1579,55 @@ public class ParameterMananer {
                 if (data == null || data.length() == 0) {
                     return langIndex;
                 }
-                resultObj = (JSONObject)(data.get(index));
+                resultObj = (JSONObject)(data.get(position));
                 if (resultObj != null) {
                     Log.d(TAG, "getLangIndexCodeByIndex resultObj = " + resultObj.toString());
                     langIndex = ((int)resultObj.get("lang_index"));
                 }
             } else {
-                Log.d(TAG, "getLangIndexCodeByIndex then get null");
+                Log.d(TAG, "getLangIndexCodeByPosition then get null");
             }
         } catch (Exception e) {
-            Log.d(TAG, "getLangIndexCodeByIndex Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            Log.d(TAG, "getLangIndexCodeByPosition Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
         }
         return langIndex;
     }
 
-    public JSONObject setPrimaryAudioLangByIndex(int index) {
+    public int getSecondLangIndexCodeByPosition(int position) {
+        int langIndex = 0;
+        try {
+            int currentCountryCode = getCurrentCountryCode();
+            JSONObject resultObj = getCountryLangs(currentCountryCode);
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return langIndex;
+                }
+                if (position >= data.length()) {
+                    langIndex = 255;
+                } else {
+                    resultObj = (JSONObject)(data.get(position));
+                    if (resultObj != null) {
+                        Log.d(TAG, "getSecondLangIndexCodeByPosition resultObj = " + resultObj.toString());
+                        langIndex = ((int)resultObj.get("lang_index"));
+                    }
+                }
+            } else {
+                Log.d(TAG, "getSecondLangIndexCodeByPosition then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getSecondLangIndexCodeByPosition Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return langIndex;
+    }
+
+    public JSONObject setPrimaryAudioLangByPosition(int position) {
         JSONObject resultObj = null;
         try {
-            int langIndex = getLangIndexCodeByIndex(index);
+            int langIndex = getLangIndexCodeByPosition(position);
             resultObj = setPrimaryAudioLangId(langIndex);
             if (resultObj != null) {
                 Log.d(TAG, "setPrimaryAudioLangByIndex resultObj:" + resultObj.toString());
@@ -1449,7 +1641,7 @@ public class ParameterMananer {
         return resultObj;
     }
 
-    private JSONObject setPrimaryAudioLangId(int langIndex) {
+    public JSONObject setPrimaryAudioLangId(int langIndex) {
         JSONObject resultObj = null;
         try {
             JSONArray args1 = new JSONArray();
@@ -1467,10 +1659,10 @@ public class ParameterMananer {
         return resultObj;
     }
 
-    public JSONObject setSecondaryAudioLangByIndex(int index) {
+    public JSONObject setSecondaryAudioLangByPosition(int position) {
         JSONObject resultObj = null;
         try {
-            int langIndex = getLangIndexCodeByIndex(index);
+            int langIndex = getSecondLangIndexCodeByPosition(position);
             resultObj = setSecondaryAudioLangId(langIndex);
             if (resultObj != null) {
                 Log.d(TAG, "setSecondaryAudioLangByIndex resultObj:" + resultObj.toString());
@@ -1484,7 +1676,7 @@ public class ParameterMananer {
         return resultObj;
     }
 
-    private JSONObject setSecondaryAudioLangId(int langIndex) {
+    public JSONObject setSecondaryAudioLangId(int langIndex) {
         JSONObject resultObj = null;
         try {
             JSONArray args1 = new JSONArray();
@@ -1502,10 +1694,10 @@ public class ParameterMananer {
         return resultObj;
     }
 
-    public JSONObject setPrimaryTextLangByIndex(int index) {
+    public JSONObject setPrimaryTextLangByPosition(int position) {
         JSONObject resultObj = null;
         try {
-            int langIndex = getLangIndexCodeByIndex(index);
+            int langIndex = getLangIndexCodeByPosition(position);
             resultObj = setPrimaryTextLangId(langIndex);
             if (resultObj != null) {
                 Log.d(TAG, "setPrimaryTextLangByIndex resultObj:" + resultObj.toString());
@@ -1537,10 +1729,10 @@ public class ParameterMananer {
         return resultObj;
     }
 
-    public JSONObject setSecondaryTextLangByIndex(int index) {
+    public JSONObject setSecondaryTextLangByPosition(int position) {
         JSONObject resultObj = null;
         try {
-            int langIndex = getLangIndexCodeByIndex(index);
+            int langIndex = getSecondLangIndexCodeByPosition(position);
             resultObj = setSecondaryTextLangId(langIndex);
             if (resultObj != null) {
                 Log.d(TAG, "setSecondaryTextLangByIndex resultObj:" + resultObj.toString());
