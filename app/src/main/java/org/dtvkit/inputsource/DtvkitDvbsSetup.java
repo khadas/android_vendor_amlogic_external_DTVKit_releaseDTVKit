@@ -278,11 +278,13 @@ public class DtvkitDvbsSetup extends Activity {
     private JSONArray initBlindSearch(JSONArray args) {
         try {
             int[] result = getBlindFrequency();
-            if (result[0] < 0 || result[1] < 0 || result[0] > result[1]) {
+            String satellite = mDataMananer.getStringParameters(DataMananer.KEY_SATALLITE);
+            if (result[0] < 0 || result[1] < 0 || result[0] > result[1] || TextUtils.isEmpty(satellite)) {
                 return null;
             }
             args.put(result[0]);// "start_freq" khz //arg5
             args.put(result[1]);//"end_freq" khz //arg6
+            args.put(satellite);//arg7
         } catch (Exception e) {
             args = null;
             Toast.makeText(this, R.string.dialog_parameter_set_blind, Toast.LENGTH_SHORT).show();
