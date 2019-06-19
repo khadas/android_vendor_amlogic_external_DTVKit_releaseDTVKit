@@ -15,7 +15,15 @@ LOCAL_C_INCLUDES += $(JNI_H_INCLUDE) \
                     frameworks/native/libs/nativewindow \
                     external/skia/include/core \
                     hardware/amlogic/gralloc \
-                    vendor/amlogic/common/external/DTVKit/android-rpcservice/apps/binder/inc \
+
+DVBCORE_DIRECTORY := $(LOCAL_PATH)/../../../../../DVBCore/
+HAVE_DVBCORE_DIRECTORY := $(shell test -d $(DVBCORE_DIRECTORY) && echo yes)
+ifeq ($(HAVE_DVBCORE_DIRECTORY),yes)
+$(warning "DVBCore directory exist")
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../../../../android-rpcservice/apps/binder/inc
+else
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../../../../releaseDTVKit/rpcservice
+endif
 
 LOCAL_MODULE := libdtvkit_jni
 LOCAL_SHARED_LIBRARIES :=  \
