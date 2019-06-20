@@ -908,6 +908,120 @@ public class DtvkitTvInput extends TvInputService {
                 } else if (number < 10) {
                     playerNotifyTeletextEvent(unit + TT_EVENT_0);
                 }
+            } else if ("quick_navigate_1".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("quick_navigate_1", false);
+                Log.d(TAG, "do private cmd: quick_navigate_1: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(0);
+                }
+            } else if ("quick_navigate_2".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("quick_navigate_2", false);
+                Log.d(TAG, "do private cmd: quick_navigate_2: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(1);
+                }
+            } else if ("quick_navigate_3".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("quick_navigate_3", false);
+                Log.d(TAG, "do private cmd: quick_navigate_3: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(2);
+                }
+            } else if ("quick_navigate_4".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("quick_navigate_4", false);
+                Log.d(TAG, "do private cmd: quick_navigate_4: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(3);
+                }
+            } else if ("previous_page".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("previous_page", false);
+                Log.d(TAG, "do private cmd: previous_page: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(16);
+                }
+            } else if ("next_page".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("next_page", false);
+                Log.d(TAG, "do private cmd: next_page: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(15);
+                }
+            } else if ("index_page".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("index_page", false);
+                Log.d(TAG, "do private cmd: index_page: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(14);
+                }
+            } else if ("next_sub_page".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("next_sub_page", false);
+                Log.d(TAG, "do private cmd: next_sub_page: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(17);
+                }
+            } else if ("previous_sub_page".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("previous_sub_page", false);
+                Log.d(TAG, "do private cmd: previous_sub_page: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(18);
+                }
+            } else if ("back_page".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("back_page", false);
+                Log.d(TAG, "do private cmd: back_page: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(19);
+                }
+            } else if ("forward_page".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("forward_page", false);
+                Log.d(TAG, "do private cmd: forward_page: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(20);
+                }
+            } else if ("hold".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("hold", false);
+                Log.d(TAG, "do private cmd: hold: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(21);
+                }
+            } else if ("reveal".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("reveal", false);
+                Log.d(TAG, "do private cmd: reveal: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(22);
+                }
+            } else if ("clear".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("clear", false);
+                Log.d(TAG, "do private cmd: clear: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(23);
+                }
+            } else if ("mix_video".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("mix_video", false);
+                Log.d(TAG, "do private cmd: mix_video: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(24);
+                }
+            } else if ("double_height".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("double_height", false);
+                Log.d(TAG, "do private cmd: double_height: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(25);
+                }
+            } else if ("double_scroll_up".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("double_scroll_up", false);
+                Log.d(TAG, "do private cmd: double_scroll_up: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(26);
+                }
+            } else if ("double_scroll_down".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("double_scroll_down", false);
+                Log.d(TAG, "do private cmd: double_scroll_down: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(27);
+                }
+            } else if ("timer".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("timer", false);
+                Log.d(TAG, "do private cmd: timer: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(28);
+                }
             }
         }
 

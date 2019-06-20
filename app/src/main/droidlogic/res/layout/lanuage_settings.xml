@@ -4,21 +4,32 @@
     android:layout_height="match_parent"
     android:layout_gravity="center"
     android:layout_margin="50dp"
-    android:gravity="center_horizontal"
+    android:gravity="center"
     android:orientation="vertical">
 
-    <ImageView
+    <!--<ImageView
         android:id="@+id/imageView3"
         android:layout_width="wrap_content"
         android:layout_height="67dp"
-        android:src="@drawable/dtvkit" />
+        android:src="@drawable/dtvkit" />-->
+
+    <TextView
+        android:id="@+id/dvb_search"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@android:color/holo_orange_dark"
+        android:fontFamily="sans-serif"
+        android:gravity="center"
+        android:padding="10dp"
+        android:text="@string/public_dvb_search"
+        android:textSize="@dimen/dvb_search_text_size"
+        android:textStyle="bold" />
 
     <LinearLayout
         android:id="@+id/container"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center_horizontal"
-        android:layout_margin="10dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="50dp"
         android:orientation="vertical">
 
         <LinearLayout
