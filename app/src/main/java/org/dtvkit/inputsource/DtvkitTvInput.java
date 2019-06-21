@@ -1896,6 +1896,7 @@ public class DtvkitTvInput extends TvInputService {
     private List<TvTrackInfo> playerGetTracks() {
         List<TvTrackInfo> tracks = new ArrayList<>();
         try {
+            List<TvTrackInfo> audioTracks = new ArrayList<>();
             JSONArray args = new JSONArray();
             JSONArray audioStreams = DtvkitGlueClient.getInstance().request("Player.getListOfAudioStreams", args).getJSONArray("data");
             int undefinedIndex = 1;
@@ -1918,17 +1919,22 @@ public class DtvkitTvInput extends TvInputService {
                     }
                 }
                 String codes = audioStream.getString("codec");
+                int pid = audioStream.getInt("pid");
+                Bundle bundle = new Bundle();
                 if (!TextUtils.isEmpty(codes)) {
-                    Bundle bundle = new Bundle();
                     bundle.putString(ConstantManager.KEY_AUDIO_CODES_DES, codes);
-                    track.setExtra(bundle);
                 }
-                tracks.add(track.build());
+                bundle.putInt(ConstantManager.KEY_TRACK_PID, pid);
+                track.setExtra(bundle);
+                audioTracks.add(track.build());
             }
+            ConstantManager.ascendTrackInfoOderByPid(audioTracks);
+            tracks.addAll(audioTracks);
         } catch (Exception e) {
             Log.e(TAG, "getListOfAudioStreams = " + e.getMessage());
         }
         try {
+            List<TvTrackInfo> subTracks = new ArrayList<>();
             JSONArray args = new JSONArray();
             JSONArray subtitleStreams = DtvkitGlueClient.getInstance().request("Player.getListOfSubtitleStreams", args).getJSONArray("data");
             int undefinedIndex = 1;
@@ -1954,8 +1960,15 @@ public class DtvkitTvInput extends TvInputService {
                     undefinedIndex++;
                 }
                 track.setLanguage(subLang);
-                tracks.add(track.build());
+                int pid = subtitleStream.getInt("pid");
+                Bundle bundle = new Bundle();
+                bundle.putInt(ConstantManager.KEY_TRACK_PID, pid);
+                track.setExtra(bundle);
+                subTracks.add(track.build());
             }
+            ConstantManager.ascendTrackInfoOderByPid(subTracks);
+            tracks.addAll(subTracks);
+            List<TvTrackInfo> teleTracks = new ArrayList<>();
             JSONArray args1 = new JSONArray();
             JSONArray teletextStreams = DtvkitGlueClient.getInstance().request("Player.getListOfTeletextStreams", args1).getJSONArray("data");
             undefinedIndex = 1;
@@ -1977,8 +1990,14 @@ public class DtvkitTvInput extends TvInputService {
                     undefinedIndex++;
                 }
                 track.setLanguage(teleLang);
-                tracks.add(track.build());
+                int pid = teletextStream.getInt("pid");
+                Bundle bundle = new Bundle();
+                bundle.putInt(ConstantManager.KEY_TRACK_PID, pid);
+                track.setExtra(bundle);
+                teleTracks.add(track.build());
             }
+            ConstantManager.ascendTrackInfoOderByPid(teleTracks);
+            tracks.addAll(teleTracks);
         } catch (Exception e) {
             Log.e(TAG, "getListOfSubtitleStreams = " + e.getMessage());
         }
