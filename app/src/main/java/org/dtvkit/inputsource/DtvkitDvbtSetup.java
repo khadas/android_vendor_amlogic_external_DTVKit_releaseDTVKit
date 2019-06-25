@@ -25,6 +25,7 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.view.KeyEvent;
+import android.widget.Toast;
 
 import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.json.JSONArray;
@@ -43,34 +44,26 @@ public class DtvkitDvbtSetup extends Activity {
     private boolean mIsDvbt = false;
     private DataMananer mDataMananer;
     private ParameterMananer mParameterMananer = null;
+    private boolean mStartSync = false;
+    private boolean mStartSearch = false;
+    private JSONArray mServiceList = null;
+    private int mFoundServiceNumber = 0;
+    private int mSearchManualAutoType = -1;// 0 manual 1 auto
+    private int mSearchDvbcDvbtType = -1;
 
     private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
         @Override
         public void onSignal(String signal, JSONObject data) {
 
             if ((mIsDvbt && signal.equals("DvbtStatusChanged")) || (!mIsDvbt && signal.equals("DvbcStatusChanged"))) {
-                int progress = 0;
-                try {
-                    progress = data.getInt("progress");
-                } catch (JSONException ignore) {
-                }
-
+                int progress = getSearchProcess(data);
                 if (progress < 100) {
-                    int found = 0;
-                    try
-                    {
-                        JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getNumberOfServices", new JSONArray());
-                        found = obj.getInt("data");
-                    }
-                    catch (Exception ignore)
-                    {
-                        Log.e(TAG, ignore.getMessage());
-                    }
-
-
+                    int found = getFoundServiceNumber();
                     setSearchProgress(progress);
                     setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress), String.format(Locale.ENGLISH, "Found %d services", found));
                 } else {
+                    mFoundServiceNumber = getFoundServiceNumber();
+                    mServiceList = getServiceList();
                     onSearchFinished();
                 }
             }
@@ -83,6 +76,7 @@ public class DtvkitDvbtSetup extends Activity {
             String status = intent.getStringExtra(EpgSyncJobService.SYNC_STATUS);
             if (status.equals(EpgSyncJobService.SYNC_FINISHED)) {
                 setSearchStatus("Finished", "");
+                mStartSync = false;
                 finish();
             }
         }
@@ -90,11 +84,20 @@ public class DtvkitDvbtSetup extends Activity {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_BACK) {
-            stopMonitoringSearch();
-            stopSearch();
-            finish();
+        if (mStartSync) {
+            Toast.makeText(DtvkitDvbtSetup.this, R.string.sync_tv_provider, Toast.LENGTH_SHORT).show();
             return true;
+        }
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            if (mStartSearch) {
+                onSearchFinished();
+                return true;
+            } else {
+                stopMonitoringSearch();
+                stopSearch();
+                finish();
+                return true;
+            }
         }
 
         return super.onKeyDown(keyCode, event);
@@ -137,8 +140,46 @@ public class DtvkitDvbtSetup extends Activity {
     }
 
     @Override
+    public void finish() {
+        //send search info to livetv if found any
+        Log.d(TAG, "finish");
+        if (mFoundServiceNumber > 0) {
+            Intent intent = new Intent();
+            intent.putExtra(DtvkitDvbScanSelect.SEARCH_TYPE_MANUAL_AUTO, mSearchManualAutoType);
+            intent.putExtra(DtvkitDvbScanSelect.SEARCH_TYPE_DVBS_DVBT_DVBC, mSearchDvbcDvbtType);
+            intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_SERVICE_NUMBER, mFoundServiceNumber);
+            String serviceListJsonArray = (mServiceList != null && mServiceList.length() > 0) ? mServiceList.toString() : "";
+            String firstServiceName = "";
+            try {
+                firstServiceName = (mServiceList != null && mServiceList.length() > 0) ? mServiceList.getJSONObject(0).getString("name") : "";
+            } catch (JSONException e) {
+                Log.e(TAG, "finish JSONException = " + e.getMessage());
+            }
+            intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_SERVICE_LIST, serviceListJsonArray);
+            intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_FIRST_SERVICE, firstServiceName);
+            setResult(RESULT_OK, intent);
+        } else {
+            setResult(RESULT_CANCELED);
+        }
+        super.finish();
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        Log.d(TAG, "onStop");
+        if (mStartSearch) {
+            onSearchFinished();
+        } else {
+            stopMonitoringSearch();
+            stopSearch();
+        }
+    }
+
+    @Override
     public void onDestroy() {
         super.onDestroy();
+        Log.d(TAG, "onDestroy");
         stopMonitoringSearch();
         stopMonitoringSync();
     }
@@ -474,7 +515,7 @@ public class DtvkitDvbtSetup extends Activity {
         setSearchStatus("Searching", "");
         setSearchProgressIndeterminate(false);
         startMonitoringSearch();
-
+        mFoundServiceNumber = 0;
         try {
             JSONArray args = new JSONArray();
             args.put(false); // Commit
@@ -498,11 +539,19 @@ public class DtvkitDvbtSetup extends Activity {
                     } else {
                         command = (mIsDvbt ? "Dvbt.startManualSearchById" : "Dvbc.startManualSearchById");
                     }
+                    mSearchManualAutoType = DtvkitDvbScanSelect.SEARCH_TYPE_MANUAL;
                 } else {
                     command = (mIsDvbt ? "Dvbt.startSearch" : "Dvbc.startSearch");
+                    mSearchManualAutoType = DtvkitDvbScanSelect.SEARCH_TYPE_AUTO;
+                }
+                if (mIsDvbt) {
+                    mSearchDvbcDvbtType = DtvkitDvbScanSelect.SEARCH_TYPE_DVBT;
+                } else {
+                    mSearchDvbcDvbtType = DtvkitDvbScanSelect.SEARCH_TYPE_DVBC;
                 }
                 Log.d(TAG, "command = " + command + ", args = " + args.toString());
                 DtvkitGlueClient.getInstance().request(command, args);
+                mStartSearch = true;
             } else {
                 stopMonitoringSearch();
                 setSearchStatus("parameter not complete", "");
@@ -516,6 +565,7 @@ public class DtvkitDvbtSetup extends Activity {
     }
 
     private void stopSearch() {
+        mStartSearch = false;
         findViewById(R.id.terrestrialstartsearch).setEnabled(true);
         try {
             JSONArray args = new JSONArray();
@@ -528,6 +578,7 @@ public class DtvkitDvbtSetup extends Activity {
     }
 
     private void onSearchFinished() {
+        mStartSearch = false;
         disableStopSearchButton();
         setSearchStatus("Finishing search", "");
         setSearchProgressIndeterminate(true);
@@ -561,11 +612,13 @@ public class DtvkitDvbtSetup extends Activity {
     }
 
     private void startMonitoringSync() {
+        mStartSync = true;
         LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver,
                 new IntentFilter(EpgSyncJobService.ACTION_SYNC_STATUS_CHANGED));
     }
 
     private void stopMonitoringSync() {
+        mStartSync = false;
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
     }
 
@@ -610,5 +663,47 @@ public class DtvkitDvbtSetup extends Activity {
                 findViewById(R.id.terrestrialstopsearch).setEnabled(false);
             }
         });
+    }
+
+    private int getFoundServiceNumber() {
+        int found = 0;
+        try {
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getNumberOfServices", new JSONArray());
+            found = obj.getInt("data");
+            Log.i(TAG, "getFoundServiceNumber found = " + found);
+        } catch (Exception ignore) {
+            Log.e(TAG, "getFoundServiceNumber Exception = " + ignore.getMessage());
+        }
+        return found;
+    }
+
+    private int getSearchProcess(JSONObject data) {
+        int progress = 0;
+        if (data == null) {
+            return progress;
+        }
+        try {
+            progress = data.getInt("progress");
+        } catch (JSONException ignore) {
+            Log.e(TAG, "getSearchProcess Exception = " + ignore.getMessage());
+        }
+        return progress;
+    }
+
+    private JSONArray getServiceList() {
+        JSONArray result = null;
+        try {
+            JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getListOfServices", new JSONArray());
+            JSONArray services = obj.getJSONArray("data");
+            result = services;
+            for (int i = 0; i < services.length(); i++) {
+                JSONObject service = services.getJSONObject(i);
+                Log.i(TAG, "getServiceList service = " + service.toString());
+            }
+
+        } catch (Exception e) {
+            Log.e(TAG, "getServiceList Exception = " + e.getMessage());
+        }
+        return result;
     }
 }

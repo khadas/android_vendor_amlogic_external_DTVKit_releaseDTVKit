@@ -21,6 +21,18 @@ public class DtvkitDvbScanSelect extends Activity {
     public static final int REQUEST_CODE_START_DVBS_ACTIVITY = 3;
     public static final int REQUEST_CODE_START_SETTINGS_ACTIVITY = 4;
 
+    public static final int SEARCH_TYPE_MANUAL = 0;
+    public static final int SEARCH_TYPE_AUTO = 1;
+    public static final int SEARCH_TYPE_DVBC = 0;
+    public static final int SEARCH_TYPE_DVBT = 1;
+    public static final int SEARCH_TYPE_DVBS = 2;
+    public static final String SEARCH_TYPE_MANUAL_AUTO = "search_manual_auto";
+    public static final String SEARCH_TYPE_DVBS_DVBT_DVBC = "search_dvbs_dvbt_dvbc";
+    public static final String SEARCH_FOUND_SERVICE_NUMBER = "service_number";
+    public static final String SEARCH_FOUND_SERVICE_LIST = "service_list";
+    public static final String SEARCH_FOUND_SERVICE_INFO = "service_info";
+    public static final String SEARCH_FOUND_FIRST_SERVICE = "first_service";
+
     private DataMananer mDataMananer;
     private Intent mIntent = null;
 

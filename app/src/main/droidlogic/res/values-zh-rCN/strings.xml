@@ -96,7 +96,7 @@
     <string name="strSettingsAudioLang">音频语言:</string>
     <string name="strSettingsMainAudioLang">音频主语言:</string>
     <string name="strSettingsAssistAudioLang">音频副语言:</string>
-    <string name="strSettingsSubtitleLang">字幕语言:</string>
-    <string name="strSettingsMainSubtitleLang">字幕主语言:</string>
-    <string name="strSettingsAssistSubtitleLang">字幕副语言:</string>
+    <string name="strSettingsSubtitleLang">文字语言:</string>
+    <string name="strSettingsMainSubtitleLang">文字主语言:</string>
+    <string name="strSettingsAssistSubtitleLang">文字副语言:</string>
 </resources>
