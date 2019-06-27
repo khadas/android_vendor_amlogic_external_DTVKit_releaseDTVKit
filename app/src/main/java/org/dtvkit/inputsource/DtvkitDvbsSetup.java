@@ -55,8 +55,12 @@ public class DtvkitDvbsSetup extends Activity {
                     getProgressBar().setProgress(progress);
                     setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress));
                 } else {
-                    mFoundServiceNumber = getFoundServiceNumber();
                     mServiceList = getServiceList();
+                    mFoundServiceNumber = getFoundServiceNumber();
+                    if (mFoundServiceNumber == 0 && mServiceList != null && mServiceList.length() > 0) {
+                        Log.d(TAG, "onSignal mFoundServiceNumber erro use mServiceList length = " + mServiceList.length());
+                        mFoundServiceNumber = mServiceList.length();
+                    }
                     onSearchFinished();
                 }
             }
@@ -763,7 +767,7 @@ public class DtvkitDvbsSetup extends Activity {
             result = services;
             for (int i = 0; i < services.length(); i++) {
                 JSONObject service = services.getJSONObject(i);
-                Log.i(TAG, "getServiceList service = " + service.toString());
+                //Log.i(TAG, "getServiceList service = " + service.toString());
             }
 
         } catch (Exception e) {

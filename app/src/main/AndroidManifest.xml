@@ -32,12 +32,12 @@
 
         <uses-library android:name="droidlogic.software.core" />
 
-        <activity android:name=".MainActivity">
+        <!--<activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <!--<category android:name="android.intent.category.LEANBACK_LAUNCHER" />-->
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity>-->
         <activity android:name=".DtvkitDvbScanSelect">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
