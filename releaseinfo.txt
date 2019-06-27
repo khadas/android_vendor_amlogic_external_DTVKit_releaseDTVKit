@@ -1,0 +1,26 @@
+android-inputsource
+commit: be0dabd348a106681b76129b32745d398a684a41
+
+android-rpcservice
+commit: 2bae0b1c04b47dd79749c18a6b70bd7adf980e95
+
+dtvkit-amlogic
+commit: 583794c55a455f512cc829d054aa939e448645c2
+
+DVBCore
+commit: 85a50358e6399a9438b8a046648553fde0f507a6
+
+CI-PLUS
+commit: ae133123d6ca80d918d2473cd4095c5bbd9c0549
+
+DSMCC
+commit: 0773253b3f11cd6d60fb6237e8db8d5ba68dbe04
+
+MHEG5
+commit: c13b7be1e39b8cdacade5223f8761d9ade9cc4af
+
+
+说明：
+release 到openlinux 只需要android-inputsource和releaseDTVKit 这两个git就可以了。
+
+
