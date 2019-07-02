@@ -19,6 +19,10 @@ commit: 0773253b3f11cd6d60fb6237e8db8d5ba68dbe04
 MHEG5
 commit: c13b7be1e39b8cdacade5223f8761d9ade9cc4af
 
+DVB
+commit: da39a5825873566f29c52046b009bebc2a36e7db
+
+
 
 说明：
 release 到openlinux 只需要android-inputsource和releaseDTVKit 这两个git就可以了。
