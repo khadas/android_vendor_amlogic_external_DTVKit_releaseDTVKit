@@ -27,9 +27,6 @@ endif
 
 LOCAL_MODULE := libdtvkit_jni
 LOCAL_SHARED_LIBRARIES :=  \
-    libhidlbase \
-    libhidltransport \
-    libhidlmemory \
     libcutils \
     libutils \
     libgui \
@@ -38,7 +35,7 @@ LOCAL_SHARED_LIBRARIES :=  \
     libhardware \
     libhardware_legacy \
     libnativehelper \
-    lib_dtvkitserver
+    libdtvkitserver
 
 LOCAL_STATIC_LIBRARIES := libamgralloc_ext_static
 LOCAL_PRELINK_MODULE := false
