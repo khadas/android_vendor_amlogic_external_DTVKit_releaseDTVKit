@@ -15,8 +15,7 @@ $(warning "DVBCore directory exist")
 LOCAL_MODULE := libinvaildDTVKit
 LOCAL_SRC_FILES := libinvaildDTVKit.so
 else
-LOCAL_MODULE := lib_dtvkitserver
-LOCAL_SRC_FILES := lib_dtvkitserver.so
+LOCAL_MODULE := libdtvkitserver
+LOCAL_SRC_FILES := libdtvkitserver.so
 endif
-LOCAL_MODULE_PATH := $(TARGET_OUT_PRODUCT)/lib
 include $(BUILD_PREBUILT)
