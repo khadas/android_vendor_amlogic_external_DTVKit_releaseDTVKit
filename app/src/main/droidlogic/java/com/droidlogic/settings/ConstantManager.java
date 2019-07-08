@@ -34,10 +34,17 @@ public class ConstantManager {
     static {
         PI_TO_VIDEO_FORMAT_MAP.put("interlace", "I");
         PI_TO_VIDEO_FORMAT_MAP.put("progressive", "P");
+        PI_TO_VIDEO_FORMAT_MAP.put("interlace-top", "I");
+        PI_TO_VIDEO_FORMAT_MAP.put("interlace-bottom", "I");
+        PI_TO_VIDEO_FORMAT_MAP.put("Compressed", "P");
     }
 
+    public static final String CONSTANT_FORMAT_PROGRESSIVE = "progressive";
+    public static final String CONSTANT_FORMAT_INTERLACE = "interlace";
+    public static final String CONSTANT_FORMAT_COMRPESSED = "Compressed";
+
     public static final String SYS_HEIGHT_PATH = "/sys/class/video/frame_height";
-    public static final String SYS_PI_PATH = "/sys/class/deinterlace/di0/frame_format";
+    public static final String SYS_PI_PATH = "/sys/class/deinterlace/di0/frame_format";//"/sys/class/video/frame_format";
 
     public static void ascendTrackInfoOderByPid(List<TvTrackInfo> list) {
         if (list != null) {
