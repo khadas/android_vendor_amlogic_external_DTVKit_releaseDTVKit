@@ -191,6 +191,8 @@ public class DtvkitTvInput extends TvInputService {
 
         private NativeOverlayView nativeOverlayView;
         private CiMenuView ciOverlayView;
+        private int w;
+        private int h;
 
         private boolean mhegTookKey = false;
 
@@ -211,6 +213,8 @@ public class DtvkitTvInput extends TvInputService {
         }
 
         public void setSize(int width, int height) {
+            w = width;
+            h = height;
             nativeOverlayView.setSize(width, height);
         }
 
@@ -624,6 +628,12 @@ public class DtvkitTvInput extends TvInputService {
         public void onSetMain(boolean isMain) {
             Log.d(TAG, "onSetMain, isMain: " + isMain +" mCurrentDtvkitTvInputSessionIndex is " + mCurrentDtvkitTvInputSessionIndex);
             mIsMain = isMain;
+            if (!mIsMain) {
+                if (null != mSysSettingManager)
+                    mSysSettingManager.writeSysFs("/sys/class/video/disable_video", "1");
+                if (null != mView)
+                    layoutSurface(0, 0, mView.w, mView.h);
+            }
         }
 
         @Override
@@ -674,7 +684,7 @@ public class DtvkitTvInput extends TvInputService {
         @Override
         public void onSurfaceChanged(int format, int width, int height) {
             Log.i(TAG, "onSurfaceChanged " + format + ", " + width + ", " + height);
-            playerSetRectangle(0, 0, width, height);
+            //playerSetRectangle(0, 0, width, height);
         }
 
         public View onCreateOverlayView() {
@@ -690,8 +700,8 @@ public class DtvkitTvInput extends TvInputService {
             if (mView == null) {
                 mView = new DtvkitOverlayView(mContext);
             }
-            //Platform platform = new Platform();
-            //playerSetRectangle(platform.getSurfaceX(), platform.getSurfaceY(), width, height);
+            Platform platform = new Platform();
+            playerSetRectangle(platform.getSurfaceX(), platform.getSurfaceY(), width, height);
             mView.setSize(width, height);
         }
 
@@ -1444,7 +1454,8 @@ public class DtvkitTvInput extends TvInputService {
                    }
                    //due to the incorrect Surface size passed in onSurfaceChanged(),
                    //close this feature temporarily, will affect all video layout requests.(eg. mheg, afd)
-                   //layoutSurface(left,top,right,bottom);
+                   if (mIsMain)
+                       layoutSurface(left,top,right,bottom);
                 }
                 else if (signal.equals("ServiceRetuned"))
                 {

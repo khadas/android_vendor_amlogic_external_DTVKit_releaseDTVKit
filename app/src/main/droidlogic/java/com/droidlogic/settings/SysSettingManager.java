@@ -28,6 +28,10 @@ public class SysSettingManager {
         return result;
     }
 
+    public boolean writeSysFs(String sys, String val) {
+        return mSystemControlManager.writeSysFs(sys, val);
+    }
+
     public String getVideoFormatFromSys() {
         String result = "";
         String height = readSysFs(ConstantManager.SYS_HEIGHT_PATH);
