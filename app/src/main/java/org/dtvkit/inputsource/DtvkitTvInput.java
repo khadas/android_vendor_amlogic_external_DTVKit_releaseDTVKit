@@ -1267,8 +1267,9 @@ public class DtvkitTvInput extends TvInputService {
                                 notifyTracksChanged(mTunedTracks);
 
                                 if (mTunedChannel.getServiceType().equals(TvContract.Channels.SERVICE_TYPE_AUDIO_VIDEO)) {
-                                    if (mHandlerThreadHandle != null)
+                                    if (mHandlerThreadHandle != null) {
                                         mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);//check resolution later
+                                    }
                                 }
                                 Log.i(TAG, "audio track selected: " + playerGetSelectedAudioTrack());
                                 notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(playerGetSelectedAudioTrack()));
@@ -1434,9 +1435,10 @@ public class DtvkitTvInput extends TvInputService {
                     ComponentName sync = new ComponentName(mContext, DtvkitEpgSync.class);
                     EpgSyncJobService.requestImmediateSync(mContext, mInputId, true, sync);
                     //notify update parent contrl
-                    if (mHandlerThreadHandle != null)
+                    if (mHandlerThreadHandle != null) {
                         mHandlerThreadHandle.removeMessages(MSG_CHECK_PARENTAL_CONTROL);
                         mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_PARENTAL_CONTROL, MSG_CHECK_PARENTAL_CONTROL_PERIOD);
+                    }
                 }
                 else if (signal.equals("DvbUpdatedChannel"))
                 {
@@ -1477,8 +1479,9 @@ public class DtvkitTvInput extends TvInputService {
                    } catch (JSONException e) {
                       Log.e(TAG, e.getMessage());
                    }
-                   if (mHandlerThreadHandle != null)
+                   if (mHandlerThreadHandle != null) {
                        mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);
+                   }
                    //due to the incorrect Surface size passed in onSurfaceChanged(),
                    //close this feature temporarily, will affect all video layout requests.(eg. mheg, afd)
                    //layoutSurface(left,top,right,bottom);

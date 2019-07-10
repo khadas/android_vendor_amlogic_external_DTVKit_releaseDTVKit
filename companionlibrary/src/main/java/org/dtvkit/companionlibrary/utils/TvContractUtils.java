@@ -34,9 +34,12 @@ import android.util.ArrayMap;
 import android.util.Log;
 import android.util.LongSparseArray;
 import android.util.SparseArray;
+import android.content.ContentProviderOperation;
+import android.content.OperationApplicationException;
 
 import org.dtvkit.companionlibrary.model.Channel;
 import org.dtvkit.companionlibrary.model.Program;
+import org.dtvkit.companionlibrary.model.InternalProviderData;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -68,21 +71,69 @@ public class TvContractUtils {
     public static void updateChannels(Context context, String inputId, List<Channel> channels) {
         // Create a map from original network ID to channel row ID for existing channels.
         ArrayMap<Long, Long> channelMap = new ArrayMap<>();
+        ArrayMap<Long, String> channelSetFavMap = new ArrayMap<>();
+        ArrayMap<Long, String> channelSetSkipMap = new ArrayMap<>();
+        ArrayMap<Long, String> channelSkipValueMap = new ArrayMap<>();
+        ArrayMap<Long, String> channelFavValueMap = new ArrayMap<>();
         Uri channelsUri = TvContract.buildChannelsUriForInput(inputId);
         String[] projection = {Channels._ID, Channels.COLUMN_ORIGINAL_NETWORK_ID, Channels.COLUMN_TRANSPORT_STREAM_ID,
-                Channels.COLUMN_SERVICE_ID};
+                Channels.COLUMN_SERVICE_ID, Channels.COLUMN_INTERNAL_PROVIDER_DATA};
         ContentResolver resolver = context.getContentResolver();
         Cursor cursor = null;
         try {
             cursor = resolver.query(channelsUri, projection, null, null, null);
-            cursor = resolver.query(channelsUri, projection, null, null, null);
+            InternalProviderData internalProviderData = null;
+            byte[] internalProviderByteData = null;
+            String setFavFlag = "0";
+            String setSkipFlag = "0";
+            String favValue = "0";
+            String skipValue = "false";
             while (cursor != null && cursor.moveToNext()) {
                 long rowId = cursor.getLong(0);
                 int originalNetworkId = cursor.getInt(1);
                 int transportStreamId = cursor.getInt(2);
                 int serviceId = cursor.getInt(3);
+                int type = cursor.getType(4);//InternalProviderData type
+                setFavFlag = "0";
+                setSkipFlag = "0";
+                favValue = "0";
+                skipValue = "false";
+                if (type == Cursor.FIELD_TYPE_BLOB) {
+                    internalProviderByteData = cursor.getBlob(4);
+                    if (internalProviderByteData != null) {
+                        internalProviderData = new InternalProviderData(internalProviderByteData);
+                    }
+                    if (internalProviderData != null) {
+                        setSkipFlag = (String)internalProviderData.get(Channel.KEY_SET_HIDDEN);
+                        setFavFlag = (String)internalProviderData.get(Channel.KEY_SET_FAVOURITE);
+                        favValue = (String)internalProviderData.get(Channel.KEY_IS_FAVOURITE);
+                        skipValue = (String)internalProviderData.get(Channel.KEY_HIDDEN);
+                        if (setSkipFlag == null) {
+                            setSkipFlag = "0";
+                        }
+                        if (setFavFlag == null) {
+                            setFavFlag = "0";
+                        }
+                        if (favValue == null) {
+                            favValue = "0";
+                        }
+                        if (skipValue == null) {
+                            skipValue = "false";
+                        }
+                    }
+                    if (DEBUG) Log.i(TAG, "skipValue = " + skipValue + ", setSkipFlag = " + setSkipFlag + ", favValue = " + favValue + ", setFavFlag = " + setFavFlag);
+                } else {
+                    if (DEBUG) Log.i(TAG, "COLUMN_INTERNAL_PROVIDER_DATA other type");
+                }
+
                 channelMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, rowId);
+                channelSetFavMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setFavFlag);
+                channelSetSkipMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setSkipFlag);
+                channelSkipValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, skipValue);
+                channelFavValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, favValue);
             }
+        } catch (Exception e) {
+            Log.e(TAG, "updateChannels query Failed = " + e.getMessage());
         } finally {
             if (cursor != null) {
                 cursor.close();
@@ -91,6 +142,7 @@ public class TvContractUtils {
 
         // If a channel exists, update it. If not, insert a new one.
         Map<Uri, String> logos = new HashMap<>();
+        ArrayList<ContentProviderOperation> ops = new ArrayList<>();
         for (Channel channel : channels) {
             ContentValues values = new ContentValues();
             values.put(Channels.COLUMN_INPUT_ID, inputId);
@@ -114,12 +166,63 @@ public class TvContractUtils {
             int serviceId = channel.getServiceId();
             long triplet = ((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId;
             Long rowId = channelMap.get(triplet);
+            String setFavFlag = channelSetFavMap.get(triplet);
+            String setSkipFlag = channelSetSkipMap.get(triplet);
+            String favValue = channelFavValueMap.get(triplet);
+            String skipValue = channelSkipValueMap.get(triplet);
+            InternalProviderData internalProviderData = channel.getInternalProviderData();
+            byte[] dataByte = null;
+            if (setSkipFlag == null) {
+                setSkipFlag = "0";
+            }
+            if (setFavFlag == null) {
+                setFavFlag = "0";
+            }
+            if (favValue == null) {
+                favValue = "0";
+            }
+            if (skipValue == null) {
+                skipValue = "false";
+            }
+            if (internalProviderData == null) {
+                internalProviderData = new InternalProviderData();
+            }
+            try {
+                if ("1".equals(setFavFlag)) {
+                    internalProviderData.put(Channel.KEY_SET_FAVOURITE, "1");
+                    internalProviderData.put(Channel.KEY_IS_FAVOURITE, favValue);
+                } else {
+                    internalProviderData.put(Channel.KEY_SET_FAVOURITE, "0");
+                    String getFavValue = ((String)internalProviderData.get(Channel.KEY_IS_FAVOURITE));
+                    internalProviderData.put(Channel.KEY_IS_FAVOURITE, getFavValue == null ? "0" : getFavValue);
+                }
+                if ("1".equals(setSkipFlag)) {
+                    internalProviderData.put(Channel.KEY_SET_HIDDEN, "1");
+                    internalProviderData.put(Channel.KEY_HIDDEN, skipValue);
+                } else {
+                    internalProviderData.put(Channel.KEY_SET_HIDDEN, "0");
+                    String getSkipValue = ((String)internalProviderData.get(Channel.KEY_HIDDEN));
+                    internalProviderData.put(Channel.KEY_SET_HIDDEN, getSkipValue == null ? "false" : getSkipValue);
+                }
+                dataByte = internalProviderData.toString().getBytes();
+            } catch (Exception e) {
+                Log.e(TAG, "updateChannels put Failed = " + e.getMessage());
+            }
+            if (dataByte != null && dataByte.length > 0) {
+                values.put(TvContract.Channels.COLUMN_INTERNAL_PROVIDER_DATA, dataByte);
+            } else {
+                values.putNull(TvContract.Channels.COLUMN_INTERNAL_PROVIDER_DATA);
+            }
             if (DEBUG) {
                 Log.d(TAG, String.format("Mapping %d to %d", triplet, rowId));
             }
-            Uri uri;
+            Uri uri = null;
             if (rowId == null) {
-                uri = resolver.insert(TvContract.Channels.CONTENT_URI, values);
+                //uri = resolver.insert(TvContract.Channels.CONTENT_URI, values);
+                ops.add(ContentProviderOperation.newInsert(
+                                    TvContract.Channels.CONTENT_URI)
+                                    .withValues(values)
+                                    .build());
                 if (DEBUG) {
                     Log.d(TAG, "Adding channel " + channel.getDisplayName() + " at " + uri);
                 }
@@ -129,13 +232,23 @@ public class TvContractUtils {
                 if (DEBUG) {
                     Log.d(TAG, "Updating channel " + channel.getDisplayName() + " at " + uri);
                 }
-                resolver.update(uri, values, null, null);
+                //resolver.update(uri, values, null, null);
+                ops.add(ContentProviderOperation.newUpdate(
+                                    TvContract.buildChannelUri(rowId))
+                                    .withValues(values)
+                                    .build());
                 channelMap.remove(triplet);
             }
-            if (channel.getChannelLogo() != null && !TextUtils.isEmpty(channel.getChannelLogo())) {
+            /*if (channel.getChannelLogo() != null && !TextUtils.isEmpty(channel.getChannelLogo())) {
                 logos.put(TvContract.buildChannelLogoUri(uri), channel.getChannelLogo());
-            }
+            }*/
         }
+        try {
+            resolver.applyBatch(TvContract.AUTHORITY, ops);
+        } catch (Exception e) {
+            Log.e(TAG, "updateChannels Failed = " + e.getMessage());
+        }
+        ops.clear();
         if (!logos.isEmpty()) {
             new InsertLogosTask(context).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, logos);
         }

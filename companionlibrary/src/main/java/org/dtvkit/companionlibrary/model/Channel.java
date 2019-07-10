@@ -62,6 +62,11 @@ public final class Channel {
     private int mSearchable;
     private String mServiceType;
 
+    public static final String KEY_IS_FAVOURITE = "is_favourite";
+    public static final String KEY_SET_FAVOURITE = "set_favourite";
+    public static final String KEY_HIDDEN = "hidden";
+    public static final String KEY_SET_HIDDEN = "set_hidden";
+
     private Channel() {
         mId = INVALID_CHANNEL_ID;
         mOriginalNetworkId = INVALID_INTEGER_VALUE;
