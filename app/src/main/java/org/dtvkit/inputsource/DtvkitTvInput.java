@@ -661,11 +661,11 @@ public class DtvkitTvInput extends TvInputService {
             if (null != mHardware && mConfigs.length > 0) {
                 if (null == surface) {
                     if (mIsMain) {
-                        doRelease();
                         setOverlayViewEnabled(false);
                         mHardware.setSurface(null, null);
                         Log.d(TAG, "onSetSurface null");
                         mSurface = null;
+                        doRelease();
                     }
                 } else {
                     if (mSurface != surface) {
