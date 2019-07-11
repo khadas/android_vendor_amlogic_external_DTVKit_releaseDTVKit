@@ -1,11 +1,11 @@
 android-inputsource
-commit: f5698635088d8ef651ab5083e81fbfed3ec87331
+commit: 67e33c344c663918d6e2fb0770d01afdc9660f40
 
 android-rpcservice
-commit: ac24b626cdde9fbf4b69546369228dc934d8d89e
+commit: 1e37f21ec7eb2467817d28f6a8692dbe1dbeede1
 
 dtvkit-amlogic
-commit: 583794c55a455f512cc829d054aa939e448645c2
+commit: d61a5aad0e560a5b7b62254253e3db3858b07a34
 
 DVBCore
 commit: e84dbf9965ebdfb25a9ad73c46e0c876ebac5639
