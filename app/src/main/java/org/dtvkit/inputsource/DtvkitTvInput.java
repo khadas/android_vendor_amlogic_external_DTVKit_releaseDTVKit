@@ -65,9 +65,6 @@ import org.json.JSONObject;
 /*
 dtvkit
  */
-import org.dtvkit.inputsource.DtvkitDvbScan;
-import org.dtvkit.inputsource.DtvkitDvbScan.ScannerEvent;
-
 import com.droidlogic.settings.PropSettingManager;
 import com.droidlogic.settings.ConvertSettingManager;
 import com.droidlogic.settings.SysSettingManager;
@@ -86,11 +83,8 @@ public class DtvkitTvInput extends TvInputService {
     private LongSparseArray<Channel> mChannels;
     private ContentResolver mContentResolver;
 
-    protected DtvkitDvbScan mDtvkitDvbScan = null;
     protected String mInputId = null;
-    protected String mProtocol = null;
    // private TvControlManager Tcm = null;
-    private DtvScanHandler mDtvScanHandler;
     private static final int MSG_DO_TRY_SCAN = 0;
     private static final int RETRY_TIMES = 10;
     private int retry_times = RETRY_TIMES;
@@ -147,7 +141,6 @@ public class DtvkitTvInput extends TvInputService {
         super.onCreate();
         Log.i(TAG, "onCreate");
         mTvInputManager = (TvInputManager)this.getSystemService(Context.TV_INPUT_SERVICE);
-        mDtvkitDvbScan = new DtvkitDvbScan();
         mContentResolver = getContentResolver();
         mContentResolver.registerContentObserver(TvContract.Channels.CONTENT_URI, true, mContentObserver);
         onChannelsChanged();
@@ -555,7 +548,7 @@ public class DtvkitTvInput extends TvInputService {
         }
     }
 
-    class DtvkitTvInputSession extends TvInputService.Session implements DtvkitDvbScan.ScannerEventListener {
+    class DtvkitTvInputSession extends TvInputService.Session               {
         private static final String TAG = "DtvkitTvInputSession";
         private static final int ADEC_START_DECODE = 1;
         private static final int ADEC_PAUSE_DECODE = 2;
@@ -591,7 +584,6 @@ public class DtvkitTvInput extends TvInputService {
             super(context);
             mContext = context;
             Log.i(TAG, "DtvkitTvInputSession creat");
-            mDtvkitDvbScan.setScannerListener(this);
             setOverlayViewEnabled(true);
             mCaptioningManager =
                 (CaptioningManager) context.getSystemService(Context.CAPTIONING_SERVICE);
@@ -650,7 +642,6 @@ public class DtvkitTvInput extends TvInputService {
             playerSetSubtitlesOn(false);
             playerSetTeletextOn(false, -1);
             DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
-            mDtvkitDvbScan.setScannerListener(null);
         }
 
         @Override
@@ -1022,37 +1013,6 @@ public class DtvkitTvInput extends TvInputService {
                 if (actiondown) {
                     playerNotifyTeletextEvent(28);
                 }
-            }
-        }
-
-        @Override
-        public void onEvent(ScannerEvent event) {
-            switch (event.type) {
-                case DtvkitDvbScan.EVENT_SCAN_BEGIN:
-                    Log.d(TAG, "scan start");
-                    //mStatus = ScanStatusType.IN_PROG;
-                   // updateStatus(mStatus);
-                    break;
-                case DtvkitDvbScan.EVENT_SCAN_END:
-                    //mStatus = ScanStatusType.COMPLETE;
-                    //updateStatus(mStatus);
-                    Log.d(TAG, "scan end");
-                    DtvkitStopSyncDb();
-                    break;
-                case DtvkitDvbScan.EVENT_SCAN_PROGRESS:
-                    //mComplete = event.precent;
-                    //mDtvCount = event.totalcount;
-                    //updateChannelCount(ChannelType.DTV, mDtvCount);
-                    //updateProgress(mComplete);
-                    break;
-                case DtvkitDvbScan.EVENT_STORE_BEGIN:
-                    Log.d(TAG, "store begin");
-                    //amlDtvkitStopScan(mProtocol);
-                    DtvkitStartSyncDb(mInputId);
-                    break;
-                default:
-                    Log.d(TAG, "unhandled scanner event: " + event.type);
-                    break;
             }
         }
 
@@ -2529,197 +2489,6 @@ public class DtvkitTvInput extends TvInputService {
             onChannelsChanged();
         }
     };
-
-    public void cancelScan() {
-        Log.d(TAG, "cancel scan");
-
-        /*
-        add dtvkit stop scan api, and unregist handle
-         */
-        DtvkitStopScan(mProtocol);
-        //mStatus = ScanStatusType.USER_ABORT;
-        //updateStatus(mStatus);
-    }
-
-    public int getScanStatus() {
-        Log.d(TAG, "get scan status");
-
-        //mCounts.put(ChannelType.ATV, mAtvCount);
-        //mCounts.put(ChannelType.DTV, mDtvCount);
-        //mCounts.put(ChannelType.IP, mIpCount);
-
-        return 0;//new ScanStatus(mComplete, mStatus, mCounts);
-    }
-
-    private void reset() {
-        Log.d(TAG, "reset");
-        //mStatus = ScanStatusType.NO_SCAN;
-        //mComplete = 0;
-        //mAtvCount = 0;
-        //mDtvCount = 0;
-        //mIpCount = 0;
-        //mCounts.clear();
-    }
-
-    public  class ScanType {
-        public static final int SCAN_DTV_AUTO = 0x1;
-        public static final int SCAN_DTV_MANUAL = 0x2;
-        public static final int SCAN_DTV_ALLBAND = 0x3;
-        public static final int SCAN_DTV_NONE = 0x7;
-
-        public static final int SCAN_ATV_AUTO = 0x1;
-        public static final int SCAN_ATV_MANUAL = 0x2;
-        public static final int SCAN_ATV_FREQ = 0x3;
-        public static final int SCAN_ATV_NONE = 0x7;
-
-        public static final int SCAN_ATV_AUTO_FREQ_LIST = 0x0; /* 0: freq table list sacn mode */
-        public static final int SCAN_ATV_AUTO_ALL_BAND = 0x1;  /* 1: all band sacn mode */
-
-        public ScanType() {}
-    }
-
-
-   public enum ScanProtocol {
-        AIR(0),
-        CABLE(1),
-        ALL(2);
-
-        private int val;
-
-        ScanProtocol(int val) {
-            this.val = val;
-        }
-
-        public int toInt() {
-            return this.val;
-        }
-    }
-
-    public void startAutoScan(ScanProtocol protocol, ScanType type) {
-        /*
-        need add check dtvkit is playing or stoping, if true, we need retry
-         */
-        if (false) {
-            Log.d(TAG, "startAutoScan block, wait for=" + retry_times + ", timeout is 200ms");
-            if (retry_times > 0) {
-                doStartAutoScaninHandle(protocol, type);
-                retry_times--;
-                return ;
-            }
-        } else {
-            Log.d(TAG, "startAutoScan is ok");
-            doStartAutoScan(protocol, type);
-        }
-    }
-
-    private final class DtvScanHandler extends Handler {
-        @Override
-        public void handleMessage(Message message) {
-            Log.d(TAG, "AmlTvScanHandler, msg.what=" + message.what);
-            switch (message.what) {
-                case MSG_DO_TRY_SCAN:
-                    mDtvScanHandler.removeMessages(MSG_DO_TRY_SCAN);
-                    SomeArgs args = (SomeArgs) message.obj;
-                    startAutoScan((ScanProtocol)args.arg1, (ScanType)args.arg2);
-                    break;
-            }
-        }
-    }
-
-    private void doStartAutoScan(ScanProtocol protocol, ScanType type) {
-        reset();
-        String scanProtocol;
-        switch (protocol) {
-            case AIR:
-                scanProtocol = TvContract.Channels.TYPE_DVB_T;
-                break;
-            case CABLE:
-                scanProtocol = TvContract.Channels.TYPE_DVB_S;
-                break;
-            case ALL:
-                // TODO: scan all for real
-                scanProtocol = TvContract.Channels.TYPE_DVB_T;
-                break;
-            default:
-                scanProtocol = TvContract.Channels.TYPE_DVB_T;
-                break;
-        }
-
-        // start scan
-        /*
-        add dtvkit scan api and regist handle
-         */
-        mProtocol = scanProtocol;
-        Log.d(TAG, "doStartAutoScan");
-        DtvkitStartScan(mProtocol, null);
-        //mStatus = ScanStatusType.IN_PROG;
-        //updateStatus(mStatus);
-    }
-
-    public final class SomeArgs {
-         public Object arg1;
-         public Object arg2;
-         public SomeArgs() {
-
-         }
-         public void clear() {
-             arg1 = null;
-             arg2 = null;
-         }
-     }
-
-    private void doStartAutoScaninHandle(ScanProtocol protocol, ScanType type) {
-        Log.d(TAG, "doStartAutoScaninHandle");
-        Message message = mDtvScanHandler.obtainMessage();
-        message.what = MSG_DO_TRY_SCAN;
-        SomeArgs args = new SomeArgs();
-        synchronized(this) {
-            args.arg1 = protocol;
-            args.arg2 = type;
-            message.obj = args;
-        }
-        mDtvScanHandler.sendMessageDelayed(message, 200);
-    }
-        /*
-        add dtvkit scan api
-     */
-    /*
-        protocol  : TvContract.Channels.TYPE_DVB_T or TvContract.Channels.TYPE_DVB_S
-        scanParam : scan param for dtvt or dvbs.
-     */
-    private int DtvkitStartScan(String protocol, JSONObject scanParam) {
-        int ret = 0;
-        Log.d(TAG, "DtvkitStartScan:"+ " protocol" + protocol);
-        //mDtvkitDvbScan.setScannerListener(this);
-        mDtvkitDvbScan.startSearch(protocol, scanParam);
-        return ret;
-    }
-     /*
-        protocol  : TvContract.Channels.TYPE_DVB_T or TvContract.Channels.TYPE_DVB_S
-        mHandler  : used to got scan event
-     */
-    private int DtvkitStopScan(String protocol) {
-        int ret = 0;
-        Log.d(TAG, "DtvkitStopScan:"+ " protocol" + protocol);
-        mDtvkitDvbScan.stopScan(protocol);
-        return ret;
-    }
-        /*
-        inputId  : used for store channel to tv.db, can not null
-     */
-    public int DtvkitStartSyncDb(String inputId) {
-        int ret = 0;
-        Log.d(TAG, "DtvkitStartSyncDb:"+ " inputId" + inputId);
-        ret = mDtvkitDvbScan.StartSyncDb(this, inputId);
-        return ret;
-    }
-        /*
-     */
-    public int DtvkitStopSyncDb() {
-        int ret = 0;
-        ret = mDtvkitDvbScan.StopSyncDb(this);
-        return ret;
-    }
 
    private boolean recordingAddRecording(String dvbUri, boolean eventTriggered, long duration, StringBuffer response) {
        try {
