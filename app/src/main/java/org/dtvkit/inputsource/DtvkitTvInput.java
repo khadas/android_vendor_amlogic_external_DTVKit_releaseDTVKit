@@ -713,7 +713,10 @@ public class DtvkitTvInput extends TvInputService {
                 Log.e(TAG, "DtvkitTvInputSession onTune invalid channelUri = " + channelUri);
                 return false;
             }
-            mHandlerThreadHandle.obtainMessage(MSG_ON_TUNE, 0, 0, channelUri).sendToTarget();
+
+            if (mHandlerThreadHandle != null)
+                mHandlerThreadHandle.obtainMessage(MSG_ON_TUNE, 0, 0, channelUri).sendToTarget();
+
             mTunedChannel = getChannel(channelUri);
 
             Log.i(TAG, "onTune will be Done in onTuneByHandlerThreadHandle");
@@ -1487,7 +1490,8 @@ public class DtvkitTvInput extends TvInputService {
                       retuneUri = ContentUris.withAppendedId(retuneUri,id);
                       Log.i(TAG, "Retuning to " + retuneUri);
 
-                      mHandlerThreadHandle.obtainMessage(MSG_ON_TUNE, 1/*mhegTune*/, 0, retuneUri).sendToTarget();
+                      if (mHandlerThreadHandle != null)
+                          mHandlerThreadHandle.obtainMessage(MSG_ON_TUNE, 1/*mhegTune*/, 0, retuneUri).sendToTarget();
                    }
                    else
                    {
@@ -1526,7 +1530,8 @@ public class DtvkitTvInput extends TvInputService {
                                 break;
                             case MSG_CHECK_RESOLUTION:
                                 if (!checkRealTimeResolution()) {
-                                    mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);
+                                    if (mHandlerThreadHandle != null)
+                                        mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_RESOLUTION, MSG_CHECK_RESOLUTION_PERIOD);
                                 }
                                 break;
                             case MSG_CHECK_PARENTAL_CONTROL:
