@@ -940,6 +940,7 @@ public class DtvkitTvInput extends TvInputService {
             //will regist handle to client when
             //creat ciMenuView,so we need destory and
             //unregist handle.
+            releaseSignalHandler();
             if (mDtvkitTvInputSessionCount == mCurrentDtvkitTvInputSessionIndex || mIsMain) {
                 //release by message queue for current session
                 if (mMainHandle != null) {
@@ -949,7 +950,6 @@ public class DtvkitTvInput extends TvInputService {
                 }
             } else {
                 //release directly as new session has created
-                releaseSignalHandler();
                 finalReleaseWorkThread();
                 doDestroyOverlay();
             }
@@ -966,6 +966,7 @@ public class DtvkitTvInput extends TvInputService {
 
         private void doRelease() {
             Log.i(TAG, "doRelease index = " + mCurrentDtvkitTvInputSessionIndex);
+            releaseSignalHandler();
             removeScheduleTimeshiftRecordingTask();
             scheduleTimeshiftRecording = false;
             timeshiftRecorderState = RecorderState.STOPPED;
@@ -975,7 +976,6 @@ public class DtvkitTvInput extends TvInputService {
             playerStop();
             playerSetSubtitlesOn(false);
             playerSetTeletextOn(false, -1);
-            //DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
             mCurAudioFmt = -2;
             Log.i(TAG, "doRelease over index = " + mCurrentDtvkitTvInputSessionIndex);
         }
