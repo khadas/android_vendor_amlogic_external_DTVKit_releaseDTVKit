@@ -19,9 +19,8 @@ import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
 
-import org.dtvkit.inputsource.DtvkitGlueClient;
+import org.droidlogic.dtvkit.DtvkitGlueClient;
 import org.dtvkit.inputsource.DataMananer;
-
 
 public class ParameterMananer {
 
@@ -74,8 +73,8 @@ public class ParameterMananer {
     public static final String KEY_DISEQC1_2_DISH_SAVE_POSITION = "key_dish_save_to_position";
     public static final String KEY_DISEQC1_2_DISH_MOVE_TO_POSITION = "key_dish_move_to_position";
 
-    public static final String[] ID_DIALOG_KEY_COLLECTOR = {KEY_SATALLITE, KEY_TRANSPONDER, KEY_LNB_TYPE, KEY_UNICABLE_SWITCH/*KEY_UNICABLE*/, /*KEY_LNB_POWER,
-            KEY_22_KHZ, */KEY_TONE_BURST, KEY_DISEQC1_0, KEY_DISEQC1_1, KEY_MOTOR};
+    public static final String[] ID_DIALOG_KEY_COLLECTOR = {KEY_SATALLITE, KEY_TRANSPONDER, KEY_LNB_TYPE, KEY_UNICABLE_SWITCH/*KEY_UNICABLE*/, KEY_LNB_POWER,
+            KEY_22_KHZ, KEY_TONE_BURST, KEY_DISEQC1_0, KEY_DISEQC1_1, KEY_MOTOR};
     public static final String KEY_LNB_CUSTOM = "key_lnb_custom";
     public static final String KEY_LNB_CUSTOM_SINGLE_DOUBLE = "key_lnb_custom_single_double";
     public static final int DEFAULT_LNB_CUSTOM_SINGLE_DOUBLE = 0;//SINGLE
@@ -138,6 +137,9 @@ public class ParameterMananer {
     public static final String KEY_DTVKIT_ASSIST_AUDIO_LANG = "assist_audio_lang";
     public static final String KEY_DTVKIT_MAIN_SUBTITLE_LANG = "main_subtitle_lang";
     public static final String KEY_DTVKIT_ASSIST_SUBTITLE_LANG = "assist_subtitle_lang";*///save in dtvkit
+
+    //add for pvr record path setting
+    public static final String KEY_PVR_RECORD_PATH = "pvr_record_path";
 
     public ParameterMananer(Context context, DtvkitGlueClient client) {
         this.mContext = context;
@@ -752,11 +754,11 @@ public class ParameterMananer {
             case 0:
                 derection = "east";
                 break;
+            case 1:
+                derection = "center";
+                break;
             case 2:
                 derection = "west";
-                break;
-            case 3:
-                derection = "center";
                 break;
             default:
                 derection = "center";
@@ -846,7 +848,7 @@ public class ParameterMananer {
         Log.d(TAG, "enableDishLimits->" + status);
     }
 
-    public void setDishLimits(int east, int west) {
+    /*public void setDishLimits(int east, int west) {
         try {
             JSONArray args1 = new JSONArray();
             args1.put(east);
@@ -862,6 +864,36 @@ public class ParameterMananer {
             e.printStackTrace();
         }
         Log.d(TAG, "setDishLimits east->" + east + ", west->" + west);
+    }*/
+
+    public void setDishELimits() {
+        try {
+            JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.setDishEastLimits", new JSONArray());
+            if (resultObj != null) {
+                Log.d(TAG, "setDishELimits resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setDishELimits then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setDishELimits Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        Log.d(TAG, "setDishELimits east");
+    }
+
+    public void setDishWLimits() {
+        try {
+            JSONObject resultObj = DtvkitGlueClient.getInstance().request("Dvbs.setDishWestLimits", new JSONArray());
+            if (resultObj != null) {
+                Log.d(TAG, "setDishWLimits resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "setDishWLimits then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "setDishWLimits Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        Log.d(TAG, "setDishWLimits  west");
     }
 
     public String getSatelliteName(String name) {
@@ -1799,5 +1831,179 @@ public class ParameterMananer {
             return result;
         }
         return result;
+    }
+
+    public JSONObject startTuneAction() {
+        JSONObject resultObj = null;
+        try {
+            JSONArray args = initTuneActionData();
+            if (args == null || args.length() == 0) {
+                Log.d(TAG, "startTuneAction null args");
+                return null;
+            }
+            Log.i(TAG, "startTuneAction:" + args.toString());
+            resultObj = DtvkitGlueClient.getInstance().request("Dvbs.tuneActionStart", args);
+            if (resultObj != null) {
+                Log.d(TAG, "startTuneAction resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "startTuneAction then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "startTuneAction Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    public JSONObject stopTuneAction() {
+        JSONObject resultObj = null;
+        try {
+            JSONArray args = new JSONArray();
+            Log.i(TAG, "stopTuneAction:" + args.toString());
+            resultObj = DtvkitGlueClient.getInstance().request("Dvbs.tuneActionStop", args);
+            if (resultObj != null) {
+                Log.d(TAG, "stopTuneAction resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "stopTuneAction then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "stopTuneAction Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    private JSONArray initTuneActionData() {
+        JSONArray result = new JSONArray();
+        JSONObject obj = new JSONObject();
+        try {
+            boolean unicable_switch = (mDataMananer.getIntParameters(DataMananer.KEY_UNICABLE_SWITCH) == 1);
+            obj.put("unicable", unicable_switch);
+            obj.put("unicable_chan", mDataMananer.getIntParameters(DataMananer.KEY_USER_BAND));
+            obj.put("unicable_if", mDataMananer.getIntParameters(DataMananer.KEY_UB_FREQUENCY));
+            obj.put("unicable_position_b", mDataMananer.getIntParameters(DataMananer.KEY_POSITION) == 1);
+            obj.put("tone_burst", DataMananer.DIALOG_SET_SELECT_SINGLE_ITEM_TONE_BURST_LIST[mDataMananer.getIntParameters(DataMananer.KEY_TONE_BURST)]);
+            obj.put("c_switch", mDataMananer.getIntParameters(DataMananer.KEY_DISEQC1_0));
+            obj.put("u_switch", mDataMananer.getIntParameters(DataMananer.KEY_DISEQC1_1));
+            obj.put("dish_pos", mDataMananer.getIntParameters(DataMananer.KEY_DISEQC1_2_DISH_CURRENT_POSITION));
+            int lnb_type = mDataMananer.getIntParameters(DataMananer.KEY_LNB_TYPE);
+            //saved lnbtype: 0:single, 1:universal, 2:user define
+            //needed lnbtype: 0:single, 1:universal, 2:unicable, 3:user define
+            if (unicable_switch) {
+                lnb_type = 2;//unicable
+            } else if (lnb_type == 2) {//
+                lnb_type = 3;//user define
+            }
+            obj.put("lnb_type", lnb_type);
+
+            JSONObject lnbobj = new JSONObject();
+            JSONObject lowband_obj = new JSONObject();
+            JSONObject highband_obj = new JSONObject();
+            int lnbtype = mDataMananer.getIntParameters(DataMananer.KEY_LNB_TYPE);
+            int lowlnb = 0;
+            int highlnb = 0;
+            int lowMin = 0;
+            int lowMax = 11750;
+            int highMin = 0;
+            int highMax = 11750;
+            switch (lnbtype) {
+                case 0:
+                    lowlnb = 5150;
+                    break;
+                case 1:
+                    lowlnb = 9750;
+                    highlnb = 10600;
+                    break;
+                case 2:
+                    String customlnb = mDataMananer.getStringParameters(DataMananer.KEY_LNB_CUSTOM);
+                    if (TextUtils.isEmpty(customlnb)) {
+                        Log.d(TAG, "customlnb null!");
+                        return null;
+                    }
+                    String[] customlnbvalue = null;
+                    if (customlnb != null) {
+                        customlnbvalue = customlnb.split(",");
+                    }
+                    if (customlnbvalue != null && customlnbvalue.length == 1) {
+                        lowlnb = Integer.valueOf(customlnbvalue[0]);
+                        lowMin = mDataMananer.getIntParameters(DataMananer.KEY_LNB_CUSTOM_LOW_MIN);
+                        lowMax = mDataMananer.getIntParameters(DataMananer.KEY_LNB_CUSTOM_LOW_MAX);
+                    } else if (customlnbvalue != null && customlnbvalue.length == 2) {
+                        lowlnb = Integer.valueOf(customlnbvalue[0]);
+                        highlnb = Integer.valueOf(customlnbvalue[1]);
+                        lowMin = mDataMananer.getIntParameters(DataMananer.KEY_LNB_CUSTOM_LOW_MIN);
+                        lowMax = mDataMananer.getIntParameters(DataMananer.KEY_LNB_CUSTOM_LOW_MAX);
+                        highMin = mDataMananer.getIntParameters(DataMananer.KEY_LNB_CUSTOM_HIGH_MIN);
+                        highMax = mDataMananer.getIntParameters(DataMananer.KEY_LNB_CUSTOM_HIGH_MAX);
+                    } else {
+                        Log.d(TAG, "null lnb customized data!");
+                        return null;
+                    }
+                    break;
+            }
+            lowband_obj.put("min_freq", lowMin);
+            lowband_obj.put("max_freq", lowMax);
+            lowband_obj.put("local_oscillator_frequency", lowlnb);
+            lowband_obj.put("lnb_voltage", DataMananer.DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER_LIST[mDataMananer.getIntParameters(DataMananer.KEY_LNB_POWER)]);
+            lowband_obj.put("tone_22k", mDataMananer.getIntParameters(DataMananer.KEY_22_KHZ) == 1);
+            highband_obj.put("min_freq", highMin);
+            highband_obj.put("max_freq", highMax);
+            highband_obj.put("local_oscillator_frequency", highlnb);
+            highband_obj.put("lnb_voltage", DataMananer.DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER_LIST[mDataMananer.getIntParameters(DataMananer.KEY_LNB_POWER)]);
+            highband_obj.put("tone_22k", mDataMananer.getIntParameters(DataMananer.KEY_22_KHZ) == 1);
+
+            lnbobj.put("low_band", lowband_obj);
+            if (highlnb > 0) {
+                lnbobj.put("high_band", highband_obj);
+            }
+            obj.put("lnb", lnbobj);
+        } catch (Exception e) {
+            obj = null;
+            Log.d(TAG, "initLbnData Exception " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+        result.put(obj.toString());//arg1
+        String[] singleParameter = null;
+        String parameter = mDataMananer.getStringParameters(DataMananer.KEY_TRANSPONDER);
+        if (parameter != null) {
+            singleParameter = parameter.split("/");
+            if (singleParameter != null && singleParameter.length == 3) {
+                result.put(Integer.valueOf(singleParameter[0]));//arg2
+                result.put(singleParameter[1]);//arg3
+                result.put(Integer.valueOf(singleParameter[2]));//arg4
+            } else {
+                return null;
+            }
+        } else {
+            return null;
+        }
+        result.put(DataMananer.KEY_FEC_ARRAY_VALUE[mDataMananer.getIntParameters(DataMananer.KEY_FEC_MODE)]);//arg5
+        return result;
+    }
+
+    public boolean getHearingImpairedSwitchStatus() {
+        boolean result = false;
+        try {
+            JSONArray args = new JSONArray();
+            result = DtvkitGlueClient.getInstance().request("Player.getSubtitleHardHearingOn", args).getBoolean("data");
+        } catch (Exception e) {
+            Log.d(TAG, "getHearingImpairedSwitchStatus Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        Log.i(TAG, "getHearingImpairedSwitchStatus on = " + result);
+        return result;
+    }
+
+    public void setHearingImpairedSwitchStatus(boolean on) {
+        try {
+            JSONArray args = new JSONArray();
+            args.put(on);
+            DtvkitGlueClient.getInstance().request("Player.setSubtitleHardHearingOn", args);
+            Log.i(TAG, "setHearingImpairedSwitchStatus:" + on);
+        } catch (Exception e) {
+            Log.e(TAG, "setHearingImpairedSwitchStatus " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }

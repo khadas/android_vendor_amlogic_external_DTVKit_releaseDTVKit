@@ -163,4 +163,91 @@
 
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/strength_quality_container"
+        android:layout_width="750dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical|center_horizontal"
+        android:gravity="center_vertical|center_horizontal"
+        android:orientation="horizontal"
+        android:weightSum="2" >
+
+        <LinearLayout
+            android:id="@+id/strength_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="15dp"
+            android:layout_marginBottom="10dp"
+            android:orientation="horizontal"
+            android:layout_weight="1"
+            android:weightSum="5">
+
+            <TextView
+                android:id="@+id/strength_text"
+                android:layout_width="30dp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="15dp"
+                android:layout_weight="1"
+                android:text="@string/dialog_diseqc_1_2_strength"
+                android:textColor="#B3EEEEEE"
+                android:textSize="14sp" />
+
+            <ProgressBar
+                android:id="@+id/strength_progressbar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="3" />
+
+            <TextView
+                android:id="@+id/strength_percent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:layout_weight="1"
+                android:text="0%"
+                android:textColor="#B3EEEEEE"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/quality_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="15dp"
+            android:layout_marginBottom="10dp"
+            android:orientation="horizontal"
+            android:layout_weight="1"
+            android:weightSum="5">
+
+            <TextView
+                android:id="@+id/quality_text"
+                android:layout_width="30dp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="15dp"
+                android:layout_weight="1"
+                android:text="@string/dialog_diseqc_1_2_quality"
+                android:textColor="#B3EEEEEE"
+                android:textSize="14sp" />
+
+            <ProgressBar
+                android:id="@+id/quality_progressbar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="3" />
+
+            <TextView
+                android:id="@+id/quality_percent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:layout_weight="1"
+                android:text="0%"
+                android:textColor="#B3EEEEEE"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+    </LinearLayout>
+
 </LinearLayout>

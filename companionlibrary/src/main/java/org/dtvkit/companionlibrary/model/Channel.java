@@ -62,10 +62,17 @@ public final class Channel {
     private int mSearchable;
     private String mServiceType;
 
+    //sync with ChannelInfo in droidlogic-tv.jar
     public static final String KEY_IS_FAVOURITE = "is_favourite";
+    public static final String KEY_FAVOURITE_INFO = "favourite_info";
     public static final String KEY_SET_FAVOURITE = "set_favourite";
     public static final String KEY_HIDDEN = "hidden";
     public static final String KEY_SET_HIDDEN = "set_hidden";
+    public static final String KEY_SET_DISPLAYNAME = "set_displayname";
+    public static final String KEY_SET_DISPLAYNUMBER = "set_displaynumber";
+    public static final String KEY_VIDEO_CODEC = "video_codec";
+
+    private String mVideoCodec;
 
     private Channel() {
         mId = INVALID_CHANNEL_ID;
@@ -240,6 +247,13 @@ public final class Channel {
         return mServiceType;
     }
 
+    /**
+     * @return The value of video decode for the channel.
+     */
+    public String getVideoCodec() {
+        return mVideoCodec;
+    }
+
     @Override
     public String toString() {
         return "Channel{"
@@ -253,6 +267,7 @@ public final class Channel {
                 + ", description=" + mDescription
                 + ", channelLogo=" + mChannelLogo
                 + ", videoFormat=" + mVideoFormat
+                + ", mVideoCodec=" + mVideoCodec
                 + ", appLinkText=" + mAppLinkText + "}";
     }
 
@@ -352,6 +367,7 @@ public final class Channel {
         mDisplayName = other.mDisplayName;
         mDescription = other.mDescription;
         mVideoFormat = other.mVideoFormat;
+        mVideoCodec = other.mVideoCodec;
         mOriginalNetworkId = other.mOriginalNetworkId;
         mTransportStreamId = other.mTransportStreamId;
         mServiceId = other.mServiceId;
@@ -438,6 +454,13 @@ public final class Channel {
             }
             if (!cursor.isNull(++index)) {
                 builder.setAppLinkText(cursor.getString(index));
+            }
+        }
+        InternalProviderData data = builder.mChannel.getInternalProviderData();
+        if (data != null) {
+            try {
+                builder.setVideoCodec((String)data.get(KEY_VIDEO_CODEC));
+            } catch (Exception e) {
             }
         }
         return builder.build();
@@ -591,6 +614,11 @@ public final class Channel {
          */
         public Builder setVideoFormat(String videoFormat) {
             mChannel.mVideoFormat = videoFormat;
+            return this;
+        }
+
+        public Builder setVideoCodec(String videoCodec) {
+            mChannel.mVideoCodec = videoCodec;
             return this;
         }
 

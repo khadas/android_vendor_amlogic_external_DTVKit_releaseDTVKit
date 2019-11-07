@@ -166,6 +166,10 @@ public class DataMananer {
     public static final String KEY_SEARCH_DVBT_CHANNEL_NAME = "dvbt_channel_name";
     public static final int VALUE_SEARCH_CHANNEL_NAME_INDEX_DEFAULT = 0;
 
+    //add for pvr record path setting
+    public static final String KEY_PVR_RECORD_PATH = "pvr_record_path";
+    public static final String PVR_DEFAULT_PATH = "/data/data/org.dtvkit.inputsource";
+
     public DataMananer(Context context) {
         this.mContext = context;
     }
@@ -342,6 +346,9 @@ public class DataMananer {
                 break;
             case KEY_LNB_CUSTOM:
                 defValue = "";
+                break;
+            case KEY_PVR_RECORD_PATH:
+                defValue = PVR_DEFAULT_PATH;
                 break;
             default:
                 defValue = "";

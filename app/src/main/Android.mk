@@ -33,7 +33,7 @@ LOCAL_CERTIFICATE := platform
 LOCAL_PROGUARD_ENABLED := disabled
 
 
-LOCAL_JAVA_LIBRARIES += droidlogic droidlogic-tv
+LOCAL_JAVA_LIBRARIES += droidlogic droidlogic-dtvkit
 
 LOCAL_CERTIFICATE := platform
 LOCAL_PRODUCT_MODULE := true

@@ -58,7 +58,7 @@ import java.util.Map;
 public class TvContractUtils {
     public static final String PREFERENCES_FILE_KEY = "org.dtvkit.companionlibrary";
     private static final String TAG = "TvContractUtils";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
 
     /**
      * Updates the list of available channels.
@@ -68,16 +68,23 @@ public class TvContractUtils {
      * @param channels The updated list of channels.
      * @hide
      */
-    public static void updateChannels(Context context, String inputId, List<Channel> channels) {
+
+    public static void updateChannels(Context context, String inputId, boolean isSearched, List<Channel> channels) {
         // Create a map from original network ID to channel row ID for existing channels.
         ArrayMap<Long, Long> channelMap = new ArrayMap<>();
         ArrayMap<Long, String> channelSetFavMap = new ArrayMap<>();
         ArrayMap<Long, String> channelSetSkipMap = new ArrayMap<>();
         ArrayMap<Long, String> channelSkipValueMap = new ArrayMap<>();
         ArrayMap<Long, String> channelFavValueMap = new ArrayMap<>();
+        ArrayMap<Long, String> channelFavListValueMap = new ArrayMap<>();
+        ArrayMap<Long, String> channelSetDisPlayNameMap = new ArrayMap<>();
+        ArrayMap<Long, String> channelSetDisPlayNumberMap = new ArrayMap<>();
+        ArrayMap<Long, String> channelDisPlayNameValueMap = new ArrayMap<>();
+        ArrayMap<Long, String> channelDisPlayNumberValueMap = new ArrayMap<>();
         Uri channelsUri = TvContract.buildChannelsUriForInput(inputId);
         String[] projection = {Channels._ID, Channels.COLUMN_ORIGINAL_NETWORK_ID, Channels.COLUMN_TRANSPORT_STREAM_ID,
-                Channels.COLUMN_SERVICE_ID, Channels.COLUMN_INTERNAL_PROVIDER_DATA};
+                Channels.COLUMN_SERVICE_ID, Channels.COLUMN_DISPLAY_NAME, Channels.COLUMN_DISPLAY_NUMBER,
+                Channels.COLUMN_INTERNAL_PROVIDER_DATA};
         ContentResolver resolver = context.getContentResolver();
         Cursor cursor = null;
         try {
@@ -87,27 +94,41 @@ public class TvContractUtils {
             String setFavFlag = "0";
             String setSkipFlag = "0";
             String favValue = "0";
+            String favListValue = "";
             String skipValue = "false";
+            String setDisplayNameFlag = "0";
+            String setDisplayNumberFlag = "0";
+            String displayName = null;
+            String displayNumber = null;
             while (cursor != null && cursor.moveToNext()) {
                 long rowId = cursor.getLong(0);
                 int originalNetworkId = cursor.getInt(1);
                 int transportStreamId = cursor.getInt(2);
                 int serviceId = cursor.getInt(3);
-                int type = cursor.getType(4);//InternalProviderData type
+                displayName = cursor.getString(4);
+                displayNumber = cursor.getString(5);
+                int type = cursor.getType(6);//InternalProviderData type
                 setFavFlag = "0";
                 setSkipFlag = "0";
                 favValue = "0";
+                favListValue = "";
                 skipValue = "false";
+                setDisplayNameFlag = "0";
+                setDisplayNumberFlag = "0";
                 if (type == Cursor.FIELD_TYPE_BLOB) {
-                    internalProviderByteData = cursor.getBlob(4);
+                    internalProviderByteData = cursor.getBlob(6);
                     if (internalProviderByteData != null) {
                         internalProviderData = new InternalProviderData(internalProviderByteData);
                     }
                     if (internalProviderData != null) {
+                        if (DEBUG) Log.i(TAG, "internalProviderData = " + internalProviderData.toString());
                         setSkipFlag = (String)internalProviderData.get(Channel.KEY_SET_HIDDEN);
                         setFavFlag = (String)internalProviderData.get(Channel.KEY_SET_FAVOURITE);
                         favValue = (String)internalProviderData.get(Channel.KEY_IS_FAVOURITE);
+                        favListValue = (String)internalProviderData.get(Channel.KEY_FAVOURITE_INFO);
                         skipValue = (String)internalProviderData.get(Channel.KEY_HIDDEN);
+                        setDisplayNameFlag = (String)internalProviderData.get(Channel.KEY_SET_DISPLAYNAME);
+                        setDisplayNumberFlag = (String)internalProviderData.get(Channel.KEY_SET_DISPLAYNUMBER);
                         if (setSkipFlag == null) {
                             setSkipFlag = "0";
                         }
@@ -117,20 +138,37 @@ public class TvContractUtils {
                         if (favValue == null) {
                             favValue = "0";
                         }
+                        if (favListValue == null) {
+                            favListValue = "";
+                        }
                         if (skipValue == null) {
                             skipValue = "false";
                         }
+                        if (setDisplayNameFlag == null) {
+                            setDisplayNameFlag = "0";
+                        }
+                        if (setDisplayNumberFlag == null) {
+                            setDisplayNumberFlag = "0";
+                        }
                     }
-                    if (DEBUG) Log.i(TAG, "skipValue = " + skipValue + ", setSkipFlag = " + setSkipFlag + ", favValue = " + favValue + ", setFavFlag = " + setFavFlag);
+                    if (DEBUG) Log.i(TAG, "skipValue = " + skipValue + ", setSkipFlag = " + setSkipFlag + ", favValue = " + favValue + ", setFavFlag = " + setFavFlag +
+                            ", setDisplayNameFlag = " + setDisplayNameFlag + ", setDisplayNumberFlag = " + setDisplayNumberFlag + ", displayName = " + displayName + " displayNumber = " + displayNumber);
                 } else {
                     if (DEBUG) Log.i(TAG, "COLUMN_INTERNAL_PROVIDER_DATA other type");
                 }
 
                 channelMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, rowId);
-                channelSetFavMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setFavFlag);
-                channelSetSkipMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setSkipFlag);
-                channelSkipValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, skipValue);
-                channelFavValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, favValue);
+                if (!isSearched) {
+                    channelSetFavMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setFavFlag);
+                    channelSetSkipMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setSkipFlag);
+                    channelSkipValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, skipValue);
+                    channelFavValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, favValue);
+                    channelFavListValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, favListValue);
+                    channelSetDisPlayNameMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setDisplayNameFlag);
+                    channelSetDisPlayNumberMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, setDisplayNumberFlag);
+                    channelDisPlayNameValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, displayName);
+                    channelDisPlayNumberValueMap.put(((long)originalNetworkId << 32) | (transportStreamId << 16) | serviceId, displayNumber);
+                }
             }
         } catch (Exception e) {
             Log.e(TAG, "updateChannels query Failed = " + e.getMessage());
@@ -169,7 +207,12 @@ public class TvContractUtils {
             String setFavFlag = channelSetFavMap.get(triplet);
             String setSkipFlag = channelSetSkipMap.get(triplet);
             String favValue = channelFavValueMap.get(triplet);
+            String favListValue = channelFavListValueMap.get(triplet);
             String skipValue = channelSkipValueMap.get(triplet);
+            String setDisplayNameFlag = channelSetDisPlayNameMap.get(triplet);
+            String setDisplayNumberFlag = channelSetDisPlayNumberMap.get(triplet);
+            String displayName = channelDisPlayNameValueMap.get(triplet);
+            String displayNumber = channelDisPlayNumberValueMap.get(triplet);
             InternalProviderData internalProviderData = channel.getInternalProviderData();
             byte[] dataByte = null;
             if (setSkipFlag == null) {
@@ -181,20 +224,44 @@ public class TvContractUtils {
             if (favValue == null) {
                 favValue = "0";
             }
+            if (favListValue == null) {
+                favListValue = "";
+            }
             if (skipValue == null) {
                 skipValue = "false";
+            }
+            if (setDisplayNameFlag == null) {
+                setSkipFlag = "0";
+            }
+            if (setDisplayNumberFlag == null) {
+                setFavFlag = "0";
             }
             if (internalProviderData == null) {
                 internalProviderData = new InternalProviderData();
             }
             try {
+                if ("1".equals(setDisplayNameFlag) && displayName != null) {
+                    internalProviderData.put(Channel.KEY_SET_DISPLAYNAME, "1");
+                    values.put(Channels.COLUMN_DISPLAY_NAME, displayName);
+                } else {
+                    internalProviderData.put(Channel.KEY_SET_DISPLAYNAME, "0");
+                }
+                if ("1".equals(setDisplayNumberFlag) && displayNumber != null) {
+                    internalProviderData.put(Channel.KEY_SET_DISPLAYNUMBER, "1");
+                    values.put(Channels.COLUMN_DISPLAY_NUMBER, displayNumber);
+                } else {
+                    internalProviderData.put(Channel.KEY_SET_DISPLAYNUMBER, "0");
+                }
                 if ("1".equals(setFavFlag)) {
                     internalProviderData.put(Channel.KEY_SET_FAVOURITE, "1");
                     internalProviderData.put(Channel.KEY_IS_FAVOURITE, favValue);
+                    internalProviderData.put(Channel.KEY_FAVOURITE_INFO, favListValue);
                 } else {
                     internalProviderData.put(Channel.KEY_SET_FAVOURITE, "0");
                     String getFavValue = ((String)internalProviderData.get(Channel.KEY_IS_FAVOURITE));
+                    String getFavListValue = ((String)internalProviderData.get(Channel.KEY_FAVOURITE_INFO));
                     internalProviderData.put(Channel.KEY_IS_FAVOURITE, getFavValue == null ? "0" : getFavValue);
+                    internalProviderData.put(Channel.KEY_FAVOURITE_INFO, getFavListValue == null ? "" : getFavListValue);
                 }
                 if ("1".equals(setSkipFlag)) {
                     internalProviderData.put(Channel.KEY_SET_HIDDEN, "1");
@@ -265,6 +332,50 @@ public class TvContractUtils {
                     PREFERENCES_FILE_KEY, Context.MODE_PRIVATE).edit();
             editor.apply();
         }
+    }
+
+    public static boolean updateSingleChannelColumn(ContentResolver contentResolver, long id, String columnKey, Object value) {
+        boolean ret = false;
+        if (id == -1 || TextUtils.isEmpty(columnKey) || contentResolver == null) {
+            return ret;
+        }
+        String[] projection = {columnKey};
+        Uri channelsUri = TvContract.buildChannelUri(id);
+        Cursor cursor = null;
+        ContentValues values = null;
+        try {
+            cursor = contentResolver.query(channelsUri, projection, Channels._ID + "=?", new String[]{String.valueOf(id)}, null);
+            while (cursor != null && cursor.moveToNext()) {
+                values = new ContentValues();
+                if (value instanceof byte[]) {
+                    values.put(columnKey, (byte[])value);
+                } else if (value instanceof String) {
+                    values.put(columnKey, (String)value);
+                } else if (value instanceof Integer) {
+                    values.put(columnKey, (Integer)value);
+                } else {
+                    Log.i(TAG, "updateChannelInternalProviderData unkown data type");
+                    return ret;
+                }
+                ret = true;
+                contentResolver.update(channelsUri, values, null, null);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.i(TAG, "updateSingleColumn mContentResolver operation Exception = " + e.getMessage());
+        }
+        try {
+            if (cursor != null) {
+                cursor.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.i(TAG, "updateSingleColumn cursor.close() Exception = " + e.getMessage());
+        }
+        if (DEBUG)
+            Log.d(TAG, "updateSingleColumn " + (ret ? "found" : "notfound")
+                    + " _id:" + id + " key:" + columnKey + " value:" + value);
+        return ret;
     }
 
     /**
@@ -416,6 +527,21 @@ public class TvContractUtils {
         }
         return null;
     }
+
+    public static Program getCurrentProgramExt(ContentResolver resolver, Uri channelUri, long nowMs) {
+        List<Program> programs = getPrograms(resolver, channelUri);
+        if (programs == null) {
+            return null;
+        }
+        //long nowMs = System.currentTimeMillis();
+        for (Program program : programs) {
+            if (program.getStartTimeUtcMillis() <= nowMs && program.getEndTimeUtcMillis() > nowMs) {
+                return program;
+            }
+        }
+        return null;
+    }
+
 
     /**
      * Returns the program that is scheduled to be playing after a given program on a given channel.

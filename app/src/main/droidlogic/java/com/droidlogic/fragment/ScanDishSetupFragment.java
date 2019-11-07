@@ -1,6 +1,8 @@
 package com.droidlogic.fragment;
 
 import java.util.LinkedList;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import com.droidlogic.fragment.ItemAdapter.ItemDetail;
 import com.droidlogic.fragment.ItemListView.ListItemFocusedListener;
@@ -30,6 +32,13 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.media.tv.TvInputInfo;
+import android.widget.ProgressBar;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Message;
+import android.annotation.NonNull;
+import android.annotation.Nullable;
+import android.widget.Toast;
 
 import org.dtvkit.inputsource.R;
 import org.dtvkit.inputsource.R.color;
@@ -51,13 +60,92 @@ public class ScanDishSetupFragment extends Fragment {
     private LinearLayout mSatelliteQuickkey2;
     private TextView mItemTitleTextView;
     private TextView mOptionTitleItemTextView;
+    private ProgressBar mStrengthProgressBar;
+    private ProgressBar mQualityProgressBar;
+    private TextView mStrengthTextView;
+    private TextView mQualityTextView;
     private DialogManager mDialogManager = null;
+
+    private TimerTask task = new TimerTask() {
+        public void run() {
+            ((ScanMainActivity)getActivity()).runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (mParameterMananer == null) {
+                        return;
+                    }
+                    int strength = mParameterMananer.getStrengthStatus();
+                    int quality = mParameterMananer.getQualityStatus();
+                    if (mStrengthProgressBar != null && mQualityProgressBar != null &&
+                            mStrengthTextView != null && mQualityTextView != null) {
+                        mStrengthProgressBar.setProgress(strength);
+                        mQualityProgressBar.setProgress(quality);
+                        mStrengthTextView.setText(strength + "%");
+                        mQualityTextView.setText(quality + "%");
+                        //Log.d(TAG, "run task get strength and quality");
+                    }
+                }
+            });
+        }
+    };
+    private Timer timer = new Timer();
+    private boolean mScheduled = false;
+
+    private HandlerThread mHandlerThread;
+    private Handler  mThreadHandler;
+
+    private final int MSG_START_TUNE_ACTION = 0;
+    private final int MSG_STOP_TUNE_ACTION = 1;
+    private final int MSG_STOP_RELEAS_ACTION = 2;
+    private final int VALUE_START_TUNE_DELAY = 200;
+    private boolean mIsStarted = false;
+    private boolean mIsReleasing = false;
+
+    private void initHandlerThread() {
+        mHandlerThread = new HandlerThread("check-message-coming");
+        mHandlerThread.start();
+        mThreadHandler = new Handler(mHandlerThread.getLooper()) {
+            @Override
+            public void handleMessage(Message msg) {
+                switch (msg.what) {
+                    case MSG_START_TUNE_ACTION:
+                        if (mParameterMananer != null) {
+                            mIsStarted = true;
+                            mParameterMananer.startTuneAction();
+                        }
+                        break;
+                    case MSG_STOP_TUNE_ACTION:
+                        if (mParameterMananer != null) {
+                            mIsStarted = false;
+                            mParameterMananer.stopTuneAction();
+                        }
+                        break;
+                    case MSG_STOP_RELEAS_ACTION:
+                        if (!mThreadHandler.hasMessages(MSG_STOP_RELEAS_ACTION)) {
+                            releaseHandler();
+                        } else {
+                            releaseMessage();
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+        };
+    }
 
     /*public static ScanDishSetupFragment newInstance() {
         return new ScanDishSetupFragment();
     }*/
     public ScanDishSetupFragment() {
 
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        initHandlerThread();
+        Log.d(TAG, "onCreate");
     }
 
     @Override
@@ -73,6 +161,11 @@ public class ScanDishSetupFragment extends Fragment {
         mSatelliteQuickkey2 = (LinearLayout) rootView.findViewById(R.id.function_key2);
         creatFour1();
         creatFour2();
+
+        mStrengthProgressBar = (ProgressBar)rootView.findViewById(R.id.strength_progressbar);
+        mQualityProgressBar = (ProgressBar)rootView.findViewById(R.id.quality_progressbar);
+        mStrengthTextView = (TextView)rootView.findViewById(R.id.strength_percent);
+        mQualityTextView = (TextView)rootView.findViewById(R.id.quality_percent);
 
         mListViewItem = (ItemListView) rootView.findViewById(R.id.listview_item);
         mListViewOption = (ItemListView) rootView.findViewById(R.id.listview_option);
@@ -141,8 +234,49 @@ public class ScanDishSetupFragment extends Fragment {
 
         mListViewOption.setOnItemSelectedListener(mListViewOption);
         mListViewItem.setOnItemSelectedListener(mListViewItem);
+        initStrengthQualityUpdate();
 
         return rootView;
+    }
+
+    private void releaseHandler() {
+        Log.d(TAG, "releaseHandler");
+        mIsReleasing = true;
+        getActivity().finish();
+        if (mThreadHandler != null) {
+            mThreadHandler.removeCallbacksAndMessages(null);
+            mThreadHandler = null;
+        }
+
+        if (mHandlerThread != null) {
+            mHandlerThread.quit();
+            mHandlerThread = null;
+        }
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        if (mScheduled) {
+            abortStrengthQualityUpdate();
+        }
+        if (mIsStarted) {
+            mIsStarted = false;
+            stopTune();
+        }
+        if (!mIsReleasing) {
+            mIsReleasing = true;
+            releaseMessage();
+        }
+        Log.d(TAG, "onStop");
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        //releaseHandler();
+        //mParameterMananer.stopTuneAction();
+        Log.d(TAG, "onDestroy");
     }
 
     private void changeSatelliteQuickkeyLayout() {
@@ -191,6 +325,25 @@ public class ScanDishSetupFragment extends Fragment {
         View view = (View) inflater.inflate(R.layout.edit_exit_wheel_display, null);
         mSatelliteQuickkey2.removeAllViews();
         mSatelliteQuickkey2.addView(view);
+    }
+
+    private void initStrengthQualityUpdate() {
+        startTune();
+        if (mScheduled) {
+            abortStrengthQualityUpdate();
+        }
+        timer.schedule(task, 1000, 1000);
+        mScheduled = true;
+        Log.d(TAG, "initStrengthQualityUpdate");
+    }
+
+    private void abortStrengthQualityUpdate() {
+        if (mScheduled) {
+            mScheduled = false;
+            task.cancel();
+            timer.cancel();
+            Log.d(TAG, "abortStrengthQualityUpdate");
+        }
     }
 
     /*AdapterView.OnItemClickListener mOnItemClickListener = new AdapterView.OnItemClickListener() {
@@ -247,6 +400,8 @@ public class ScanDishSetupFragment extends Fragment {
                             if (mCurrentSubCustomDialog != null) {
                                 mCurrentSubCustomDialog.showDialog();
                             }
+                        } else {
+                            startTune();
                         }
                         mItemAdapterOption.reFill(mParameterMananer.getCompleteParameterList(mParameterMananer.getCurrentListType(), mParameterMananer.getCurrentSatelliteIndex()));
                     }
@@ -262,6 +417,7 @@ public class ScanDishSetupFragment extends Fragment {
                             } else {
                                 mParameterMananer.saveStringParameters(parameterKey, "");
                             }
+                            startTune();
                         } else if ("cancel".equals(data.getString("button"))) {
                             Log.d(TAG, "cancel in clicked");
                         }
@@ -299,6 +455,7 @@ public class ScanDishSetupFragment extends Fragment {
                             mCurrentCustomDialog.updateListView(mCurrentCustomDialog.getDialogTitle(), mCurrentCustomDialog.getDialogKey(), mParameterMananer.getIntParameters(ParameterMananer.KEY_UNICABLE));
                         }
                         mItemAdapterOption.reFill(mParameterMananer.getCompleteParameterList(mParameterMananer.getCurrentListType(), mParameterMananer.getCurrentSatelliteIndex()));
+                        startTune();
                     } else if ("selected".equals(data.getString("action")) && data != null && data.getInt("position") == 2) {
                         mCurrentSubCustomDialog = mDialogManager.buildUnicableCustomedItemDialog(mSingleSelectDialogCallBack);
                         if (mCurrentSubCustomDialog != null) {
@@ -316,6 +473,7 @@ public class ScanDishSetupFragment extends Fragment {
                             if (mCurrentCustomDialog != null) {
                                 mCurrentCustomDialog.updateListView(mCurrentCustomDialog.getDialogTitle(), mCurrentCustomDialog.getDialogKey(), mParameterMananer.getIntParameters(ParameterMananer.KEY_UNICABLE));
                             }
+                            startTune();
                         } else if ("cancel".equals(data.getString("button"))) {
                             Log.d(TAG, "KEY_UB_FREQUENCY cancel in clicked");
                         }
@@ -332,6 +490,7 @@ public class ScanDishSetupFragment extends Fragment {
                             mCurrentCustomDialog.updateListView(mCurrentCustomDialog.getDialogTitle(), mCurrentCustomDialog.getDialogKey(), data.getInt("position"));
                         }
                         mItemAdapterOption.reFill(mParameterMananer.getCompleteParameterList(mParameterMananer.getCurrentListType(), mParameterMananer.getCurrentSatelliteIndex()));
+                        startTune();
                     }
                     break;
                 case ParameterMananer.KEY_MOTOR:
@@ -348,6 +507,7 @@ public class ScanDishSetupFragment extends Fragment {
                             }
                         }
                         mItemAdapterOption.reFill(mParameterMananer.getCompleteParameterList(mParameterMananer.getCurrentListType(), mParameterMananer.getCurrentSatelliteIndex()));
+                        startTune();
                     }
                     break;
                 case ParameterMananer.KEY_DISEQC1_2:
@@ -359,14 +519,25 @@ public class ScanDishSetupFragment extends Fragment {
                         mParameterMananer.saveIntParameters(parameterKey, diseqc1_2_position);
                         boolean needbreak = false;
                         switch (diseqc1_2_position) {
+                            case 3://dish limts east
+                                mParameterMananer.setDishELimits();
+                                needbreak = true;
+                                break;
+                            case 4://dish limts west
+                                mParameterMananer.setDishWLimits();
+                                needbreak = true;
+                                break;
                             case 7://move
                                 mParameterMananer.dishMove(mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_MOVE_DIRECTION), mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_MOVE_STEP));
+                                needbreak = true;
                                 break;
                             case 9://save to position
                                 mParameterMananer.storeDishPosition(mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_CURRENT_POSITION));
+                                needbreak = true;
                                 break;
                             case 10://move to position
                                 mParameterMananer.moveDishToPosition(mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_CURRENT_POSITION));
+                                needbreak = true;
                                 break;
                             default:
                                 needbreak = true;
@@ -385,7 +556,7 @@ public class ScanDishSetupFragment extends Fragment {
                                 mParameterMananer.saveIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_LIMITS_STATUS, "left".equals(data.getString("action")) ? 0 : 1);
                                 mParameterMananer.enableDishLimits(mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_LIMITS_STATUS) == 1);
                                 break;
-                            case 3://dish limts east
+                            /*case 3://dish limts east
                                 int value = mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_EAST_LIMITS);
                                 if ("left".equals(data.getString("action"))) {
                                     if (value != 0) {
@@ -412,7 +583,7 @@ public class ScanDishSetupFragment extends Fragment {
                                 }
                                 mParameterMananer.saveIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_WEST_LIMITS, westvalue);
                                 mParameterMananer.setDishLimits(mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_EAST_LIMITS), mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_WEST_LIMITS));
-                                break;
+                                break;*/
                             case 5://dish move direction
                                 int directionvalue = mParameterMananer.getIntParameters(ParameterMananer.KEY_DISEQC1_2_DISH_MOVE_DIRECTION);
                                 if ("left".equals(data.getString("action"))) {
@@ -433,7 +604,7 @@ public class ScanDishSetupFragment extends Fragment {
                                         stepvalue = stepvalue - 1;
                                     }
                                 } else {
-                                    if (stepvalue != 180) {
+                                    if (stepvalue != 127) {
                                         stepvalue = stepvalue + 1;
                                     }
                                 }
@@ -516,7 +687,8 @@ public class ScanDishSetupFragment extends Fragment {
                                 }
                                 getActivity().startActivity(intent);*/
                                 //getActivity().startActivityForResult(intent, ScanMainActivity.REQUEST_CODE_START_SETUP_ACTIVITY);
-                                getActivity().finish();
+                                //getActivity().finish();
+                                stopAndRelease();
                                 break;
                             default:
                                 break;
@@ -600,6 +772,43 @@ public class ScanDishSetupFragment extends Fragment {
         }
     };
 
+    private void startTune() {
+        if (mThreadHandler != null) {
+            if (mThreadHandler.hasMessages(MSG_START_TUNE_ACTION)) {
+                mThreadHandler.removeMessages(MSG_START_TUNE_ACTION);
+            }
+            Log.d(TAG, "sendEmptyMessage startTune");
+            mThreadHandler.sendEmptyMessageDelayed(MSG_START_TUNE_ACTION, VALUE_START_TUNE_DELAY);
+        }
+    }
+
+    private void stopTune() {
+        if (mThreadHandler != null) {
+            if (mThreadHandler.hasMessages(MSG_START_TUNE_ACTION)) {
+                mThreadHandler.removeMessages(MSG_START_TUNE_ACTION);
+            }
+            Log.d(TAG, "sendEmptyMessage stopTune");
+            mThreadHandler.sendEmptyMessage(MSG_STOP_TUNE_ACTION);
+        }
+    }
+
+    private void stopAndRelease() {
+        Log.d(TAG, "stopAndRelease");
+        abortStrengthQualityUpdate();
+        stopTune();
+        releaseMessage();
+    }
+
+    private void releaseMessage() {
+        Log.d(TAG, "releaseMessage");
+        if (mThreadHandler != null) {
+            if (mThreadHandler.hasMessages(MSG_STOP_RELEAS_ACTION)) {
+                mThreadHandler.removeMessages(MSG_STOP_RELEAS_ACTION);
+            }
+            mThreadHandler.sendEmptyMessage(MSG_STOP_RELEAS_ACTION);
+        }
+    }
+
     private void switchtoLeftList() {
         if (ItemListView.LIST_RIGHT.equals(mCurrentListFocus)) {
             mCurrentListFocus = ItemListView.LIST_LEFT;
@@ -635,7 +844,11 @@ public class ScanDishSetupFragment extends Fragment {
                 } else if (ParameterMananer.ITEM_TRANSPONDER.equals(listtype)) {
                     LinkedList<ItemDetail> items = mParameterMananer.getTransponderList();
                     if (items != null && position < items.size()) {
-                        mParameterMananer.setCurrentTransponder(items != null ? (items.get(position).getFirstText()) : "null");
+                        String transponder = items != null ? (items.get(position).getFirstText()) : "null";
+                        mParameterMananer.setCurrentTransponder(transponder);
+                        if (!TextUtils.isEmpty(transponder) && !"null".equals(transponder)) {
+                            startTune();
+                        }
                     } else {
                         Log.e(TAG, "onListItemSelected setCurrentTransponder erro position index");
                     }

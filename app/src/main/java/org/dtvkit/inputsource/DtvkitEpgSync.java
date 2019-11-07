@@ -10,6 +10,8 @@ import org.dtvkit.companionlibrary.model.Channel;
 import org.dtvkit.companionlibrary.model.EventPeriod;
 import org.dtvkit.companionlibrary.model.InternalProviderData;
 import org.dtvkit.companionlibrary.model.Program;
+import org.droidlogic.dtvkit.DtvkitGlueClient;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.ArrayList;
@@ -28,7 +30,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
         try {
             JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getListOfServices", new JSONArray());
 
-            Log.i(TAG, obj.toString());
+            Log.i(TAG, "getChannels=" + obj.toString());
 
             JSONArray services = obj.getJSONArray("data");
 
@@ -40,7 +42,27 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 InternalProviderData data = new InternalProviderData();
                 data.put("dvbUri", uri);
                 data.put("hidden", service.getBoolean("hidden"));
-
+                data.put("network_id", service.getInt("network_id"));
+                data.put("frequency", service.getInt("freq"));
+                JSONObject satellite = new JSONObject();
+                satellite.put("satellite_info_name", service.getString("sate_name"));
+                data.put("satellite_info", satellite.toString());
+                JSONObject transponder = new JSONObject();
+                String tranponderDisplay = service.getString("transponder");
+                transponder.put("transponder_info_display_name", tranponderDisplay);
+                if (tranponderDisplay != null) {
+                    String[] splitTransponder = tranponderDisplay.split("/");
+                    if (splitTransponder != null && splitTransponder.length == 3) {
+                        transponder.put("transponder_info_satellite_name", service.getString("sate_name"));
+                        transponder.put("transponder_info_frequency", splitTransponder[0]);
+                        transponder.put("transponder_info_polarity", splitTransponder[1]);
+                        transponder.put("transponder_info_symbol", splitTransponder[2]);
+                    }
+                }
+                data.put("transponder_info", transponder.toString());
+                data.put("video_pid", service.getInt("video_pid"));
+                data.put("video_codec", service.getString("video_codec"));
+                data.put("is_data", service.getBoolean("is_data"));
                 channels.add(new Channel.Builder()
                         .setDisplayName(service.getString("name"))
                         .setDisplayNumber(String.format(Locale.ENGLISH, "%d", service.getInt("lcn")))
@@ -54,7 +76,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
             }
 
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "getChannels Exception = " + e.getMessage());
         }
 
         return channels;

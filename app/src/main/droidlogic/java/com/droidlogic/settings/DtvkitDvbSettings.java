@@ -9,6 +9,9 @@ import android.widget.Spinner;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.text.TextUtils;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -20,13 +23,16 @@ import java.util.List;
 
 import com.droidlogic.fragment.ParameterMananer;
 
-import org.dtvkit.inputsource.DtvkitGlueClient;
+import org.droidlogic.dtvkit.DtvkitGlueClient;
 import org.dtvkit.inputsource.R;
 
 import android.content.ComponentName;
 import android.media.tv.TvInputInfo;
 import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.dtvkit.inputsource.DtvkitEpgSync;
+
+import com.droidlogic.settings.SysSettingManager;
+import com.droidlogic.settings.PropSettingManager;
 
 public class DtvkitDvbSettings extends Activity {
 
@@ -35,12 +41,18 @@ public class DtvkitDvbSettings extends Activity {
 
     private DtvkitGlueClient mDtvkitGlueClient = DtvkitGlueClient.getInstance();
     private ParameterMananer mParameterMananer = null;
+    private SysSettingManager mSysSettingManager = null;
+    private List<String> mStoragePathList = new ArrayList<String>();
+    private List<String> mStorageNameList = new ArrayList<String>();
+    private Object mStorageLock = new Object();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.lanuage_settings);
         mParameterMananer = new ParameterMananer(this, mDtvkitGlueClient);
+        mSysSettingManager = new SysSettingManager(this);
+        updateStorageList();
         initLayout(false);
     }
 
@@ -57,6 +69,10 @@ public class DtvkitDvbSettings extends Activity {
         Spinner assist_audio = (Spinner)findViewById(R.id.assist_audio_spinner);
         Spinner main_subtitle = (Spinner)findViewById(R.id.main_subtitle_spinner);
         Spinner assist_subtitle = (Spinner)findViewById(R.id.assist_subtitle_spinner);
+        Spinner hearing_impaired = (Spinner)findViewById(R.id.hearing_impaired_spinner);
+        Spinner pvr_path = (Spinner)findViewById(R.id.storage_select_spinner);
+        Button refresh = (Button)findViewById(R.id.storage_refresh);
+        CheckBox recordFrequency = (CheckBox)findViewById(R.id.record_full_frequency);
         initSpinnerParameter();
         if (update) {
             Log.d(TAG, "initLayout update");
@@ -158,6 +174,58 @@ public class DtvkitDvbSettings extends Activity {
                 // TODO Auto-generated method stub
             }
         });
+        hearing_impaired.setOnItemSelectedListener(new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                Log.d(TAG, "hearing_impaired onItemSelected position = " + position);
+                int saved = mParameterMananer.getHearingImpairedSwitchStatus() ? 1 : 0;
+                if (saved == position) {
+                    Log.d(TAG, "hearing_impaired onItemSelected same position");
+                    return;
+                }
+                mParameterMananer.setHearingImpairedSwitchStatus(position == 1);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // TODO Auto-generated method stub
+            }
+        });
+        pvr_path.setOnItemSelectedListener(new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String saved = mParameterMananer.getStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH);
+                String current = getCurrentStoragePath(position);
+                Log.d(TAG, "pvr_path onItemSelected previous = " + saved + ", new = " + current);
+                if (TextUtils.equals(current, saved)) {
+                    Log.d(TAG, "pvr_path onItemSelected same path");
+                    return;
+                }
+                mParameterMananer.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, current);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // TODO Auto-generated method stub
+            }
+        });
+        refresh.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "refresh storage device");
+                updateStorageList();
+                initLayout(true);
+            }
+        });
+        recordFrequency.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                if (recordFrequency.isChecked()) {
+                    PropSettingManager.setProp(PropSettingManager.PVR_RECORD_MODE, PropSettingManager.PVR_RECORD_MODE_FREQUENCY);
+                } else {
+                    PropSettingManager.setProp(PropSettingManager.PVR_RECORD_MODE, PropSettingManager.PVR_RECORD_MODE_CHANNEL);
+                }
+            }
+        });
     }
 
     private void initSpinnerParameter() {
@@ -166,6 +234,9 @@ public class DtvkitDvbSettings extends Activity {
         Spinner assist_audio = (Spinner)findViewById(R.id.assist_audio_spinner);
         Spinner main_subtitle = (Spinner)findViewById(R.id.main_subtitle_spinner);
         Spinner assist_subtitle = (Spinner)findViewById(R.id.assist_subtitle_spinner);
+        Spinner hearing_impaired = (Spinner)findViewById(R.id.hearing_impaired_spinner);
+        Spinner pvr_path = (Spinner)findViewById(R.id.storage_select_spinner);
+        CheckBox recordFrequency = (CheckBox)findViewById(R.id.record_full_frequency);
         List<String> list = null;
         ArrayAdapter<String> adapter = null;
         int select = 0;
@@ -204,5 +275,69 @@ public class DtvkitDvbSettings extends Activity {
         assist_subtitle.setAdapter(adapter);
         select = mParameterMananer.getCurrentSecondSubLangId();
         assist_subtitle.setSelection(select);
+        //add hearing impaired
+        list = getHearingImpairedOption();
+        adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
+        adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
+        hearing_impaired.setAdapter(adapter);
+        select = mParameterMananer.getHearingImpairedSwitchStatus() ? 1 : 0;
+        hearing_impaired.setSelection(select);
+        //add pvr path select
+        list = mStorageNameList;
+        adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
+        adapter.setDropDownViewResource(android.R.layout.simple_list_item_single_choice);
+        pvr_path.setAdapter(adapter);
+        String devicePath = mParameterMananer.getStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH);
+        if (!SysSettingManager.isDeviceExist(devicePath)) {
+            select = 0;
+            mParameterMananer.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, SysSettingManager.PVR_DEFAULT_PATH);
+        } else {
+            select = getCurrentStoragePosition(devicePath);
+        }
+        pvr_path.setSelection(select);
+        String pvrRecordMode = PropSettingManager.getString(PropSettingManager.PVR_RECORD_MODE, PropSettingManager.PVR_RECORD_MODE_CHANNEL);
+        recordFrequency.setChecked(PropSettingManager.PVR_RECORD_MODE_FREQUENCY.equals(pvrRecordMode) ? true : false);
+    }
+
+    private List<String> getHearingImpairedOption() {
+        List<String> result = new ArrayList<String>();
+        result.add(getString(R.string.strSettingsHearingImpairedOff));
+        result.add(getString(R.string.strSettingsHearingImpairedOn));
+        return result;
+    }
+
+    private void updateStorageList() {
+        synchronized(mStorageLock) {
+            mStorageNameList = mSysSettingManager.getStorageDeviceNameList();
+            mStoragePathList = mSysSettingManager.getStorageDevicePathList();
+        }
+    }
+
+    private int getCurrentStoragePosition(String name) {
+        int result = 0;
+        boolean found = false;
+        synchronized(mStorageLock) {
+            if (mStoragePathList != null && mStoragePathList.size() > 0) {
+                for (int i = 0; i < mStoragePathList.size(); i++) {
+                    if (TextUtils.equals(mStoragePathList.get(i), name)) {
+                        result = i;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!found) {
+            mParameterMananer.saveStringParameters(ParameterMananer.KEY_PVR_RECORD_PATH, mSysSettingManager.getAppDefaultPath());
+        }
+        return result;
+    }
+
+    private String getCurrentStoragePath(int position) {
+        String result = null;
+        synchronized(mStorageLock) {
+            result = mStoragePathList.get(position);
+        }
+        return result;
     }
 }

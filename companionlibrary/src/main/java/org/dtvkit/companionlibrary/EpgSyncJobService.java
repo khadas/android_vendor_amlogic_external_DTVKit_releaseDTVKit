@@ -133,9 +133,10 @@ public abstract class EpgSyncJobService extends JobService {
     private static final int PERIODIC_SYNC_JOB_ID = 0;
     private static final int REQUEST_SYNC_JOB_ID = 1;
     private static final int BATCH_OPERATION_COUNT = 100;
-    private static final long OVERRIDE_DEADLINE_MILLIS = 1000;  // 1 second
+    private static final long OVERRIDE_DEADLINE_MILLIS = 0L;  // 1 second
     private static final String BUNDLE_KEY_SYNC_NOW_NEXT = "BUNDLE_KEY_SYNC_NOW_NEXT";
     private static final String BUNDLE_KEY_SYNC_CHANNEL_ONLY = "BUNDLE_KEY_SYNC_CHANNEL_ONLY";
+    public static final String BUNDLE_KEY_SYNC_SEARCHED_CHANNEL = "BUNDLE_KEY_SYNC_SEARCHED_CHANNEL";
 
 
     private final SparseArray<EpgSyncTask> mTaskArray = new SparseArray<>();
@@ -351,6 +352,31 @@ public abstract class EpgSyncJobService extends JobService {
         requestImmediateSync(context, inputId, nowNext, false, jobServiceComponent);
     }
 
+    public static void requestImmediateSyncSearchedChannel(Context context, String inputId, boolean searchedChannel,
+            ComponentName jobServiceComponent) {
+        if (jobServiceComponent.getClass().isAssignableFrom(EpgSyncJobService.class)) {
+            throw new IllegalArgumentException("This class does not extend EpgSyncJobService");
+        }
+
+        PersistableBundle persistableBundle = new PersistableBundle();
+        persistableBundle.putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true);
+        persistableBundle.putBoolean(ContentResolver.SYNC_EXTRAS_EXPEDITED, true);
+        persistableBundle.putString(EpgSyncJobService.BUNDLE_KEY_INPUT_ID, inputId);
+        persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_NOW_NEXT, true);
+        persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_CHANNEL_ONLY, false);
+        persistableBundle.putBoolean(EpgSyncJobService.BUNDLE_KEY_SYNC_SEARCHED_CHANNEL, searchedChannel);
+        JobInfo.Builder builder = new JobInfo.Builder(REQUEST_SYNC_JOB_ID, jobServiceComponent);
+        JobInfo jobInfo = builder
+                .setExtras(persistableBundle)
+                .setOverrideDeadline(EpgSyncJobService.OVERRIDE_DEADLINE_MILLIS)
+                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                .build();
+        scheduleJob(context, jobInfo);
+        if (DEBUG) {
+            Log.d(TAG, "requestImmediateSyncSearchedChannel Single job scheduled");
+        }
+    }
+
     /**
      * Cancels all pending jobs.
      * @param context Application's context.
@@ -367,6 +393,7 @@ public abstract class EpgSyncJobService extends JobService {
     public class EpgSyncTask extends AsyncTask<Void, Void, Void> {
         private final JobParameters params;
         private String mInputId;
+        private boolean mIsSearchedChannel;
 
         public EpgSyncTask(JobParameters params) {
             this.params = params;
@@ -376,6 +403,7 @@ public abstract class EpgSyncJobService extends JobService {
         public Void doInBackground(Void... voids) {
             PersistableBundle extras = params.getExtras();
             mInputId = extras.getString(BUNDLE_KEY_INPUT_ID);
+            mIsSearchedChannel = extras.getBoolean(BUNDLE_KEY_SYNC_SEARCHED_CHANNEL, false);
 
             if (mInputId == null) {
                 broadcastError(ERROR_INPUT_ID_NULL);
@@ -388,7 +416,7 @@ public abstract class EpgSyncJobService extends JobService {
             }
 
             List<Channel> tvChannels = getChannels();
-            TvContractUtils.updateChannels(mContext, mInputId, tvChannels);
+            TvContractUtils.updateChannels(mContext, mInputId, mIsSearchedChannel, tvChannels);
             LongSparseArray<Channel> channelMap = TvContractUtils.buildChannelMap(
                     mContext.getContentResolver(), mInputId);
             if (channelMap == null) {

@@ -18,6 +18,7 @@ import android.widget.LinearLayout;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.droidlogic.dtvkit.DtvkitGlueClient;
 
 import java.util.ArrayList;
 
@@ -27,6 +28,8 @@ public class CiMenuView extends LinearLayout {
     private static final String EXIT_TO_QUIT = "Exit to quit";
     private static final int MENU_TIMEOUT_MESSAGE = 1;
     private static final int RETURN_BUTTON_NUM = 0;
+
+    private static final int WAIT_CIMENU_TIMEOUT = 3000;
 
     private boolean signalTriggered = false;
     private boolean isMenuVisible = false;
@@ -38,7 +41,6 @@ public class CiMenuView extends LinearLayout {
         public void onSignal(String signal, JSONObject data) {
             if (signal.equals("CiOpenModule")) {
                 Log.i(TAG, "Ci Menu: OnSignal " + signal);
-
                 signalTriggered = true;
                 menuHandler();
             }
@@ -389,6 +391,7 @@ public class CiMenuView extends LinearLayout {
     }
 
     public void destroy() {
+        Log.i(TAG, "destroy and unregisterSignalHandler");
         stopListeningForCamSignal();
     }
 
@@ -520,7 +523,7 @@ public class CiMenuView extends LinearLayout {
             /* Although enterCiMenu returns TRUE, there are no guarantees that the menu has been
                entered. We must wait for a signal before telling the user that a menu has not
                been found */
-            timerHandler.sendEmptyMessageDelayed(MENU_TIMEOUT_MESSAGE, 3000);
+            timerHandler.sendEmptyMessageDelayed(MENU_TIMEOUT_MESSAGE, WAIT_CIMENU_TIMEOUT);
         }
     }
 
@@ -545,13 +548,13 @@ public class CiMenuView extends LinearLayout {
 
     private void menuHandler() {
         MenuType menuType;
-
         clearPreviousMenu();
         setMenuVisible();
 
         try {
             JSONObject obj = DtvkitGlueClient.getInstance().request("Dvb.getCiMenuMode", new JSONArray());
             menuType = MenuType.fromString(obj.getString("data"));
+            Log.i(TAG, "menuHandler Menu type " + obj.getString("data"));
         } catch (Exception err) {
             Log.e(TAG, err.getMessage());
             menuType = MenuType.MENU_NONE;

@@ -4,12 +4,42 @@ import android.util.Log;
 
 import java.lang.reflect.Method;
 
+import com.droidlogic.app.SystemControlManager;
+
 public class PropSettingManager {
 
     private static final String TAG = "PropSettingManager";
     private static final boolean DEBUG = true;
 
     public static final String TV_STREAM_TIME = "tv.stream.realtime";//sync with TvTime.java
+    public static final String PVR_RECORD_MODE = "tv.dtv.dvr.mode";//used in dtvkit pvr
+    public static final String PVR_RECORD_MODE_CHANNEL = "0";
+    public static final String PVR_RECORD_MODE_FREQUENCY = "1";
+
+    public static String getProp(String key) {
+        String result = null;
+        SystemControlManager systemControl = SystemControlManager.getInstance();
+        if (systemControl != null && key != null) {
+            systemControl.getProperty(key);
+        }
+        if (DEBUG) {
+            Log.d(TAG, "getProp key = " + key + ", result = " + result);
+        }
+        return result;
+    }
+
+    public static boolean setProp(String key, String val) {
+        boolean result = false;
+        SystemControlManager systemControl = SystemControlManager.getInstance();
+        if (systemControl != null && key != null) {
+            systemControl.setProperty(key, val);
+            result = true;
+        }
+        if (DEBUG) {
+            Log.d(TAG, "setProp key = " + key + ", val = " + val + ", result = " + result);
+        }
+        return result;
+    }
 
     public static long getLong(String key, long def) {
         long result = def;
@@ -86,6 +116,15 @@ public class PropSettingManager {
     public static long getStreamTimeDiff() {
         long result = 0;
         result = getLong(TV_STREAM_TIME, 0);
+        return result;
+    }
+
+    public static boolean resetRecordFrequencyFlag() {
+        boolean result = false;
+        String pvrRecordMode = getString(PropSettingManager.PVR_RECORD_MODE, PropSettingManager.PVR_RECORD_MODE_CHANNEL);
+        if (PropSettingManager.PVR_RECORD_MODE_FREQUENCY.equals(pvrRecordMode)) {
+            result = setProp(PropSettingManager.PVR_RECORD_MODE, PropSettingManager.PVR_RECORD_MODE_CHANNEL);
+        }
         return result;
     }
 }

@@ -22,6 +22,7 @@ import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.droidlogic.dtvkit.DtvkitGlueClient;
 
 import java.util.Locale;
 

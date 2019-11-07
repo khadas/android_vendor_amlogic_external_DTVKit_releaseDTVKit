@@ -23,7 +23,7 @@ import android.widget.Toast;
 import com.droidlogic.fragment.dialog.DialogManager;
 
 import org.dtvkit.inputsource.R;
-import org.dtvkit.inputsource.DtvkitGlueClient;
+import org.droidlogic.dtvkit.DtvkitGlueClient;
 
 public class ScanMainActivity extends Activity {
     private static final String TAG = "ScanMainActivity";
@@ -74,10 +74,10 @@ public class ScanMainActivity extends Activity {
     }
 
     public boolean onKeyDown(int keyCode, KeyEvent event) {
+        Log.d(TAG, "onKeyDown " + event);
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             if (mScanFragmentManager.isActive()) {
                 mScanFragmentManager.popSideFragment();
-                Log.d(TAG, "onKeyUp");
                 return true;
             }
         }

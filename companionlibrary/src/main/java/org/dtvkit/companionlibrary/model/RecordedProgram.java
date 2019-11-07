@@ -769,7 +769,7 @@ public class RecordedProgram {
          * the RecordedProgram.
          * @return This Builder object to allow for chaining of calls to builder methods.
          */
-        private Builder setChannelId(long channelId) {
+        public Builder setChannelId(long channelId) {
             mRecordedProgram.mChannelId = channelId;
             return this;
         }

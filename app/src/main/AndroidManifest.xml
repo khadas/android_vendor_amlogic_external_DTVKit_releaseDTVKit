@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     android:sharedUserId="android.uid.system"
     package="org.dtvkit.inputsource">
-    android:sharedUserId="android.uid.system"
     <uses-feature
         android:name="android.software.live_tv"
         android:required="true" />
@@ -22,15 +21,21 @@
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
     <uses-permission android:name="com.android.tv.permission.RECEIVE_INPUT_EVENT" />
     <uses-permission android:name="android.permission.TV_INPUT_HARDWARE" />
+    <uses-permission android:name="android.permission.WRITE_MEDIA_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="DTVKit Source"
         android:supportsRtl="true"
         android:theme="@style/Theme.Leanback"
-        android:banner="@drawable/dtvkit">
+        android:banner="@drawable/dtvkit"
+        android:defaultToDeviceProtectedStorage="true"
+        android:directBootAware="true"
+        android:persistent="true">
 
         <uses-library android:name="droidlogic.software.core" />
+        <uses-library android:name="droidlogic.dtvkit.software.core" />
 
         <!--<activity android:name=".MainActivity">
             <intent-filter>
@@ -77,7 +82,7 @@
             android:name=".DtvkitTvInput"
             android:label="DTVKit2"
             android:permission="android.permission.BIND_TV_INPUT">
-            <intent-filter>
+            <intent-filter android:priority="1">
                 <action android:name="android.media.tv.TvInputService" />
             </intent-filter>
             <meta-data

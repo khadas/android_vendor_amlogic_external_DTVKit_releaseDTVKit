@@ -62,6 +62,8 @@
     <string name="parameter_diseqc1_2_dish_limits_status">Dish Limits Status</string>
     <string name="parameter_diseqc1_2_dish_limits_east">Set Dish Limits East</string>
     <string name="parameter_diseqc1_2_dish_limits_west">Set Dish Limits West</string>
+    <string name="parameter_diseqc1_2_press_to_limit_east">Press To Limit East</string>
+    <string name="parameter_diseqc1_2_press_to_limit_west">Press To Limit West</string>
     <string name="parameter_diseqc1_2_move_direction_east">east</string>
     <string name="parameter_diseqc1_2_move_direction_center">center</string>
     <string name="parameter_diseqc1_2_move_direction_west">west</string>
@@ -100,4 +102,11 @@
     <string name="strSettingsSubtitleLang">Text Language:</string>
     <string name="strSettingsMainSubtitleLang">Main Text Language:</string>
     <string name="strSettingsAssistSubtitleLang">Second Text Language:</string>
+    <string name="strSettingsHearingImpaired">Hearing Impaired:</string>
+    <string name="strSettingsHearingImpairedOff">OFF</string>
+    <string name="strSettingsHearingImpairedOn">ON</string>
+    <string name="strSettingsStorageSelect">PVR Storage Select:</string>
+    <string name="strSettingsRefresh">Refresh</string>
+    <string name="strSettingsPvrDefault">App Data</string>
+    <string name="strSettingsPvrFullFrequency">Record Frequency</string>
 </resources>

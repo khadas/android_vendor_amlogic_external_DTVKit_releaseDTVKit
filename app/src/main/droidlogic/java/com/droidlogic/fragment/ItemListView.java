@@ -28,7 +28,7 @@ import com.droidlogic.fragment.ItemAdapter.ItemDetail;
 import java.util.LinkedList;
 
 import org.dtvkit.inputsource.R;
-import org.dtvkit.inputsource.DtvkitGlueClient;
+import org.droidlogic.dtvkit.DtvkitGlueClient;
 
 public class ItemListView extends ListView implements OnItemSelectedListener {
     private static final String TAG = "ItemListView";
@@ -79,6 +79,15 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
 
     public boolean dispatchKeyEvent (KeyEvent event) {
         Log.d(TAG, "dispatchKeyEvent mCurrentListSide = " + mCurrentListSide + ", event = " + event);
+        if (KeyEvent.KEYCODE_BACK == event.getKeyCode()) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                Bundle bundle1 = new Bundle();
+                bundle1.putString("action", "scan");
+                bundle1.putInt("keycode", event.getKeyCode());
+                mDataCallBack.onStatusChange(null, ParameterMananer.KEY_FUNCTION, bundle1);
+            }
+            return true;
+        }
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
             switch (event.getKeyCode()) {
                 case KeyEvent.KEYCODE_PROG_RED:
@@ -189,6 +198,8 @@ public class ItemListView extends ListView implements OnItemSelectedListener {
                     }
                     return super.dispatchKeyEvent(event);
                     //break;
+                default:
+                    break;
             }
 
             View selectedView = getSelectedView();

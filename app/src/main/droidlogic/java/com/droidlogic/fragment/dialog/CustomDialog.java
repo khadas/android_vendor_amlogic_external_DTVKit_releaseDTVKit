@@ -87,7 +87,7 @@ public class CustomDialog/* extends AlertDialog*/ {
     public static final int DIALOG_SET_SELECT_SINGLE_DISEQC1_1 = R.string.parameter_diseqc1_1;
     public static final int DIALOG_SET_SELECT_SINGLE_MOTOR = R.string.parameter_motor;
     public static final int[] ID_DIALOG_TITLE_COLLECTOR = {DIALOG_SET_SELECT_SINGLE_ITEM_SATALLITE, DIALOG_SET_SELECT_SINGLE_ITEM_TRANOPONDER, DIALOG_SET_SELECT_SINGLE_ITEM_LNB_TYPE,
-            DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE, /*DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER, DIALOG_SET_SELECT_SINGLE_ITEM_22KHZ, */DIALOG_SET_SELECT_SINGLE_TONE_BURST, DIALOG_SET_SELECT_SINGLE_DISEQC1_0,
+            DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE, DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER, DIALOG_SET_SELECT_SINGLE_ITEM_22KHZ, DIALOG_SET_SELECT_SINGLE_TONE_BURST, DIALOG_SET_SELECT_SINGLE_DISEQC1_0,
             DIALOG_SET_SELECT_SINGLE_DISEQC1_1, DIALOG_SET_SELECT_SINGLE_MOTOR};
     //public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_LNB_TYPE_LIST = {"5150", "9750/10600", "Customize"};
     public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_LNB_TYPE_LIST = {R.string.parameter_lnb_type_5150, R.string.parameter_lnb_type_9750, R.string.parameter_lnb_custom};
@@ -100,7 +100,7 @@ public class CustomDialog/* extends AlertDialog*/ {
     public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_UNICABLE_POSITION = {R.string.parameter_position_disable, R.string.parameter_position_enable};
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_LNB_POWER_LIST = {"13V", "18V", "off"/*, "13/18V"*/};
     //public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_22KHZ_LIST = {"on", "off"/*, "auto"*/};
-    public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_22KHZ_LIST = {R.string.parameter_unicable_switch_on, R.string.parameter_unicable_switch_off};
+    public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_22KHZ_LIST = {R.string.parameter_unicable_switch_off, R.string.parameter_unicable_switch_on};
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_TONE_BURST_LIST = {"none", "a", "b"};
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_0_LIST = {"none", "1/4", "2/4", "3/4", "4/4"};
     public static final String[] DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_1_LIST = {"none", "1/16", "2/16", "3/16", "4/16", "5/16", "6/16", "7/16", "8/16", "9/16", "10/16", "11/16", "12/16", "13/16", "14/16", "15/16", "16/16"};
@@ -127,7 +127,7 @@ public class CustomDialog/* extends AlertDialog*/ {
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_SET_EAST_DISH_LIMITS = R.string.parameter_diseqc1_2_dish_limits_east;
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_SET_WEST_DISH_LIMITS = R.string.parameter_diseqc1_2_dish_limits_west;
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_DIRECTTION = R.string.parameter_diseqc1_2_move_direction;
-    public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_DIRECTTION_LIST = {R.string.parameter_diseqc1_2_move_direction_east, R.string.parameter_diseqc1_2_move_direction_west, R.string.parameter_diseqc1_2_move_direction_center};
+    public static final int[] DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_DIRECTTION_LIST = {R.string.parameter_diseqc1_2_move_direction_east, R.string.parameter_diseqc1_2_move_direction_center, R.string.parameter_diseqc1_2_move_direction_west};
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_STEP = R.string.parameter_diseqc1_2_move_step;
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_MOVE = R.string.parameter_diseqc1_2_move;
     public static final int DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_POSITION = R.string.parameter_diseqc1_2_current_position;
@@ -783,7 +783,7 @@ public class CustomDialog/* extends AlertDialog*/ {
                             mQualityProgressBar.setProgress(quality);
                             mStrengthTextView.setText(strength + "%");
                             mQualityTextView.setText(quality + "%");
-                            Log.d(TAG, "run task get strength and quality");
+                            //Log.d(TAG, "run task get strength and quality");
                         }
                     }
                 });
@@ -812,10 +812,10 @@ public class CustomDialog/* extends AlertDialog*/ {
                     item = new DialogItemAdapter.DialogItemDetail(DialogItemAdapter.DialogItemDetail.ITEM_EDIT_SWITCH, mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST[i]), mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_DISH_LIMITS_LIST[mParameterMananer.getIntParameters(mParameterMananer.KEY_DISEQC1_2_DISH_LIMITS_STATUS)]), false);
                     break;
                 case 3:
-                    item = new DialogItemAdapter.DialogItemDetail(DialogItemAdapter.DialogItemDetail.ITEM_EDIT_SWITCH, mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST[i]), String.valueOf(mParameterMananer.getIntParameters(mParameterMananer.KEY_DISEQC1_2_DISH_EAST_LIMITS)), false);
+                    item = new DialogItemAdapter.DialogItemDetail(DialogItemAdapter.DialogItemDetail.ITEM_DISPLAY, mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST[i]), mContext.getString(R.string.parameter_diseqc1_2_press_to_limit_east), false);
                     break;
                 case 4:
-                    item = new DialogItemAdapter.DialogItemDetail(DialogItemAdapter.DialogItemDetail.ITEM_EDIT_SWITCH, mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST[i]), String.valueOf(mParameterMananer.getIntParameters(mParameterMananer.KEY_DISEQC1_2_DISH_WEST_LIMITS)), false);
+                    item = new DialogItemAdapter.DialogItemDetail(DialogItemAdapter.DialogItemDetail.ITEM_DISPLAY, mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST[i]), mContext.getString(R.string.parameter_diseqc1_2_press_to_limit_west), false);
                     break;
                 case 5:
                     item = new DialogItemAdapter.DialogItemDetail(DialogItemAdapter.DialogItemDetail.ITEM_EDIT_SWITCH, mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST[i]), mContext.getString(DIALOG_SET_SELECT_SINGLE_ITEM_DISEQC1_2_LIST_DIRECTTION_LIST[mParameterMananer.getIntParameters(mParameterMananer.KEY_DISEQC1_2_DISH_MOVE_DIRECTION)]), false);

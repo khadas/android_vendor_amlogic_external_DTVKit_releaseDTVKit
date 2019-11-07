@@ -26,6 +26,10 @@ import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.view.KeyEvent;
 import android.widget.Toast;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.view.WindowManager;
+import android.util.TypedValue;
 
 import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.json.JSONArray;
@@ -37,6 +41,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.droidlogic.fragment.ParameterMananer;
+import com.droidlogic.settings.ConstantManager;
+import org.droidlogic.dtvkit.DtvkitGlueClient;
 
 public class DtvkitDvbtSetup extends Activity {
     private static final String TAG = "DtvkitDvbtSetup";
@@ -50,6 +56,7 @@ public class DtvkitDvbtSetup extends Activity {
     private int mFoundServiceNumber = 0;
     private int mSearchManualAutoType = -1;// 0 manual 1 auto
     private int mSearchDvbcDvbtType = -1;
+    private PvrStatusConfirmManager mPvrStatusConfirmManager = null;
 
     private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
         @Override
@@ -57,17 +64,12 @@ public class DtvkitDvbtSetup extends Activity {
 
             if ((mIsDvbt && signal.equals("DvbtStatusChanged")) || (!mIsDvbt && signal.equals("DvbcStatusChanged"))) {
                 int progress = getSearchProcess(data);
+                Log.d(TAG, "onSignal progress = " + progress);
                 if (progress < 100) {
                     int found = getFoundServiceNumber();
                     setSearchProgress(progress);
                     setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress), String.format(Locale.ENGLISH, "Found %d services", found));
                 } else {
-                    mServiceList = getServiceList();
-                    mFoundServiceNumber = getFoundServiceNumber();
-                    if (mFoundServiceNumber == 0 && mServiceList != null && mServiceList.length() > 0) {
-                        Log.d(TAG, "onSignal mFoundServiceNumber erro use mServiceList length = " + mServiceList.length());
-                        mFoundServiceNumber = mServiceList.length();
-                    }
                     onSearchFinished();
                 }
             }
@@ -118,16 +120,30 @@ public class DtvkitDvbtSetup extends Activity {
         startSearch.setEnabled(true);
         startSearch.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                startSearch.setEnabled(false);
-                stopSearch.setEnabled(true);
-                stopSearch.requestFocus();
-                startSearch();
+                int searchmode = mDataMananer.getIntParameters(DataMananer.KEY_PUBLIC_SEARCH_MODE);
+                boolean autoSearch = (DataMananer.VALUE_PUBLIC_SEARCH_MODE_AUTO == searchmode);
+                mPvrStatusConfirmManager.setSearchType(autoSearch ? ConstantManager.KEY_DTVKIT_SEARCH_TYPE_AUTO : ConstantManager.KEY_DTVKIT_SEARCH_TYPE_MANUAL);
+                boolean checkPvr = mPvrStatusConfirmManager.needDeletePvrRecordings();
+                if (checkPvr) {
+                    mPvrStatusConfirmManager.showDialogToAppoint(DtvkitDvbtSetup.this, autoSearch);
+                } else {
+                    mPvrStatusConfirmManager.sendDvrCommand(DtvkitDvbtSetup.this);
+                    startSearch.setEnabled(false);
+                    stopSearch.setEnabled(true);
+                    stopSearch.requestFocus();
+                    startSearch();
+                }
             }
         });
         startSearch.requestFocus();
+        mDataMananer = new DataMananer(this);
+        mPvrStatusConfirmManager = new PvrStatusConfirmManager(this, mDataMananer);
         Intent intent = getIntent();
         if (intent != null) {
             mIsDvbt = intent.getBooleanExtra(DataMananer.KEY_IS_DVBT, false);
+            String status = intent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
+            mPvrStatusConfirmManager.setPvrStatus(status);
+            Log.d(TAG, "onCreate mIsDvbt = " + mIsDvbt + ", status = " + status);
         }
         ((TextView)findViewById(R.id.description)).setText(mIsDvbt ? R.string.strSearchDvbtDescription : R.string.strSearchDvbcDescription);
 
@@ -139,8 +155,21 @@ public class DtvkitDvbtSetup extends Activity {
             }
         });
 
-        mDataMananer = new DataMananer(this);
         initOrUpdateView(true);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d(TAG, "onResume");
+        mPvrStatusConfirmManager.registerCommandReceiver();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.d(TAG, "onPause");
+        mPvrStatusConfirmManager.unRegisterCommandReceiver();
     }
 
     @Override
@@ -161,6 +190,7 @@ public class DtvkitDvbtSetup extends Activity {
             }
             intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_SERVICE_LIST, serviceListJsonArray);
             intent.putExtra(DtvkitDvbScanSelect.SEARCH_FOUND_FIRST_SERVICE, firstServiceName);
+            Log.d(TAG, "finish firstServiceName = " + firstServiceName);
             setResult(RESULT_OK, intent);
         } else {
             setResult(RESULT_CANCELED);
@@ -424,7 +454,7 @@ public class DtvkitDvbtSetup extends Activity {
                     if (mIsDvbt) {
                         if (DataMananer.VALUE_FREQUENCY_MODE == isfrequencysearch) {
                             args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) > 0);
-                            args.put(Integer.valueOf(parameter) * 1000000);//mhz
+                            args.put(Integer.valueOf(parameter) * 1000);//khz to hz
                             args.put(DataMananer.VALUE_DVBT_BANDWIDTH_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_BANDWIDTH)]);
                             args.put(DataMananer.VALUE_DVBT_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_MODE)]);
                             args.put(DataMananer.VALUE_DVBT_TYPE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE)]);
@@ -439,7 +469,7 @@ public class DtvkitDvbtSetup extends Activity {
                     } else {
                         if (DataMananer.VALUE_FREQUENCY_MODE == isfrequencysearch) {
                             args.put(mDataMananer.getIntParameters(DataMananer.KEY_NIT) > 0);
-                            args.put(Integer.valueOf(parameter) * 1000000);//mhz
+                            args.put(Integer.valueOf(parameter) * 1000);//khz to hz
                             args.put(DataMananer.VALUE_DVBC_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBC_MODE)]);
                             args.put(getUpdatedDvbcSymbolRate());
                         } else {
@@ -473,8 +503,11 @@ public class DtvkitDvbtSetup extends Activity {
             parameter = getChannelIndex();
         } else if (editable != null) {
             String value = editable.toString();
-            if (!TextUtils.isEmpty(value) && TextUtils.isDigitsOnly(value)) {
-                parameter = value;
+            if (!TextUtils.isEmpty(value)/* && TextUtils.isDigitsOnly(value)*/) {
+                //float for frequency
+                float toFloat = Float.valueOf(value);
+                int toInt = (int)(toFloat * 1000.0f);//khz
+                parameter = String.valueOf(toInt);
             }
         }
 
@@ -595,7 +628,13 @@ public class DtvkitDvbtSetup extends Activity {
             setSearchStatus("Failed to finish search", e.getMessage());
             return;
         }
-
+        //update search results as After the search is finished, the lcn will be reordered
+        mServiceList = getServiceList();
+        mFoundServiceNumber = getFoundServiceNumber();
+        if (mFoundServiceNumber == 0 && mServiceList != null && mServiceList.length() > 0) {
+            Log.d(TAG, "mFoundServiceNumber erro use mServiceList length = " + mServiceList.length());
+            mFoundServiceNumber = mServiceList.length();
+        }
         setSearchStatus("Updating guide", "");
         startMonitoringSync();
         // By default, gets all channels and 1 hour of programs (DEFAULT_IMMEDIATE_EPG_DURATION_MILLIS)
@@ -604,7 +643,8 @@ public class DtvkitDvbtSetup extends Activity {
         // If the intent that started this activity is from Live Channels app
         String inputId = this.getIntent().getStringExtra(TvInputInfo.EXTRA_INPUT_ID);
         Log.i(TAG, String.format("inputId: %s", inputId));
-        EpgSyncJobService.requestImmediateSync(this, inputId, true, new ComponentName(this, DtvkitEpgSync.class)); // 12 hours
+        //EpgSyncJobService.requestImmediateSync(this, inputId, true, new ComponentName(this, DtvkitEpgSync.class)); // 12 hours
+        EpgSyncJobService.requestImmediateSyncSearchedChannel(this, inputId, (mFoundServiceNumber > 0),new ComponentName(this, DtvkitEpgSync.class));
     }
 
     private void startMonitoringSearch() {

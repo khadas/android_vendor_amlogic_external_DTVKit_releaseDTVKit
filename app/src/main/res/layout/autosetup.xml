@@ -208,6 +208,7 @@
                 android:id="@+id/public_typein_edit"
                 android:layout_width="300dp"
                 android:layout_height="wrap_content"
+                android:inputType="numberDecimal"
                 android:ems="10"
                 android:gravity="center"
                 android:hint="@string/search_frequency_hint" />
