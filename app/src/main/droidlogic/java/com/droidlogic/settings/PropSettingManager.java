@@ -11,7 +11,7 @@ public class PropSettingManager {
     private static final String TAG = "PropSettingManager";
     private static final boolean DEBUG = true;
 
-    public static final String TV_STREAM_TIME = "tv.stream.realtime";//sync with TvTime.java
+    public static final String TV_STREAM_TIME = "vendor.sys.tv.stream.realtime";//sync with TvTime.java
     public static final String PVR_RECORD_MODE = "tv.dtv.dvr.mode";//used in dtvkit pvr
     public static final String PVR_RECORD_MODE_CHANNEL = "0";
     public static final String PVR_RECORD_MODE_FREQUENCY = "1";
