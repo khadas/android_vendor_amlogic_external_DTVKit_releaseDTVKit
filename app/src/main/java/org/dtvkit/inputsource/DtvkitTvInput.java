@@ -118,6 +118,10 @@ public class DtvkitTvInput extends TvInputService {
     private DtvkitTvInputSession mSession;
     protected HandlerThread mHandlerThread = null;
 
+    /*associate audio*/
+    protected boolean mAudioADAutoStart = false;
+    protected int mAudioADMixingLevel = 50;
+
     private enum PlayerState {
         STOPPED, PLAYING
     }
@@ -1432,6 +1436,9 @@ public class DtvkitTvInput extends TvInputService {
                         mView.showOverLay();
                     };
                 }*/
+            } else if (TextUtils.equals(DataMananer.ACTION_AD_MIXING_LEVEL, action)) {
+                mAudioADMixingLevel = data.getInt(DataMananer.PARA_VALUE1);
+                setAdFunction(MSG_MIX_AD_MIX_LEVEL, mAudioADMixingLevel);
             }
         }
 
@@ -1640,51 +1647,68 @@ public class DtvkitTvInput extends TvInputService {
                     } catch (JSONException ignore) {
                         Log.e(TAG, ignore.getMessage());
                     }
-                    Log.d(TAG, "cmd ="+cmd+" param1 ="+param1+" param2 ="+param2);
+                    //Log.d(TAG, "cmd ="+cmd+" param1 ="+param1+" param2 ="+param2);
                     switch (cmd) {
                         case ADEC_START_DECODE:
                             audioManager.setParameters("fmt="+param1);
                             audioManager.setParameters("has_dtv_video="+param2);
                             audioManager.setParameters("cmd="+cmd);
+                            Log.d(TAG, "AHandler setParameters ADEC_START_DECODE:fmt=" + param1
+                                    + ",has_dtv_video=" + param2 + "," + "cmd=" + cmd);
                             mCurAudioFmt = param1;
                             break;
                         case ADEC_PAUSE_DECODE:
                             audioManager.setParameters("cmd="+cmd);
+                            Log.d(TAG, "AHandler setParameters ADEC_PAUSE_DECODE:cmd=" + cmd);
                             break;
                         case ADEC_RESUME_DECODE:
                             audioManager.setParameters("cmd="+cmd);
+                            Log.d(TAG, "AHandler setParameters ADEC_RESUME_DECODE:cmd=" + cmd);
                             break;
                         case ADEC_STOP_DECODE:
                             audioManager.setParameters("cmd="+cmd);
+                            Log.d(TAG, "AHandler setParameters ADEC_STOP_DECODE:cmd=" + cmd);
                             break;
                         case ADEC_SET_DECODE_AD:
                             audioManager.setParameters("cmd="+cmd);
-                            audioManager.setParameters("fmt="+param1);
-                            audioManager.setParameters("pid="+param2);
+                            audioManager.setParameters("subafmt="+param1);
+                            audioManager.setParameters("subapid="+param2);
+                            Log.d(TAG, "AHandler setParameters ADEC_SET_DECODE_AD:cmd=" + cmd
+                                    + ",subafmt=" + param1 + ",subapid=" + param2);
                             mCurAudioFmt = param1;
                             break;
                         case ADEC_SET_VOLUME:
                             audioManager.setParameters("cmd="+cmd);
                             audioManager.setParameters("vol="+param1);
+                            Log.d(TAG, "AHandler setParameters ADEC_SET_VOLUME:cmd=" + cmd
+                                    + ",vol=" + param1);
                             break;
                         case ADEC_SET_MUTE:
                             audioManager.setParameters("cmd="+cmd);
                             audioManager.setParameters("mute="+param1);
+                            Log.d(TAG, "AHandler setParameters ADEC_SET_MUTE:cmd=" + cmd
+                                    + ",mute=" + param1);
                             break;
                         case ADEC_SET_OUTPUT_MODE:
                             audioManager.setParameters("cmd="+cmd);
                             audioManager.setParameters("mode="+param1);
+                            Log.d(TAG, "AHandler setParameters ADEC_SET_OUTPUT_MODE:cmd=" + cmd
+                                    + ",mode=" + param1);
                             break;
                         case ADEC_SET_PRE_GAIN:
                             audioManager.setParameters("cmd="+cmd);
                             audioManager.setParameters("gain="+param1);
+                            Log.d(TAG, "AHandler setParameters ADEC_SET_PRE_GAIN:cmd=" + cmd
+                                    + ",gain=" + param1);
                             break;
                         case ADEC_SET_PRE_MUTE:
                             audioManager.setParameters("cmd="+cmd);
                             audioManager.setParameters("mute="+param1);
+                            Log.d(TAG, "AHandler setParameters ADEC_SET_PRE_MUTE:cmd=" + cmd
+                                    + ",mute=" + param1);
                             break;
                         default:
-                            Log.i(TAG,"unkown audio cmd!");
+                            Log.i(TAG,"AHandler setParameters unkown audio cmd!");
                             break;
                     }
                 }
@@ -2000,6 +2024,13 @@ public class DtvkitTvInput extends TvInputService {
         protected static final int MSG_GET_SIGNAL_STRENGTH = 8;
         protected static final int MSG_UPDATE_TRACKINFO = 9;
 
+        //audio ad
+        public static final int MSG_MIX_AD_DUAL_SUPPORT = 20;
+        public static final int MSG_MIX_AD_MIX_SUPPORT = 21;
+        public static final int MSG_MIX_AD_MIX_LEVEL = 22;
+        public static final int MSG_MIX_AD_SET_MAIN = 23;
+        public static final int MSG_MIX_AD_SET_ASSOCIATE = 24;
+
         protected static final int MSG_CHECK_RESOLUTION_PERIOD = 1000;//MS
         protected static final int MSG_UPDATE_TRACKINFO_DELAY = 2000;//MS
         protected static final int MSG_CHECK_PARENTAL_CONTROL_PERIOD = 2000;//MS
@@ -2216,6 +2247,39 @@ public class DtvkitTvInput extends TvInputService {
             }
         }
 
+        private boolean playerInitAssociateDualSupport() {
+            boolean result = false;
+            mAudioADAutoStart = mDataMananer.getIntParameters(DataMananer.TV_KEY_AD_SWITCH) == 1;
+            mAudioADMixingLevel = mDataMananer.getIntParameters(DataMananer.TV_KEY_AD_MIX);
+            boolean adOn = playergetAudioDescriptionOn();
+            Log.d(TAG, "playerInitAssociateDualSupport mAudioADAutoStart = " + mAudioADAutoStart + ", mAudioADMixingLevel = " + mAudioADMixingLevel);
+            if (mAudioADAutoStart) {
+                setAdFunction(MSG_MIX_AD_DUAL_SUPPORT, 1);
+                setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 1);
+                setAdFunction(MSG_MIX_AD_MIX_LEVEL, mAudioADMixingLevel);
+                //if (!adOn) {
+                    setAdFunction(MSG_MIX_AD_SET_ASSOCIATE, 1);
+                //}
+            } else {
+                setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 0);
+                setAdFunction(MSG_MIX_AD_DUAL_SUPPORT, 0);
+                //if (adOn) {
+                    setAdFunction(MSG_MIX_AD_SET_ASSOCIATE, 0);
+                //}
+            }
+            result = true;
+            return result;
+        }
+
+        private boolean playerResetAssociateDualSupport() {
+            boolean result = false;
+            setAdFunction(MSG_MIX_AD_SET_ASSOCIATE, 0);
+            //setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 0);
+            //setAdFunction(MSG_MIX_AD_DUAL_SUPPORT, 0);
+            result = true;
+            return result;
+        }
+
         private class MainHandler extends Handler {
             public void handleMessage(Message msg) {
                 Log.d(TAG, "MainHandler [[[:" + msg.what + ", sessionIndex = " + mCurrentDtvkitTvInputSessionIndex);
@@ -2291,6 +2355,7 @@ public class DtvkitTvInput extends TvInputService {
             playerSetSubtitlesOn(false);
             playerSetTeletextOn(false, -1);
             setParentalControlOn(false);
+            playerResetAssociateDualSupport();
             mKeyUnlocked = false;
             if (mBlocked)
             {
@@ -2323,6 +2388,7 @@ public class DtvkitTvInput extends TvInputService {
                 if (mCaptioningManager != null && mCaptioningManager.isEnabled()) {
                     playerSetSubtitlesOn(true);
                 }
+                playerInitAssociateDualSupport();
             } else {
                 mTunedChannel = null;
                 notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN);
@@ -2419,6 +2485,61 @@ public class DtvkitTvInput extends TvInputService {
                 notifySessionEvent(ConstantManager.EVENT_SIGNAL_INFO, signalbundle);
                 result = true;
                 Log.d(TAG, "sendCurrentSignalInfomation notify signalStrength = " + signalInfo[0] + ", signalQuality = " + signalInfo[1]);
+            }
+            return result;
+        }
+
+        private boolean setAdFunction(int msg, int param1) {
+            boolean result = false;
+            AudioManager audioManager = null;
+            if (mContext != null) {
+                audioManager = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
+            }
+            if (audioManager == null) {
+                Log.i(TAG, "setAdFunction null audioManager");
+                return result;
+            }
+            //Log.d(TAG, "setAdFunction msg = " + msg + ", param1 = " + param1);
+            switch (msg) {
+                case MSG_MIX_AD_DUAL_SUPPORT://dual_decoder_surport for ad & main mix on/off
+                    if (param1 > 0) {
+                        audioManager.setParameters("dual_decoder_support=1");
+                    } else {
+                        audioManager.setParameters("dual_decoder_support=0");
+                    }
+                    Log.d(TAG, "setAdFunction MSG_MIX_AD_DUAL_SUPPORT setParameters:"
+                            + "dual_decoder_support=" + (param1 > 0 ? 1 : 0));
+                    result = true;
+                    break;
+                case MSG_MIX_AD_MIX_SUPPORT://Associated audio mixing on/off
+                    if (param1 > 0) {
+                        audioManager.setParameters("associate_audio_mixing_enable=1");
+                    } else {
+                        audioManager.setParameters("associate_audio_mixing_enable=0");
+                    }
+                    Log.d(TAG, "setAdFunction MSG_MIX_AD_MIX_SUPPORT setParameters:"
+                            + "associate_audio_mixing_enable=" + (param1 > 0 ? 1 : 0));
+                    result = true;
+                    break;
+                case MSG_MIX_AD_MIX_LEVEL://Associated audio mixing level
+                    audioManager.setParameters("dual_decoder_mixing_level=" + param1 + "");
+                    Log.d(TAG, "setAdFunction MSG_MIX_AD_MIX_LEVEL setParameters:"
+                            + "dual_decoder_mixing_level=" + param1);
+                    result = true;
+                    break;
+                case MSG_MIX_AD_SET_MAIN://set Main Audio by handle
+                    result = playerSelectAudioTrack(param1);
+                    Log.d(TAG, "setAdFunction MSG_MIX_AD_SET_MAIN result=" + result
+                            + ", setAudioStream " + param1);
+                    break;
+                case MSG_MIX_AD_SET_ASSOCIATE://set Associate Audio by handle
+                    result = playersetAudioDescriptionOn(param1 == 1);
+                    Log.d(TAG, "setAdFunction MSG_MIX_AD_SET_ASSOCIATE result=" + result
+                            + "setAudioDescriptionOn " + (param1 == 1));
+                    break;
+                default:
+                    Log.i(TAG,"setAdFunction unkown  msg = " + msg + ", param1 = " + param1);
+                    break;
             }
             return result;
         }
@@ -2922,6 +3043,72 @@ public class DtvkitTvInput extends TvInputService {
             return false;
         }
         return true;
+    }
+
+    private boolean playersetAudioDescriptionOn(boolean on) {
+        try {
+            JSONArray args = new JSONArray();
+            args.put(on);
+            DtvkitGlueClient.getInstance().request("Player.setAudioDescriptionOn", args);
+        } catch (Exception e) {
+            Log.e(TAG, "playersetAudioDescriptionOn = " + e.getMessage());
+            return false;
+        }
+        return true;
+    }
+
+    private boolean playergetAudioDescriptionOn() {
+        boolean result = false;
+        try {
+            JSONArray args = new JSONArray();
+            result = DtvkitGlueClient.getInstance().request("Player.getAudioDescriptionOn", args).getBoolean("data");
+        } catch (Exception e) {
+            Log.e(TAG, "playergetAudioDescriptionOn = " + e.getMessage());
+            return result;
+        }
+        return result;
+    }
+
+    private boolean playerHasDollyAssociateAudioTrack() {
+        boolean result = false;
+        List<TvTrackInfo> allAudioTrackList = getAudioTrackInfoList(false);
+        if (allAudioTrackList == null || allAudioTrackList.size() < 2) {
+            return result;
+        }
+        Iterator<TvTrackInfo> iterator = allAudioTrackList.iterator();
+        while (iterator.hasNext()) {
+            TvTrackInfo a = iterator.next();
+            if (a != null) {
+                Bundle trackBundle = a.getExtra();
+                if (trackBundle != null) {
+                    String audioCodec = trackBundle.getString(ConstantManager.KEY_TVINPUTINFO_AUDIO_CODEC, null);
+                    boolean isAd = trackBundle.getBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_AD, false);
+                    if (isAd && (TextUtils.equals(audioCodec, "AC3") || TextUtils.equals(audioCodec, "E-AC3"))) {
+                        result = true;
+                        break;
+                    }
+                }
+            } else {
+                continue;
+            }
+        }
+        return result;
+    }
+
+    private boolean playerAudioIndexIsAssociate(int index) {
+        boolean result = false;
+        List<TvTrackInfo> allAudioTrackList = getAudioTrackInfoList(false);
+        if (allAudioTrackList == null || allAudioTrackList.size() <= index) {
+            return result;
+        }
+        TvTrackInfo track = allAudioTrackList.get(index);
+        if (track != null) {
+            Bundle trackBundle = track.getExtra();
+            if (trackBundle != null && trackBundle.getBoolean(ConstantManager.KEY_TVINPUTINFO_AUDIO_AD, false)) {
+                result = true;
+            }
+        }
+        return result;
     }
 
     private boolean playerSelectSubtitleTrack(int index) {

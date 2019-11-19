@@ -450,7 +450,7 @@ public class ParameterMananer {
         SharedPreferences.Editor editor = sp.edit();
         editor.putInt(key, value);
         editor.commit();*/
-        Settings.Global.putInt(mContext.getContentResolver(), key, value);
+        Settings.System.putInt(mContext.getContentResolver(), key, value);
     }
 
     public int getIntParameters(String key) {
@@ -524,7 +524,7 @@ public class ParameterMananer {
         }
         /*SharedPreferences sp = mContext.getSharedPreferences("dish_parameter", Context.MODE_PRIVATE);
         return sp.getInt(key, defValue);*/
-        return Settings.Global.getInt(mContext.getContentResolver(), key, defValue);
+        return Settings.System.getInt(mContext.getContentResolver(), key, defValue);
     }
 
     public void saveStringParameters(String key, String value) {
@@ -532,7 +532,7 @@ public class ParameterMananer {
         SharedPreferences.Editor editor = sp.edit();
         editor.putString(key, value);
         editor.commit();*/
-        Settings.Global.putString(mContext.getContentResolver(), key, value);
+        Settings.System.putString(mContext.getContentResolver(), key, value);
     }
 
     public String getStringParameters(String key) {
@@ -598,7 +598,7 @@ public class ParameterMananer {
         }
         /*SharedPreferences sp = mContext.getSharedPreferences("dish_parameter", Context.MODE_PRIVATE);
         String result = sp.getString(key, defValue);*/
-        String result = Settings.Global.getString(mContext.getContentResolver(), key);
+        String result = Settings.System.getString(mContext.getContentResolver(), key);
         Log.d(TAG, "getStringParameters key = " + key + ", result = " + result);
         if (TextUtils.isEmpty(result)) {
             result = defValue;
