@@ -98,7 +98,7 @@ import java.util.Objects;
 import android.media.MediaCodec;
 
 
-public class DtvkitTvInput extends TvInputService {
+public class DtvkitTvInput extends TvInputService implements SystemControlManager.DisplayModeListener  {
     private static final String TAG = "DtvkitTvInput";
     private LongSparseArray<Channel> mChannels;
     private ContentResolver mContentResolver;
@@ -107,6 +107,9 @@ public class DtvkitTvInput extends TvInputService {
    // private TvControlManager Tcm = null;
     private static final int MSG_DO_TRY_SCAN = 0;
     private static final int RETRY_TIMES = 10;
+    private static final int ASPECT_MODE_AUTO = 0;
+    private static final int ASPECT_MODE_CUSTOM = 5;
+    private static final int DISPLAY_MODE_NORMAL = 6;
     private int retry_times = RETRY_TIMES;
 
     TvInputInfo mTvInputInfo = null;
@@ -308,6 +311,7 @@ public class DtvkitTvInput extends TvInputService {
         updateRecorderNumber();
         Log.d(TAG, "init stage 2");
         mSystemControlManager = SystemControlManager.getInstance();
+        mSystemControlManager.setDisplayModeListener(this);
         DtvkitGlueClient.getInstance().setSystemControlHandler(mSysControlHandler);
         Log.d(TAG, "init end");
         mIsInited = true;
@@ -367,6 +371,28 @@ public class DtvkitTvInput extends TvInputService {
         DtvkitGlueClient.getInstance().setSystemControlHandler(null);
         mHandlerThread.quit();
         mHandlerThread = null;
+    }
+
+    private boolean setTVAspectMode(int mode) {
+        boolean used=false;
+        try {
+            JSONArray args = new JSONArray();
+            args.put(mode);
+            used = DtvkitGlueClient.getInstance().request("Dvb.setTVAspectMode", args).getBoolean("data");
+            Log.i(TAG, "dvb setTVAspectMode, used:" + used);
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+        }
+        return used;
+    }
+
+    @Override
+    public void onSetDisplayMode(int mode) {
+        Log.i(TAG, "onSetDisplayMode " + mode);
+        if (mode == DISPLAY_MODE_NORMAL)
+            setTVAspectMode(ASPECT_MODE_AUTO);
+        else
+            setTVAspectMode(ASPECT_MODE_CUSTOM);
     }
 
     @Override
