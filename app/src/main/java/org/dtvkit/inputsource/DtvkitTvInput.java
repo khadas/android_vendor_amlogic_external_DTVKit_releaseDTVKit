@@ -1696,6 +1696,20 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                             Log.d(TAG, "AHandler setParameters ADEC_STOP_DECODE:cmd=" + cmd);
                             break;
                         case ADEC_SET_DECODE_AD:
+                            if (mAudioADAutoStart) {
+                                if (param2 == 0) {
+                                    //close ad
+                                    setAdFunction(MSG_MIX_AD_DUAL_SUPPORT, 0);
+                                    setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 0);
+                                } else if (param2 != 0 && param2 != 0x1fff) {
+                                    //valid ad pid
+                                    setAdFunction(MSG_MIX_AD_DUAL_SUPPORT, 1);
+                                    setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 1);
+                                    setAdFunction(MSG_MIX_AD_MIX_LEVEL, mAudioADMixingLevel);
+                                } else {
+                                    Log.d(TAG, "AHandler setParameters ADEC_SET_DECODE_AD unkown pid");
+                                }
+                            }
                             audioManager.setParameters("cmd="+cmd);
                             audioManager.setParameters("subafmt="+param1);
                             audioManager.setParameters("subapid="+param2);
@@ -2280,15 +2294,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             boolean adOn = playergetAudioDescriptionOn();
             Log.d(TAG, "playerInitAssociateDualSupport mAudioADAutoStart = " + mAudioADAutoStart + ", mAudioADMixingLevel = " + mAudioADMixingLevel);
             if (mAudioADAutoStart) {
-                setAdFunction(MSG_MIX_AD_DUAL_SUPPORT, 1);
-                setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 1);
-                setAdFunction(MSG_MIX_AD_MIX_LEVEL, mAudioADMixingLevel);
+                //setAdFunction(MSG_MIX_AD_DUAL_SUPPORT, 1);
+                //setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 1);
+                //setAdFunction(MSG_MIX_AD_MIX_LEVEL, mAudioADMixingLevel);
                 //if (!adOn) {
                     setAdFunction(MSG_MIX_AD_SET_ASSOCIATE, 1);
                 //}
             } else {
-                setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 0);
-                setAdFunction(MSG_MIX_AD_DUAL_SUPPORT, 0);
+                //setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 0);
+                //setAdFunction(MSG_MIX_AD_DUAL_SUPPORT, 0);
                 //if (adOn) {
                     setAdFunction(MSG_MIX_AD_SET_ASSOCIATE, 0);
                 //}
