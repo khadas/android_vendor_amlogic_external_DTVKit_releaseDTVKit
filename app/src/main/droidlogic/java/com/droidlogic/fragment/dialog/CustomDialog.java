@@ -164,6 +164,7 @@ public class CustomDialog/* extends AlertDialog*/ {
     public static final int[] DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_LIST = {DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_SWITCH, DIALOG_SET_EDIT_SWITCH_ITEM_USER_BAND, DIALOG_SET_EDIT_SWITCH_ITEM_UB_FREQUENCY, DIALOG_SET_EDIT_SWITCH_ITEM_POSITION};
     public static final int[] DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_SWITCH_LIST = {R.string.parameter_unicable_switch_off, R.string.parameter_unicable_switch_on};
     public static final String[] DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_USER_BAND_LIST = {"0", "1", "2", "3", "4", "5", "6", "7"};
+    public static final int[] DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_USER_BAND_FREQUENCY_LIST = {1284, 1400, 1516, 1632, 1748, 1864, 1980, 2096};
     public static final int[] DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_POSITION_LIST = {R.string.parameter_unicable_switch_off, R.string.parameter_unicable_switch_on};
 
     public CustomDialog(Context context, String type, DialogCallBack callback, ParameterMananer mananer) {
@@ -686,7 +687,7 @@ public class CustomDialog/* extends AlertDialog*/ {
         mAlertDialog.setView(mDialogView);*/
     }
 
-    public void initUnicableCustomedItemDialog() {
+    /*public void initUnicableCustomedItemDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
         mAlertDialog = builder.create();
         mDialogView = View.inflate(mContext, R.layout.set_custom_lnb, null);
@@ -752,7 +753,7 @@ public class CustomDialog/* extends AlertDialog*/ {
         int value = mParameterMananer.getIntParameters(ParameterMananer.KEY_UB_FREQUENCY);
         editText1.setHint(value + "MHz");
         mAlertDialog.setView(mDialogView);
-    }
+    }*/
 
     public void initDiseqc1_2_ItemDialog() {
         initDiseqc1_2_ItemDialog(true);

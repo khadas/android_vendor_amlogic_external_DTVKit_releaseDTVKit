@@ -443,6 +443,10 @@ public class ScanDishSetupFragment extends Fragment {
                                 unicable_value--;
                             }
                             mParameterMananer.saveIntParameters(ParameterMananer.DIALOG_SET_ITEM_UNICABLE_KEY_LIST[unicable_position], unicable_value);
+                            //update UB frequency when set user band
+                            if (unicable_position == 1) {
+                                mParameterMananer.saveIntParameters(ParameterMananer.DIALOG_SET_ITEM_UNICABLE_KEY_LIST[2], CustomDialog.DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_USER_BAND_FREQUENCY_LIST[unicable_value]);
+                            }
                         } else if ("right".equals(data.getString("action"))) {
                             Log.d(TAG, "unicable switch right in clicked");
                             int unicable_value1 = mParameterMananer.getIntParameters(ParameterMananer.DIALOG_SET_ITEM_UNICABLE_KEY_LIST[unicable_position]);
@@ -450,6 +454,10 @@ public class ScanDishSetupFragment extends Fragment {
                                 unicable_value1++;
                             }
                             mParameterMananer.saveIntParameters(ParameterMananer.DIALOG_SET_ITEM_UNICABLE_KEY_LIST[unicable_position], unicable_value1);
+                            //update UB frequency when set user band
+                            if (unicable_position == 1) {
+                                mParameterMananer.saveIntParameters(ParameterMananer.DIALOG_SET_ITEM_UNICABLE_KEY_LIST[2], CustomDialog.DIALOG_SET_EDIT_SWITCH_ITEM_UNICABLE_USER_BAND_FREQUENCY_LIST[unicable_value1]);
+                            }
                         }
                         if (mCurrentCustomDialog != null) {
                             mCurrentCustomDialog.updateListView(mCurrentCustomDialog.getDialogTitle(), mCurrentCustomDialog.getDialogKey(), mParameterMananer.getIntParameters(ParameterMananer.KEY_UNICABLE));
@@ -457,11 +465,12 @@ public class ScanDishSetupFragment extends Fragment {
                         mItemAdapterOption.reFill(mParameterMananer.getCompleteParameterList(mParameterMananer.getCurrentListType(), mParameterMananer.getCurrentSatelliteIndex()));
                         startTune();
                     } else if ("selected".equals(data.getString("action")) && data != null && data.getInt("position") == 2) {
-                        mCurrentSubCustomDialog = mDialogManager.buildUnicableCustomedItemDialog(mSingleSelectDialogCallBack);
+                        Log.d(TAG, "unicable UB frequency display only");
+                        /*mCurrentSubCustomDialog = mDialogManager.buildUnicableCustomedItemDialog(mSingleSelectDialogCallBack);
                         if (mCurrentSubCustomDialog != null) {
                             mCurrentSubCustomDialog.showDialog();
                         }
-                        mItemAdapterOption.reFill(mParameterMananer.getCompleteParameterList(mParameterMananer.getCurrentListType(), mParameterMananer.getCurrentSatelliteIndex()));
+                        mItemAdapterOption.reFill(mParameterMananer.getCompleteParameterList(mParameterMananer.getCurrentListType(), mParameterMananer.getCurrentSatelliteIndex()));*/
                     }
 
                     break;

@@ -90,7 +90,7 @@ public class DataMananer {
     public static final int KEY_UNICABLE_DEFAULT_VALUE_INDEX = 0;
     public static final int KEY_UNICABLE_SWITCH_DEFAULT_VALUE_INDEX = 0;
     public static final int KEY_USER_BAND_DEFAULT_VALUE_INDEX = 0;
-    public static final int KEY_UB_FREQUENCY_DEFAULT_VALUE_INDEX = 0;
+    public static final int KEY_UB_FREQUENCY_DEFAULT_VALUE_INDEX = 1284;
     public static final int KEY_POSITION_DEFAULT_VALUE_INDEX = 0;
 
     public static final int KEY_LNB_POWER_DEFAULT_VALUE_INDEX = 1;

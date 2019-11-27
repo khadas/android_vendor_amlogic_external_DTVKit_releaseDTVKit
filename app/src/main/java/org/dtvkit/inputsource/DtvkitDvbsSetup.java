@@ -459,7 +459,7 @@ public class DtvkitDvbsSetup extends Activity {
             boolean unicable_switch = (mDataMananer.getIntParameters(DataMananer.KEY_UNICABLE_SWITCH) == 1);
             obj.put("unicable", unicable_switch);
             obj.put("unicable_chan", mDataMananer.getIntParameters(DataMananer.KEY_USER_BAND));
-            obj.put("unicable_if", mDataMananer.getIntParameters(DataMananer.KEY_UB_FREQUENCY));
+            obj.put("unicable_if", mDataMananer.getIntParameters(DataMananer.KEY_UB_FREQUENCY) * 1000);//mhz to khz
             obj.put("unicable_position_b", mDataMananer.getIntParameters(DataMananer.KEY_POSITION) == 1);
             obj.put("tone_burst", DataMananer.DIALOG_SET_SELECT_SINGLE_ITEM_TONE_BURST_LIST[mDataMananer.getIntParameters(DataMananer.KEY_TONE_BURST)]);
             obj.put("c_switch", mDataMananer.getIntParameters(DataMananer.KEY_DISEQC1_0));

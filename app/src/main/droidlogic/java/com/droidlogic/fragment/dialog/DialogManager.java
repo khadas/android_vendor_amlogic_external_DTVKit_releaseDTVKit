@@ -47,11 +47,11 @@ public class DialogManager {
         return customDialog;
     }
 
-    public CustomDialog buildUnicableCustomedItemDialog(DialogCallBack callBack) {
+    /*public CustomDialog buildUnicableCustomedItemDialog(DialogCallBack callBack) {
         CustomDialog customDialog = new CustomDialog(mContext, CustomDialog.DIALOG_SET_EDIT_ITEM, callBack, mParameterMananer);
         customDialog.initUnicableCustomedItemDialog();
         return customDialog;
-    }
+    }*/
 
     public CustomDialog buildDiseqc1_2_ItemDialog(DialogCallBack callBack) {
         CustomDialog customDialog = new CustomDialog(mContext, CustomDialog.DIALOG_SET_EDIT_SWITCH_ITEM, callBack, mParameterMananer);
