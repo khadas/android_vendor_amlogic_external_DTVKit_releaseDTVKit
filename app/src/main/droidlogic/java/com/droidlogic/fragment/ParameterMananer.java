@@ -1533,6 +1533,29 @@ public class ParameterMananer {
         return result;
     }
 
+    private String getLangNameByIndex(int index) {
+        String result = null;
+        try {
+            JSONObject resultObj = getCountryLangs(getCurrentCountryCode());
+            JSONArray data = null;
+            if (resultObj != null) {
+                data = (JSONArray)resultObj.get("data");
+                if (data == null || data.length() == 0) {
+                    return result;
+                }
+                if (index < data.length()) {
+                    result = (String)(((JSONObject)(data.get(index))).get("lang_ids"));
+                }
+            } else {
+                Log.d(TAG, "getLangNameByIndex then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "getLangNameByIndex Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return result;
+    }
+
     public int getCurrentMainAudioLangId() {
         int id = 0;
         int[] currentInfo = getCurrentLangParameter();
@@ -1542,6 +1565,15 @@ public class ParameterMananer {
         return id;
     }
 
+    public String getCurrentMainAudioLangName() {
+        String result = null;
+        int[] currentInfo = getCurrentLangParameter();
+        if (currentInfo != null && currentInfo[1] != -1) {
+            result = getLangNameByIndex(currentInfo[1]);
+        }
+        return result;
+    }
+
     public int getCurrentSecondAudioLangId() {
         int id = 0;
         int[] currentInfo = getCurrentLangParameter();
@@ -1549,6 +1581,15 @@ public class ParameterMananer {
             id = getSecondLangPositionByIndex(currentInfo[2]);
         }
         return id;
+    }
+
+    public String getCurrentSecondAudioLangName() {
+        String result = null;
+        int[] currentInfo = getCurrentLangParameter();
+        if (currentInfo != null && currentInfo[2] != -1) {
+            result = getLangNameByIndex(currentInfo[2]);
+        }
+        return result;
     }
 
     public int getCurrentMainSubLangId() {
@@ -1721,6 +1762,23 @@ public class ParameterMananer {
             }
         } catch (Exception e) {
             Log.d(TAG, "setSecondaryAudioLangId Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return resultObj;
+    }
+
+    public JSONObject clearUserAudioSelect() {
+        JSONObject resultObj = null;
+        try {
+            JSONArray args1 = new JSONArray();
+            resultObj = DtvkitGlueClient.getInstance().request("Dvb.ClearUserAudioSelect", args1);
+            if (resultObj != null) {
+                Log.d(TAG, "clearUserAudioSelect resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "clearUserAudioSelect then get null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "clearUserAudioSelect Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
         }
         return resultObj;

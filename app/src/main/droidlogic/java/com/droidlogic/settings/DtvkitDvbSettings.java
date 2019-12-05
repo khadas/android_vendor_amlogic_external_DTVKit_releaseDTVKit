@@ -45,6 +45,7 @@ public class DtvkitDvbSettings extends Activity {
     private List<String> mStoragePathList = new ArrayList<String>();
     private List<String> mStorageNameList = new ArrayList<String>();
     private Object mStorageLock = new Object();
+    private boolean needClearAudioLangSetting = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +55,20 @@ public class DtvkitDvbSettings extends Activity {
         mSysSettingManager = new SysSettingManager(this);
         updateStorageList();
         initLayout(false);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        needClearAudioLangSetting = false;
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (needClearAudioLangSetting) {
+            mParameterMananer.clearUserAudioSelect();
+        }
     }
 
     private void updatingGuide() {
@@ -84,6 +99,8 @@ public class DtvkitDvbSettings extends Activity {
                 Log.d(TAG, "country onItemSelected position = " + position);
                 int saveCountryCode = mParameterMananer.getCurrentCountryCode();
                 int selectCountryCode = mParameterMananer.getCountryCodeByIndex(position);
+                String previousMainAudioName = mParameterMananer.getCurrentMainAudioLangName();
+                String previousAssistAudioName = mParameterMananer.getCurrentSecondAudioLangName();
                 if (saveCountryCode == selectCountryCode) {
                     Log.d(TAG, "country onItemSelected same position");
                     return;
@@ -91,6 +108,11 @@ public class DtvkitDvbSettings extends Activity {
                 mParameterMananer.setCountryCodeByIndex(position);
                 updatingGuide();
                 initLayout(true);
+                String currentMainAudioName = mParameterMananer.getCurrentMainAudioLangName();
+                String currentAssistAudioName = mParameterMananer.getCurrentSecondAudioLangName();
+                if (!TextUtils.equals(previousMainAudioName, currentMainAudioName) || !TextUtils.equals(previousAssistAudioName, currentAssistAudioName)) {
+                    needClearAudioLangSetting = true;
+                }
             }
 
             @Override
@@ -110,6 +132,7 @@ public class DtvkitDvbSettings extends Activity {
                 }
                 mParameterMananer.setPrimaryAudioLangByPosition(position);
                 updatingGuide();
+                needClearAudioLangSetting = true;
             }
 
             @Override
@@ -129,6 +152,7 @@ public class DtvkitDvbSettings extends Activity {
                 }
                 mParameterMananer.setSecondaryAudioLangByPosition(position);
                 updatingGuide();
+                needClearAudioLangSetting = true;
             }
 
             @Override
