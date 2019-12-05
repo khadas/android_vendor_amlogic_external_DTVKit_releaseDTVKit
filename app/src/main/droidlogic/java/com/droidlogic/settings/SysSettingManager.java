@@ -290,4 +290,23 @@ public class SysSettingManager {
     public String getAppDefaultPath() {
         return PVR_DEFAULT_PATH;
     }
+
+    public static String convertMediaPathToMountedPath(String mediaPath) {
+        String result = null;
+        if (isMediaPath(mediaPath)) {
+            String[] split = mediaPath.split("/");
+            if (split != null && split.length > 0) {
+                result = "/storage/" + split[split.length - 1];
+            }
+        }
+        return result;
+    }
+
+    public static boolean isMediaPath(String mediaPath) {
+        boolean result = false;
+        if (mediaPath != null && mediaPath.startsWith("/mnt/media_rw/")) {
+            result = true;
+        }
+        return result;
+    }
 }

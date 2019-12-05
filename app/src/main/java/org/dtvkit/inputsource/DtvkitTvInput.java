@@ -841,9 +841,25 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 } else {
                     builder = new RecordedProgram.Builder(program);
                 }
+                InternalProviderData data = new InternalProviderData();
+                String currentPath = mDataMananer.getStringParameters(DataMananer.KEY_PVR_RECORD_PATH);
+                int pathExist = 0;
+                if (SysSettingManager.isDeviceExist(currentPath)) {
+                    pathExist = 1;
+                }
+                if (SysSettingManager.isMediaPath(currentPath)) {
+                    currentPath = SysSettingManager.convertMediaPathToMountedPath(currentPath);
+                }
+                try {
+                    data.put(RecordedProgram.RECORD_FILE_PATH, currentPath);
+                    data.put(RecordedProgram.RECORD_STORAGE_EXIST, pathExist);
+                } catch (Exception e) {
+                    Log.e(TAG, "execStopRecording update InternalProviderData Exception = " + e.getMessage());
+                }
                 RecordedProgram recording = builder.setInputId(mInputId)
                         .setRecordingDataUri(recordingUri)
                         .setRecordingDurationMillis(recordingDurationMillis > 0 ? recordingDurationMillis : -1)
+                        .setInternalProviderData(data)
                         .build();
                 notifyRecordingStopped(mContext.getContentResolver().insert(TvContract.RecordedPrograms.CONTENT_URI,
                         recording.toContentValues()));
@@ -1084,6 +1100,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             if (!SysSettingManager.isDeviceExist(newPath)) {
                 Log.d(TAG, "removable device has been moved and use default path");
                 newPath = "/data/data/org.dtvkit.inputsource";
+                mDataMananer.saveStringParameters(DataMananer.KEY_PVR_RECORD_PATH, newPath);
             }
             recordingAddDiskPath(newPath);
             recordingSetDefaultDisk(newPath);

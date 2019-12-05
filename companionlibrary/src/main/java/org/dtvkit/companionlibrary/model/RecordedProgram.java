@@ -102,6 +102,14 @@ public class RecordedProgram {
     private int mVideoHeight;
     private int mVideoWidth;
 
+    //add for ucstom
+    private String mRecordFilePath = null;
+    private boolean mIsStorageRemoved;
+
+    //define key
+    public static final String RECORD_FILE_PATH = "record_file_path";
+    public static final String RECORD_STORAGE_EXIST = "record_sotrage_exist";
+
     private RecordedProgram() {
         this.mChannelId = INVALID_INT_VALUE;
         this.mId = INVALID_INT_VALUE;

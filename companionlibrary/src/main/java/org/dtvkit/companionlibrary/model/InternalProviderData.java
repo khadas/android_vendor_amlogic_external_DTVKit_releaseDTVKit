@@ -19,6 +19,7 @@
 package org.dtvkit.companionlibrary.model;
 
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 import org.dtvkit.companionlibrary.utils.TvContractUtils;
 
@@ -40,6 +41,7 @@ import java.util.List;
  * pre-defined values.
  */
 public class InternalProviderData {
+    private static final String TAG = "InternalProviderData";
     private static final String KEY_CUSTOM_DATA = "custom";
 
     private JSONObject mJsonObject;
@@ -63,6 +65,7 @@ public class InternalProviderData {
         try {
             mJsonObject = new JSONObject(new String(bytes));
         } catch (JSONException e) {
+            Log.i(TAG, "InternalProviderData JSONException = " + e.getMessage());
             throw new ParseException(e.getMessage());
         }
     }
@@ -82,6 +85,7 @@ public class InternalProviderData {
                     hashSum += key.hashCode() + jsonObject.get(key).hashCode();
                 }
             } catch (JSONException ignored) {
+                Log.i(TAG, "jsonHash JSONException = " + ignored.getMessage());
             }
         }
         return hashSum;
@@ -111,6 +115,7 @@ public class InternalProviderData {
                     }
                 }
             } catch (JSONException e) {
+                Log.i(TAG, "jsonEquals JSONException = " + e.getMessage());
                 return false;
             }
         }
@@ -153,6 +158,7 @@ public class InternalProviderData {
             }
             mJsonObject.getJSONObject(KEY_CUSTOM_DATA).put(key, String.valueOf(value));
         } catch (JSONException e) {
+            Log.i(TAG, "put JSONException = " + e.getMessage());
             throw new ParseException(e.getMessage());
         }
         return this;
@@ -172,6 +178,7 @@ public class InternalProviderData {
         try {
             return mJsonObject.getJSONObject(KEY_CUSTOM_DATA).opt(key);
         } catch (JSONException e) {
+            Log.i(TAG, "get JSONException = " + e.getMessage());
             throw new ParseException(e.getMessage());
         }
     }
