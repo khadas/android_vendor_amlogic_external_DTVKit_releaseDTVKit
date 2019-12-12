@@ -949,8 +949,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             //isMain status may be set to true by livetv after switch to luncher
             if (mCurrentDtvkitTvInputSessionIndex < mDtvkitTvInputSessionCount) {
                 mIsMain = false;
-            } else if (mCurrentDtvkitTvInputSessionIndex == mDtvkitTvInputSessionCount) {
-                mIsMain = true;
             }
             if (!mIsMain) {
                 if (null != mSysSettingManager)
