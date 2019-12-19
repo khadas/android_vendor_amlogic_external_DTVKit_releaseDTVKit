@@ -49,6 +49,7 @@
     <string name="strNetworkSearch">Network Search</string>
     <string name="strDVBS2">DVBS-2</string>
     <string name="strPlaceholder">Placeholder activity for product customisation.</string>
+    <string name="strImportSatellite">Import Satellites</string>
     <string name="strSetUp">Set Up</string>
     <string name="strSetUpNotFound">Setup Not Found!</string>
     <string name="strClearOld">Clear Old Search</string>

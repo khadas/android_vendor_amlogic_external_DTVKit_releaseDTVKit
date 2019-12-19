@@ -81,6 +81,7 @@ import com.droidlogic.settings.PropSettingManager;
 import com.droidlogic.settings.ConvertSettingManager;
 import com.droidlogic.settings.SysSettingManager;
 import com.droidlogic.settings.ConstantManager;
+import com.droidlogic.fragment.ParameterMananer;
 
 //import com.droidlogic.app.tv.TvControlManager;
 import com.droidlogic.app.SystemControlManager;
@@ -141,6 +142,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
     private long mDtvkitTvInputSessionCount = 0;
     private long mDtvkitRecordingSessionCount = 0;
     private DataMananer mDataMananer;
+    private ParameterMananer mParameterMananer;
     private MediaCodec mMediaCodec1;
     private MediaCodec mMediaCodec2;
     SystemControlManager mSystemControlManager;
@@ -314,6 +316,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         mSystemControlManager = SystemControlManager.getInstance();
         mSystemControlManager.setDisplayModeListener(this);
         DtvkitGlueClient.getInstance().setSystemControlHandler(mSysControlHandler);
+        mParameterMananer = new ParameterMananer(this, DtvkitGlueClient.getInstance());
+        checkDtvkitSatelliteUpdateStatusInThread();
         Log.d(TAG, "init end");
         mIsInited = true;
     }
@@ -356,6 +360,23 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 Log.d(TAG, "updateRecorderNumberInThread start");
                 updateRecorderNumber();
                 Log.d(TAG, "updateRecorderNumberInThread end");
+            }
+        }).start();
+    }
+
+    private void checkDtvkitSatelliteUpdateStatusInThread() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (mDataMananer != null && mParameterMananer != null) {
+                    if (mDataMananer.getIntParameters(DataMananer.DTVKIT_IMPORT_SATELLITE_FLAG) > 0) {
+                        Log.d(TAG, "checkDtvkitSatelliteUpdateStatus has imported already");
+                    } else {
+                        if (mParameterMananer.importDatabase(ConstantManager.DTVKIT_SATELLITE_DATA)) {
+                            mDataMananer.saveIntParameters(DataMananer.DTVKIT_IMPORT_SATELLITE_FLAG, 1);
+                        }
+                    }
+                }
             }
         }).start();
     }

@@ -35,6 +35,7 @@ import org.json.JSONObject;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
 
 import com.droidlogic.settings.ConstantManager;
+import com.droidlogic.fragment.ParameterMananer;
 
 import java.util.Locale;
 
@@ -50,6 +51,7 @@ public class DtvkitDvbsSetup extends Activity {
     private int mSearchDvbsType = -1;
     private boolean mSetUp = false;
     private PvrStatusConfirmManager mPvrStatusConfirmManager = null;
+    private ParameterMananer mParameterMananer;
 
     private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
         @Override
@@ -109,6 +111,7 @@ public class DtvkitDvbsSetup extends Activity {
 
         mDataMananer = new DataMananer(this);
         mPvrStatusConfirmManager = new PvrStatusConfirmManager(this, mDataMananer);
+        mParameterMananer = new ParameterMananer(this, DtvkitGlueClient.getInstance());
         Intent intent = getIntent();
         if (intent != null) {
             String status = intent.getStringExtra(ConstantManager.KEY_LIVETV_PVR_STATUS);
@@ -119,6 +122,7 @@ public class DtvkitDvbsSetup extends Activity {
         final Button search = (Button)findViewById(R.id.startsearch);
         final Button stop = (Button)findViewById(R.id.stopsearch);
         final Button setup = (Button)findViewById(R.id.setup);
+        final Button importSatellite = (Button)findViewById(R.id.import_satellite);
         search.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 mPvrStatusConfirmManager.setSearchType(ConstantManager.KEY_DTVKIT_SEARCH_TYPE_MANUAL);
@@ -156,6 +160,13 @@ public class DtvkitDvbsSetup extends Activity {
                     mPvrStatusConfirmManager.sendDvrCommand(DtvkitDvbsSetup.this);
                     setUp();
                 }
+            }
+        });
+
+        //ui set visibility gone as will be excuted after first boot
+        importSatellite.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                mParameterMananer.importDatabase(ConstantManager.DTVKIT_SATELLITE_DATA);
             }
         });
 

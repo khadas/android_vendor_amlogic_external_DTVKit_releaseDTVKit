@@ -177,6 +177,9 @@ public class DataMananer {
     public static final String PARA_VALUE1 = "value1";
     public static final int VALUE_AD_MIX_LEVEL = 50;
 
+    //dtvkit satellite data import flag
+    public static final String DTVKIT_IMPORT_SATELLITE_FLAG = "has_dtvkit_import_satellite";
+
     public DataMananer(Context context) {
         this.mContext = context;
     }

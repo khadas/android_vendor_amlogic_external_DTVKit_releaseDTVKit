@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+import java.io.File;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -1148,6 +1149,43 @@ public class ParameterMananer {
             Log.d(TAG, "removeTransponder Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
             e.printStackTrace();
         }
+    }
+
+    public boolean importDatabase(String path) {
+        boolean result = false;
+        JSONObject resultObj = null;
+        boolean fileValid = false;
+        if (path != null) {
+            try {
+                File file = new File(path);
+                if (file != null && file.exists() && file.isFile()) {
+                    fileValid = true;
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "importDatabase file Exception = " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+        if (!fileValid) {
+            Log.i(TAG, "importDatabase data not available");
+            return result;
+        }
+        try {
+            JSONArray args = new JSONArray();
+            args.put(path);
+            Log.d(TAG, "importDatabase->" + args.toString());
+            resultObj = DtvkitGlueClient.getInstance().request("Dvbs.importDatabase", args);
+            if (resultObj != null) {
+                result = resultObj.getBoolean("accepted") && resultObj.getBoolean("data");
+                Log.d(TAG, "importDatabase resultObj:" + resultObj.toString());
+            } else {
+                Log.d(TAG, "importDatabase result null");
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "importDatabase Exception " + e.getMessage() + ", trace=" + e.getStackTrace());
+            e.printStackTrace();
+        }
+        return result;
     }
 
     public List<String> getCountryDisplayList() {

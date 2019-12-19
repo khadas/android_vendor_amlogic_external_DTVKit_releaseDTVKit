@@ -37,6 +37,7 @@
     <string name="strNetworkSearch">网络搜索</string>
     <string name="strDVBS2">DVBS-2</string>
     <string name="strPlaceholder">产品自定义设置.</string>
+    <string name="strImportSatellite">导入卫星数据</string>
     <string name="strSetUp">设置</string>
     <string name="strSetUpNotFound">没有找到设置程序!</string>
     <string name="strClearOld">清除旧节目</string>

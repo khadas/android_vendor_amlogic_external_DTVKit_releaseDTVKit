@@ -220,6 +220,16 @@
         android:orientation="horizontal" >
 
         <Button
+            android:id="@+id/import_satellite"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="1dp"
+            android:background="@drawable/button"
+            android:layout_weight="1"
+            android:text="@string/strImportSatellite"
+            android:visibility="gone"/>
+
+        <Button
             android:id="@+id/setup"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
