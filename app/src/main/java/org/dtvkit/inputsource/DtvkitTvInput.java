@@ -139,6 +139,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
     private Handler scheduleTimeshiftRecordingHandler = null;
     private Runnable timeshiftRecordRunnable;
     private long mDtvkitTvInputSessionCount = 0;
+    private long mDtvkitRecordingSessionCount = 0;
     private DataMananer mDataMananer;
     private MediaCodec mMediaCodec1;
     private MediaCodec mMediaCodec2;
@@ -369,7 +370,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         mContentResolver.unregisterContentObserver(mRecordingsContentObserver);
         DtvkitGlueClient.getInstance().disConnectDtvkitClient();
         DtvkitGlueClient.getInstance().setSystemControlHandler(null);
-        mHandlerThread.quit();
+        mHandlerThread.getLooper().quitSafely();
         mHandlerThread = null;
     }
 
@@ -515,6 +516,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
     {
         Log.i(TAG, "onCreateRecordingSession");
         init();
+        mDtvkitRecordingSessionCount++;
         return new DtvkitRecordingSession(this, inputId);
     }
 
@@ -532,42 +534,130 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         private boolean mTuned = false;
         private boolean mStarted = false;
         private int mPath = -1;
+        private Handler mRecordingProcessHandler = null;
+        private long mCurrentRecordIndex = 0;
+        private boolean mRecordStopAndSaveReceived = false;
 
-        private final Handler mRecordingProcessHandler;
-
-        protected static final int MSG_RECORD_STOP_RECORDING = 1;
+        protected static final int MSG_RECORD_ONTUNE = 0;
+        protected static final int MSG_RECORD_ONSTART = 1;
+        protected static final int MSG_RECORD_ONSTOP = 2;
+        protected static final int MSG_RECORD_STOP_RECORDING = 3;
+        protected static final int MSG_RECORD_ONRELEASE = 4;
+        protected static final int MSG_RECORD_DO_FINALRELEASE = 5;
+        private final String[] MSG_STRING = {"RECORD_ONTUNE", "RECORD_ONSTART", "RECORD_ONSTOP", "STOP_RECORDING", "RECORD_ONRELEASE", "DO_FINALRELEASE"};
 
         @RequiresApi(api = Build.VERSION_CODES.N)
         public DtvkitRecordingSession(Context context, String inputId) {
             super(context);
             mContext = context;
             mInputId = inputId;
+            mCurrentRecordIndex = mDtvkitRecordingSessionCount;
             if (numRecorders == 0) {
                 updateRecorderNumber();
             }
+            initRecordWorkThread();
+            Log.i(TAG, "DtvkitRecordingSession");
+        }
 
-            HandlerThread handlerThread = new HandlerThread(TAG);
-            handlerThread.start();
-            mRecordingProcessHandler = new Handler(handlerThread.getLooper(), new Handler.Callback() {
+        protected void initRecordWorkThread() {
+            mRecordingProcessHandler = new Handler(mHandlerThread.getLooper(), new Handler.Callback() {
                 @Override
                 public boolean handleMessage(Message msg) {
+                    if (msg.what >= 0 && MSG_STRING.length > msg.what) {
+                        Log.d(TAG, "handleMessage " + MSG_STRING[msg.what] + " start, index = " + mCurrentRecordIndex);
+                    } else {
+                        Log.d(TAG, "handleMessage " + msg.what + " start, index = " + mCurrentRecordIndex);
+                    }
                     switch (msg.what) {
-                    case MSG_RECORD_STOP_RECORDING:
-                        execStopRecording();
-                    break;
+                        case MSG_RECORD_ONTUNE:{
+                            Uri uri = (Uri)msg.obj;
+                            doTune(uri);
+                            break;
+                        }
+                        case MSG_RECORD_ONSTART:{
+                            Uri uri = (Uri)msg.obj;
+                            doStartRecording(uri);
+                            break;
+                        }
+                        case MSG_RECORD_ONSTOP:{
+                            doStopRecording();
+                            break;
+                        }
+                        case MSG_RECORD_STOP_RECORDING:{
+                            execStopRecording();
+                            break;
+                        }
+                        case MSG_RECORD_ONRELEASE:{
+                            doRelease();
+                            break;
+                        }
+                        case MSG_RECORD_DO_FINALRELEASE:{
+                            doFinalReleaseByThread();
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                    if (msg.what >= 0 && MSG_STRING.length > msg.what) {
+                        Log.d(TAG, "handleMessage " + MSG_STRING[msg.what] + " over , index = " + mCurrentRecordIndex);
+                    } else {
+                        Log.d(TAG, "handleMessage " + msg.what + " over , index = " + mCurrentRecordIndex);
                     }
                     return true;
                 }
             });
-
-            Log.i(TAG, "DtvkitRecordingSession");
         }
 
         @Override
         public void onTune(Uri uri) {
-            Log.i(TAG, "onTune for recording " + uri);
+            if (mRecordingProcessHandler != null) {
+                mRecordingProcessHandler.removeMessages(MSG_RECORD_ONTUNE);
+                Message mess = mRecordingProcessHandler.obtainMessage(MSG_RECORD_ONTUNE, 0, 0, uri);
+                boolean result = mRecordingProcessHandler.sendMessage(mess);
+                Log.d(TAG, "onTune sendMessage result " + result + ", index = " + mCurrentRecordIndex);
+            } else {
+                Log.i(TAG, "onTune null mRecordingProcessHandler" + ", index = " + mCurrentRecordIndex);
+            }
+        }
+
+        @Override
+        public void onStartRecording(@Nullable Uri uri) {
+            if (mRecordingProcessHandler != null) {
+                mRecordingProcessHandler.removeMessages(MSG_RECORD_ONSTART);
+                Message mess = mRecordingProcessHandler.obtainMessage(MSG_RECORD_ONSTART, 0, 0, uri);
+                boolean result = mRecordingProcessHandler.sendMessage(mess);
+                Log.d(TAG, "onStartRecording sendMessage result " + result + ", index = " + mCurrentRecordIndex);
+            } else {
+                Log.i(TAG, "onStartRecording null mRecordingProcessHandler" + ", index = " + mCurrentRecordIndex);
+            }
+        }
+
+        @Override
+        public void onStopRecording() {
+            if (mRecordingProcessHandler != null) {
+                mRecordingProcessHandler.removeMessages(MSG_RECORD_ONSTOP);
+                boolean result = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_ONSTOP);
+                Log.d(TAG, "onStopRecording sendMessage result " + result + ", index = " + mCurrentRecordIndex);
+            } else {
+                Log.i(TAG, "onStopRecording null mRecordingProcessHandler" + ", index = " + mCurrentRecordIndex);
+            }
+        }
+
+        @Override
+        public void onRelease() {
+            if (mRecordingProcessHandler != null) {
+                mRecordingProcessHandler.removeMessages(MSG_RECORD_ONRELEASE);
+                boolean result = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_ONRELEASE);
+                Log.d(TAG, "onRelease sendMessage result " + result + ", index = " + mCurrentRecordIndex);
+            } else {
+                Log.i(TAG, "onRelease null mRecordingProcessHandler" + ", index = " + mCurrentRecordIndex);
+            }
+        }
+
+        public void doTune(Uri uri) {
+            Log.i(TAG, "doTune for recording " + uri);
             if (ContentUris.parseId(uri) == -1) {
-                Log.e(TAG, "DtvkitRecordingSession onTune invalid uri = " + uri);
+                Log.e(TAG, "DtvkitRecordingSession doTune invalid uri = " + uri);
                 notifyError(TvInputManager.RECORDING_ERROR_UNKNOWN);
                 return;
             }
@@ -639,9 +729,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             }
         }
 
-        @Override
-        public void onStartRecording(@Nullable Uri uri) {
-            Log.i(TAG, "onStartRecording " + uri);
+        private void doStartRecording(@Nullable Uri uri) {
+            Log.i(TAG, "doStartRecording " + uri);
             mProgram = uri;
 
             String dvbUri;
@@ -683,20 +772,30 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             }
         }
 
-        @Override
-        public void onStopRecording() {
-            Log.i(TAG, "onStopRecording");
+        private void doStopRecording() {
+            Log.i(TAG, "doStopRecording");
 
             DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingHandler);
             if (!recordingStopRecording(recordingUri)) {
                 notifyError(TvInputManager.RECORDING_ERROR_UNKNOWN);
             } else {
-                mRecordingProcessHandler.obtainMessage(MSG_RECORD_STOP_RECORDING).sendToTarget();
+                if (mRecordingProcessHandler != null) {
+                    if (!mRecordStopAndSaveReceived && !mRecordingProcessHandler.hasMessages(MSG_RECORD_STOP_RECORDING)) {
+                        mRecordingProcessHandler.removeMessages(MSG_RECORD_STOP_RECORDING);
+                        boolean result = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_STOP_RECORDING);
+                        Log.d(TAG, "doStopRecording sendMessage MSG_RECORD_STOP_RECORDING = " + result + ", index = " + mCurrentRecordIndex);
+                    } else {
+                        Log.d(TAG, "doStopRecording sendMessage MSG_RECORD_STOP_RECORDING already");
+                    }
+                } else {
+                    Log.i(TAG, "doStopRecording sendMessage MSG_RECORD_STOP_RECORDING null, index = " + mCurrentRecordIndex);
+                }
             }
             mStarted = false;
         }
 
         private void execStopRecording() {
+            mRecordStopAndSaveReceived = true;
             endRecordTimeMillis = System.currentTimeMillis();
             scheduleTimeshiftRecording = true;
             Log.d(TAG, "stop Recording:"+recordingUri);
@@ -732,9 +831,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             //PropSettingManager.resetRecordFrequencyFlag();
         }
 
-        @Override
-        public void onRelease() {
-            Log.i(TAG, "onRelease");
+        private void doRelease() {
+            Log.i(TAG, "doRelease");
 
             String uri = "";
             if (mProgram != null) {
@@ -746,7 +844,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             }
 
             DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingHandler);
-
+            if (mStarted && !mRecordStopAndSaveReceived) {
+                if (mRecordingProcessHandler != null) {
+                    mRecordingProcessHandler.removeMessages(MSG_RECORD_STOP_RECORDING);
+                    mRecordingProcessHandler.removeMessages(MSG_RECORD_DO_FINALRELEASE);
+                    boolean result1 = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_STOP_RECORDING);
+                    boolean result2 = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_DO_FINALRELEASE);
+                    Log.d(TAG, "doRelease sendMessage result1 = " + result1 + ", result2 = " + result1 + ", index = " + mCurrentRecordIndex);
+                } else {
+                    Log.i(TAG, "doRelease sendMessage null mRecordingProcessHandler" + ", index = " + mCurrentRecordIndex);
+                }
+            }
             if (!mStarted && mTuned) {
                 recordingUntune(mPath);
                 return;
@@ -766,6 +874,20 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                     }
                 }
             }
+        }
+
+        private void doFinalReleaseByThread() {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    Log.d(TAG, "doFinalReleaseByThread start index = " + mCurrentRecordIndex);
+                    if (mRecordingProcessHandler != null) {
+                        mRecordingProcessHandler.removeCallbacksAndMessages(null);
+                    }
+                    mRecordingProcessHandler = null;
+                    Log.d(TAG, "doFinalReleaseByThread end  index = " + mCurrentRecordIndex);
+                }
+            }).start();
         }
 
         private Program getProgram(Uri uri) {
@@ -824,7 +946,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 } else if (signal.equals("RecordingStatusChanged")) {
                     if (!recordingIsRecordingPathActive(data, mPath)) {
                         Log.d(TAG, "RecordingStatusChanged, stopped[path:"+mPath+"]");
-                        mRecordingProcessHandler.obtainMessage(MSG_RECORD_STOP_RECORDING).sendToTarget();
+                        if (mRecordingProcessHandler != null) {
+                            mRecordingProcessHandler.removeMessages(MSG_RECORD_STOP_RECORDING);
+                            boolean result = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_STOP_RECORDING);
+                            Log.d(TAG, "doStopRecording sendMessage MSG_RECORD_STOP_RECORDING = " + result + ", index = " + mCurrentRecordIndex);
+                        } else {
+                            Log.i(TAG, "doStopRecording sendMessage MSG_RECORD_STOP_RECORDING null, index = " + mCurrentRecordIndex);
+                        }
                     }
                 } else if (signal.equals("RecordingDiskFull")) {
                     notifyError(TvInputManager.RECORDING_ERROR_INSUFFICIENT_SPACE);
