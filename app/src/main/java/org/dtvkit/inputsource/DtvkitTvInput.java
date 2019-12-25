@@ -145,6 +145,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
     private ParameterMananer mParameterMananer;
     private MediaCodec mMediaCodec1;
     private MediaCodec mMediaCodec2;
+    private MediaCodec mMediaCodec3;
     SystemControlManager mSystemControlManager;
     //Define file type
     private final int SYSFS = 0;
@@ -4302,19 +4303,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         String str = "OMX.amlogic.avc.decoder.awesome.secure";
         try {
             mMediaCodec1 = MediaCodec.createByCodecName(str);
-            } catch (Exception exception) {
-            Log.e(TAG, "Exception during decoder creation", exception);
-            decoderRelease();
-            return false;
-        }
-        try {
             mMediaCodec2 = MediaCodec.createByCodecName(str);
-            } catch (Exception exception) {
-            Log.e(TAG, "Exception during decoder creation", exception);
+            mMediaCodec3 = MediaCodec.createByCodecName(str);
+        } catch (Exception exception) {
+            Log.d(TAG, "Exception during decoder creation", exception);
             decoderRelease();
             return false;
         }
-        Log.e(TAG, "createDecoder done");
+        Log.d(TAG, "createDecoder done");
         return true;
     }
 
@@ -4322,38 +4318,55 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         if (mMediaCodec1 != null) {
             try {
                 mMediaCodec1.stop();
-                } catch (IllegalStateException exception) {
+            } catch (IllegalStateException exception) {
                 mMediaCodec1.reset();
                 // IllegalStateException happens when decoder fail to start.
-                Log.e(TAG, "IllegalStateException during decoder1 stop", exception);
-                } finally {
-                    try {
-                        mMediaCodec1.release();
-                    } catch (IllegalStateException exception) {
-                        Log.e(TAG, "IllegalStateException during decoder1 release", exception);
-                    }
-                    mMediaCodec1 = null;
+                Log.d(TAG, "IllegalStateException during decoder1 stop", exception);
+            } finally {
+                try {
+                    mMediaCodec1.release();
+                } catch (IllegalStateException exception) {
+                    Log.d(TAG, "IllegalStateException during decoder1 release", exception);
+                }
+                mMediaCodec1 = null;
             }
         }
 
         if (mMediaCodec2 != null) {
             try {
                 mMediaCodec2.stop();
-                } catch (IllegalStateException exception) {
+            } catch (IllegalStateException exception) {
                 mMediaCodec2.reset();
                 // IllegalStateException happens when decoder fail to start.
-                Log.e(TAG, "IllegalStateException during decoder2 stop", exception);
-                } finally {
-                    try {
-                        mMediaCodec2.release();
-                    } catch (IllegalStateException exception) {
-                        Log.e(TAG, "IllegalStateException during decoder2 release", exception);
-                    }
-                    mMediaCodec2 = null;
+                Log.d(TAG, "IllegalStateException during decoder2 stop", exception);
+            } finally {
+                try {
+                    mMediaCodec2.release();
+                } catch (IllegalStateException exception) {
+                    Log.d(TAG, "IllegalStateException during decoder2 release", exception);
+                }
+                mMediaCodec2 = null;
             }
         }
 
-        Log.e(TAG, "decoderRelease done");
+        if (mMediaCodec3 != null) {
+            try {
+                mMediaCodec3.stop();
+            } catch (IllegalStateException exception) {
+                mMediaCodec3.reset();
+                // IllegalStateException happens when decoder fail to start.
+                Log.d(TAG, "IllegalStateException during decoder3 stop", exception);
+            } finally {
+                try {
+                    mMediaCodec3.release();
+                } catch (IllegalStateException exception) {
+                    Log.d(TAG, "IllegalStateException during decoder3 release", exception);
+                }
+                mMediaCodec3 = null;
+            }
+        }
+
+        Log.d(TAG, "decoderRelease done");
     }
 
     private final DtvkitGlueClient.SystemControlHandler mSysControlHandler = new DtvkitGlueClient.SystemControlHandler() {
