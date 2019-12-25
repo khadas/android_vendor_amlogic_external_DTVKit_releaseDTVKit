@@ -29,6 +29,8 @@ public class ConstantManager {
     public static final String EVENT_STREAM_PI_FORMAT = "event_pi_format";
     public static final String EVENT_RESOURCE_BUSY = "event_resource_busy";
     public static final String EVENT_SIGNAL_INFO = "event_signal_info";
+    public static final String EVENT_RECORD_PROGRAM_URI = "event_record_program_uri";
+    public static final String EVENT_RECORD_DATA_URI = "event_record_data_uri";
 
     //show or hide overlay
     public static final String ACTION_TIF_CONTROL_OVERLAY = "tif_control_overlay";

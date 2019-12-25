@@ -3,6 +3,7 @@ package org.dtvkit.inputsource;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.ContentObserver;
 import android.graphics.Bitmap;
@@ -552,6 +553,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         private long startRecordTimeMillis = 0;
         private long endRecordTimeMillis = 0;
         private String recordingUri = null;
+        private Uri mRecordedProgramUri = null;
         private boolean tunedNotified = false;
         private boolean mTuned = false;
         private boolean mStarted = false;
@@ -563,10 +565,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         protected static final int MSG_RECORD_ONTUNE = 0;
         protected static final int MSG_RECORD_ONSTART = 1;
         protected static final int MSG_RECORD_ONSTOP = 2;
-        protected static final int MSG_RECORD_STOP_RECORDING = 3;
+        protected static final int MSG_RECORD_UPDATE_RECORDING = 3;
         protected static final int MSG_RECORD_ONRELEASE = 4;
         protected static final int MSG_RECORD_DO_FINALRELEASE = 5;
-        private final String[] MSG_STRING = {"RECORD_ONTUNE", "RECORD_ONSTART", "RECORD_ONSTOP", "STOP_RECORDING", "RECORD_ONRELEASE", "DO_FINALRELEASE"};
+        private final String[] MSG_STRING = {"RECORD_ONTUNE", "RECORD_ONSTART", "RECORD_ONSTOP", "RECORD_UPDATE_RECORDING", "RECORD_ONRELEASE", "DO_FINALRELEASE"};
+
+        protected static final int MSG_RECORD_UPDATE_RECORD_PERIOD = 3000;
 
         @RequiresApi(api = Build.VERSION_CODES.N)
         public DtvkitRecordingSession(Context context, String inputId) {
@@ -605,8 +609,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                             doStopRecording();
                             break;
                         }
-                        case MSG_RECORD_STOP_RECORDING:{
-                            execStopRecording();
+                        case MSG_RECORD_UPDATE_RECORDING:{
+                            boolean insert = (msg.arg1 == 1);
+                            boolean check = (msg.arg2 == 1);
+                            updateRecordingToDb(insert, check);
                             break;
                         }
                         case MSG_RECORD_ONRELEASE:{
@@ -791,6 +797,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 mStarted = true;
                 recordingUri = recordingResponse.toString();
                 Log.i(TAG, "Recording started:"+recordingUri);
+                updateRecordProgramInfo(recordingUri);
             }
         }
 
@@ -802,69 +809,101 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 notifyError(TvInputManager.RECORDING_ERROR_UNKNOWN);
             } else {
                 if (mRecordingProcessHandler != null) {
-                    if (!mRecordStopAndSaveReceived && !mRecordingProcessHandler.hasMessages(MSG_RECORD_STOP_RECORDING)) {
-                        mRecordingProcessHandler.removeMessages(MSG_RECORD_STOP_RECORDING);
-                        boolean result = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_STOP_RECORDING);
-                        Log.d(TAG, "doStopRecording sendMessage MSG_RECORD_STOP_RECORDING = " + result + ", index = " + mCurrentRecordIndex);
-                    } else {
-                        Log.d(TAG, "doStopRecording sendMessage MSG_RECORD_STOP_RECORDING already");
-                    }
+                    mRecordingProcessHandler.removeMessages(MSG_RECORD_UPDATE_RECORDING);
+                    boolean result = mRecordingProcessHandler.sendMessage(mRecordingProcessHandler.obtainMessage(MSG_RECORD_UPDATE_RECORDING, 0, 0));
+                    Log.d(TAG, "doStopRecording sendMessage MSG_RECORD_UPDATE_RECORDING = " + result + ", index = " + mCurrentRecordIndex);
                 } else {
-                    Log.i(TAG, "doStopRecording sendMessage MSG_RECORD_STOP_RECORDING null, index = " + mCurrentRecordIndex);
+                    Log.i(TAG, "doStopRecording sendMessage MSG_RECORD_UPDATE_RECORDING null, index = " + mCurrentRecordIndex);
                 }
             }
             mStarted = false;
         }
 
-        private void execStopRecording() {
+        private void updateRecordingToDb(boolean insert, boolean check) {
             mRecordStopAndSaveReceived = true;
             endRecordTimeMillis = System.currentTimeMillis();
             scheduleTimeshiftRecording = true;
-            Log.d(TAG, "stop Recording:"+recordingUri);
+            Log.d(TAG, "updateRecordingToDb:"+recordingUri);
             if (recordingUri != null)
             {
                 long recordingDurationMillis = endRecordTimeMillis - startRecordTimeMillis;
-                RecordedProgram.Builder builder;
+                RecordedProgram.Builder builder = null;
+                InternalProviderData data = null;
                 Program program = getProgram(mProgram);
                 Channel channel = getChannel(mChannel);
                 //program = getCurrentProgram(mChannel);
-                if (program == null) {
-                    long id = -1;
-                    if (channel != null) {
-                        id = channel.getId();
+                if (insert) {
+                    if (program == null) {
+                        long id = -1;
+                        if (channel != null) {
+                            id = channel.getId();
+                        }
+                        builder = new RecordedProgram.Builder()
+                                .setChannelId(id)
+                                .setTitle(channel != null ? channel.getDisplayName() : null)
+                                .setStartTimeUtcMillis(startRecordTimeMillis)
+                                .setEndTimeUtcMillis(endRecordTimeMillis);
+                    } else {
+                        builder = new RecordedProgram.Builder(program);
                     }
-                    builder = new RecordedProgram.Builder()
-                            .setChannelId(id)
-                            .setTitle(channel != null ? channel.getDisplayName() : null)
-                            .setStartTimeUtcMillis(startRecordTimeMillis)
-                            .setEndTimeUtcMillis(endRecordTimeMillis);
+                    data = new InternalProviderData();
+                    String currentPath = mDataMananer.getStringParameters(DataMananer.KEY_PVR_RECORD_PATH);
+                    int pathExist = 0;
+                    if (SysSettingManager.isDeviceExist(currentPath)) {
+                        pathExist = 1;
+                    }
+                    if (SysSettingManager.isMediaPath(currentPath)) {
+                        currentPath = SysSettingManager.convertMediaPathToMountedPath(currentPath);
+                    }
+                    try {
+                        data.put(RecordedProgram.RECORD_FILE_PATH, currentPath);
+                        data.put(RecordedProgram.RECORD_STORAGE_EXIST, pathExist);
+                    } catch (Exception e) {
+                        Log.e(TAG, "updateRecordingToDb update InternalProviderData Exception = " + e.getMessage());
+                    }
+                }
+                if (insert) {
+                    Log.i(TAG, "updateRecordingToDb insert");
+                    RecordedProgram recording = builder.setInputId(mInputId)
+                            .setRecordingDataUri(recordingUri)
+                            .setRecordingDurationMillis(recordingDurationMillis > 0 ? recordingDurationMillis : -1)
+                            .setInternalProviderData(data)
+                            .build();
+                    mRecordedProgramUri = mContext.getContentResolver().insert(TvContract.RecordedPrograms.CONTENT_URI,
+                        recording.toContentValues());
+                    Bundle event = new Bundle();
+                    event.putString(ConstantManager.EVENT_RECORD_DATA_URI, recordingUri != null ? recordingUri : null);
+                    event.putString(ConstantManager.EVENT_RECORD_PROGRAM_URI, mRecordedProgramUri != null ? mRecordedProgramUri.toString() : null);
+                    notifySessionEvent(ConstantManager.EVENT_RECORD_PROGRAM_URI, event);
                 } else {
-                    builder = new RecordedProgram.Builder(program);
+                    Log.i(TAG, "updateRecordingToDb update");
+                    if (mRecordedProgramUri != null) {
+                        ContentValues values = new ContentValues();
+                        if (endRecordTimeMillis > -1) {
+                            values.put(TvContract.RecordedPrograms.COLUMN_END_TIME_UTC_MILLIS, endRecordTimeMillis);
+                        }
+                        if (recordingDurationMillis > 0) {
+                            values.put(TvContract.RecordedPrograms.COLUMN_RECORDING_DURATION_MILLIS, recordingDurationMillis);
+                        }
+                        mContext.getContentResolver().update(mRecordedProgramUri,
+                                values, null, null);
+                    } else {
+                        Log.i(TAG, "updateRecordingToDb update mRecordedProgramUri null");
+                    }
                 }
-                InternalProviderData data = new InternalProviderData();
-                String currentPath = mDataMananer.getStringParameters(DataMananer.KEY_PVR_RECORD_PATH);
-                int pathExist = 0;
-                if (SysSettingManager.isDeviceExist(currentPath)) {
-                    pathExist = 1;
+                //recordingUri = null;
+                if (!check) {
+                    Log.i(TAG, "updateRecordingToDb notifystop mRecordedProgramUri = " + mRecordedProgramUri + " index = " + mCurrentRecordIndex);
+                    notifyRecordingStopped(mRecordedProgramUri);
                 }
-                if (SysSettingManager.isMediaPath(currentPath)) {
-                    currentPath = SysSettingManager.convertMediaPathToMountedPath(currentPath);
+                if (mRecordingProcessHandler != null) {
+                    if (check) {
+                        boolean result = mRecordingProcessHandler.sendMessageDelayed(mRecordingProcessHandler.obtainMessage(MSG_RECORD_UPDATE_RECORDING, 0, 1), MSG_RECORD_UPDATE_RECORD_PERIOD);
+                        Log.d(TAG, "updateRecordingToDb continue sendMessage MSG_RECORD_UPDATE_RECORDING = " + result + ", index = " + mCurrentRecordIndex);
+                    }
+                } else {
+                    Log.i(TAG, "updateRecordingToDb sendMessage MSG_RECORD_UPDATE_RECORDING null, index = " + mCurrentRecordIndex);
                 }
-                try {
-                    data.put(RecordedProgram.RECORD_FILE_PATH, currentPath);
-                    data.put(RecordedProgram.RECORD_STORAGE_EXIST, pathExist);
-                } catch (Exception e) {
-                    Log.e(TAG, "execStopRecording update InternalProviderData Exception = " + e.getMessage());
-                }
-                RecordedProgram recording = builder.setInputId(mInputId)
-                        .setRecordingDataUri(recordingUri)
-                        .setRecordingDurationMillis(recordingDurationMillis > 0 ? recordingDurationMillis : -1)
-                        .setInternalProviderData(data)
-                        .build();
-                notifyRecordingStopped(mContext.getContentResolver().insert(TvContract.RecordedPrograms.CONTENT_URI,
-                        recording.toContentValues()));
-
-                recordingUri = null;
             }
             //PropSettingManager.resetRecordFrequencyFlag();
         }
@@ -884,9 +923,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingHandler);
             if (mStarted && !mRecordStopAndSaveReceived) {
                 if (mRecordingProcessHandler != null) {
-                    mRecordingProcessHandler.removeMessages(MSG_RECORD_STOP_RECORDING);
+                    mRecordingProcessHandler.removeMessages(MSG_RECORD_UPDATE_RECORDING);
                     mRecordingProcessHandler.removeMessages(MSG_RECORD_DO_FINALRELEASE);
-                    boolean result1 = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_STOP_RECORDING);
+                    boolean result1 = mRecordingProcessHandler.sendMessage(mRecordingProcessHandler.obtainMessage(MSG_RECORD_UPDATE_RECORDING, 0, 0));
                     boolean result2 = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_DO_FINALRELEASE);
                     Log.d(TAG, "doRelease sendMessage result1 = " + result1 + ", result2 = " + result1 + ", index = " + mCurrentRecordIndex);
                 } else {
@@ -954,6 +993,43 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             return channel;
         }
 
+        private void updateRecordProgramInfo(String recordDataUri) {
+            RecordedProgram searchedRecordedProgram = getRecordProgram(recordDataUri);
+            if (mRecordingProcessHandler != null) {
+                mRecordingProcessHandler.removeMessages(MSG_RECORD_UPDATE_RECORDING);
+                int arg1 = 0;
+                int arg2 = 0;
+                if (searchedRecordedProgram != null) {
+                    Log.d(TAG, "updateRecordProgramInfo update " + recordDataUri);
+                    arg1 = 0;
+                    arg2 = 1;
+                } else {
+                    Log.d(TAG, "updateRecordProgramInfo insert " + recordDataUri);
+                    arg1 = 1;
+                    arg2 = 1;
+                }
+                boolean result = mRecordingProcessHandler.sendMessage(mRecordingProcessHandler.obtainMessage(MSG_RECORD_UPDATE_RECORDING, arg1, arg2));
+                Log.d(TAG, "doStopRecording sendMessage MSG_RECORD_UPDATE_RECORDING = " + result + ", index = " + mCurrentRecordIndex);
+            } else {
+                Log.i(TAG, "doStopRecording sendMessage MSG_RECORD_UPDATE_RECORDING null, index = " + mCurrentRecordIndex);
+            }
+        }
+
+        private RecordedProgram getRecordProgram(String recordDataUri) {
+            RecordedProgram result = null;
+            if (recordDataUri != null) {
+                Cursor cursor = mContext.getContentResolver().query(TvContract.RecordedPrograms.CONTENT_URI, RecordedProgram.PROJECTION,
+                        TvContract.RecordedPrograms.COLUMN_RECORDING_DATA_URI + "=?", new String[]{recordDataUri}, null);
+                if (cursor != null) {
+                    while (cursor.moveToNext()) {
+                        result = RecordedProgram.fromCursor(cursor);
+                        break;
+                    }
+                }
+            }
+            return result;
+        }
+
         private Program getCurrentProgram(Uri channelUri) {
             return TvContractUtils.getCurrentProgram(mContext.getContentResolver(), channelUri);
         }
@@ -985,11 +1061,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                     if (!recordingIsRecordingPathActive(data, mPath)) {
                         Log.d(TAG, "RecordingStatusChanged, stopped[path:"+mPath+"]");
                         if (mRecordingProcessHandler != null) {
-                            mRecordingProcessHandler.removeMessages(MSG_RECORD_STOP_RECORDING);
-                            boolean result = mRecordingProcessHandler.sendEmptyMessage(MSG_RECORD_STOP_RECORDING);
-                            Log.d(TAG, "doStopRecording sendMessage MSG_RECORD_STOP_RECORDING = " + result + ", index = " + mCurrentRecordIndex);
+                            mRecordingProcessHandler.removeMessages(MSG_RECORD_UPDATE_RECORDING);
+                            boolean result = mRecordingProcessHandler.sendMessage(mRecordingProcessHandler.obtainMessage(MSG_RECORD_UPDATE_RECORDING, 0, 0));
+                            Log.d(TAG, "doStopRecording sendMessage MSG_RECORD_UPDATE_RECORDING = " + result + ", index = " + mCurrentRecordIndex);
                         } else {
-                            Log.i(TAG, "doStopRecording sendMessage MSG_RECORD_STOP_RECORDING null, index = " + mCurrentRecordIndex);
+                            Log.i(TAG, "doStopRecording sendMessage MSG_RECORD_UPDATE_RECORDING null, index = " + mCurrentRecordIndex);
                         }
                     }
                 } else if (signal.equals("RecordingDiskFull")) {
