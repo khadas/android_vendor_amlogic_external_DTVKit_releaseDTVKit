@@ -217,14 +217,15 @@ public class DtvkitDvbsSetup extends Activity {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 Log.d(TAG, "searchmode onItemSelected position = " + position);
                 mDataMananer.saveIntParameters(DataMananer.KEY_SEARCH_MODE, position);
-                if (position == DataMananer.VALUE_SEARCH_MODE_BLIND) {
+                //no need to add limits now
+                /*if (position == DataMananer.VALUE_SEARCH_MODE_BLIND) {
                     blindContainer.setVisibility(View.VISIBLE);
                     nit.setVisibility(View.GONE);
                     mDataMananer.saveStringParameters(DataMananer.KEY_TRANSPONDER, "null");
                 } else {
                     blindContainer.setVisibility(View.GONE);
                     nit.setVisibility(View.VISIBLE);
-                }
+                }*/
             }
 
             @Override
@@ -258,13 +259,14 @@ public class DtvkitDvbsSetup extends Activity {
         });
         int searchmodeValue = mDataMananer.getIntParameters(DataMananer.KEY_SEARCH_MODE);
         searchmode.setSelection(searchmodeValue);
-        if (searchmodeValue == DataMananer.VALUE_SEARCH_MODE_BLIND) {
+        //no need to add limits now
+        /*if (searchmodeValue == DataMananer.VALUE_SEARCH_MODE_BLIND) {
             blindContainer.setVisibility(View.VISIBLE);
             nit.setVisibility(View.GONE);
         } else {
             blindContainer.setVisibility(View.GONE);
             nit.setVisibility(View.VISIBLE);
-        }
+        }*/
         fecmode.setSelection(mDataMananer.getIntParameters(DataMananer.KEY_FEC_MODE));
         modulationmode.setSelection(mDataMananer.getIntParameters(DataMananer.KEY_MODULATION_MODE));
     }
@@ -386,13 +388,14 @@ public class DtvkitDvbsSetup extends Activity {
 
     private JSONArray initBlindSearch(JSONArray args) {
         try {
-            int[] result = getBlindFrequency();
+            //int[] result = getBlindFrequency();
             String satellite = mDataMananer.getStringParameters(DataMananer.KEY_SATALLITE);
-            if (result[0] < 0 || result[1] < 0 || result[0] > result[1] || TextUtils.isEmpty(satellite)) {
+            if (/*result[0] < 0 || result[1] < 0 || result[0] > result[1] || */TextUtils.isEmpty(satellite)) {
                 return null;
             }
-            args.put(result[0]);// "start_freq" khz //arg5
-            args.put(result[1]);//"end_freq" khz //arg6
+            //no need to add limits now
+            //args.put(result[0]);// "start_freq" khz //arg5
+            //args.put(result[1]);//"end_freq" khz //arg6
             args.put(satellite);//arg7
         } catch (Exception e) {
             args = null;
