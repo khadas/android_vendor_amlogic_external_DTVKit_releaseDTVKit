@@ -20,6 +20,14 @@ import android.media.tv.TvInputInfo;
 import android.media.tv.TvInputManager;
 import android.media.tv.TvInputService;
 import android.media.tv.TvTrackInfo;
+import android.graphics.Color;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.view.Gravity;
+import android.view.ViewGroup;
+import android.widget.RelativeLayout;
+import android.util.TypedValue;
+import android.graphics.Typeface;
 
 import android.content.IntentFilter;
 import android.content.BroadcastReceiver;
@@ -448,6 +456,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
     private class DtvkitOverlayView extends FrameLayout {
         private CiMenuView ciOverlayView;
         private TextureView Textview;
+        private TextView mText;
+        private RelativeLayout mRelativeLayout;
         private int w;
         private int h;
 
@@ -459,10 +469,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             Log.i(TAG, "onCreateDtvkitOverlayView");
             Textview = new TextureView(getContext());
             ciOverlayView = new CiMenuView(getContext());
-
             Textview.setSurfaceTextureListener(new OverlayTextureListener());
             this.addView(Textview);
             this.addView(ciOverlayView);
+            initRelativeLayout();
         }
 
         public void destroy() {
@@ -470,6 +480,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             removeView(Textview);
             ciOverlayView.destroy();
             removeView(ciOverlayView);
+            removeView(mRelativeLayout);
         }
 
         public void hideOverLay() {
@@ -478,6 +489,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             }
             if (ciOverlayView != null) {
                 ciOverlayView.setVisibility(View.GONE);
+            }
+            if (mText != null) {
+                mText.setVisibility(View.GONE);
+            }
+            if (mRelativeLayout != null) {
+                mRelativeLayout.setVisibility(View.GONE);
             }
             setVisibility(View.GONE);
         }
@@ -489,7 +506,58 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             if (ciOverlayView != null) {
                 ciOverlayView.setVisibility(View.VISIBLE);
             }
+            if (mText != null) {
+                mText.setVisibility(View.VISIBLE);
+            }
+            if (mRelativeLayout != null) {
+                mRelativeLayout.setVisibility(View.VISIBLE);
+            }
             setVisibility(View.VISIBLE);
+        }
+
+        private void initRelativeLayout() {
+            if (mText == null && mRelativeLayout == null) {
+                Log.d(TAG, "initRelativeLayout");
+                mRelativeLayout = new RelativeLayout(getContext());
+                mText = new TextView(getContext());
+                ViewGroup.LayoutParams linearLayoutParams = new ViewGroup.LayoutParams(LinearLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.FILL_PARENT);
+                mRelativeLayout.setLayoutParams(linearLayoutParams);
+                mRelativeLayout.setBackgroundColor(Color.TRANSPARENT);
+
+                //add scrambled text
+                RelativeLayout.LayoutParams textLayoutParams = new RelativeLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                textLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
+                mText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 30);
+                mText.setGravity(Gravity.CENTER);
+                mText.setTypeface(Typeface.DEFAULT_BOLD);
+                mText.setTextColor(Color.WHITE);
+                //mText.setText("RelativeLayout");
+                mText.setVisibility(View.GONE);
+                mRelativeLayout.addView(mText, textLayoutParams);
+                this.addView(mRelativeLayout);
+            } else {
+                Log.d(TAG, "initRelativeLayout already");
+            }
+        }
+
+        public void showScrambledText(String text) {
+            if (mText != null && mRelativeLayout != null) {
+                Log.d(TAG, "showText");
+                mText.setText(text);
+                if (mText.getVisibility() != View.VISIBLE) {
+                    mText.setVisibility(View.VISIBLE);
+                }
+            }
+        }
+
+        public void hideScrambledText() {
+            if (mText != null && mRelativeLayout != null) {
+                Log.d(TAG, "hideText");
+                mText.setText("");
+                if (mText.getVisibility() != View.GONE) {
+                    mText.setVisibility(View.GONE);
+                }
+            }
         }
 
         public void setSize(int width, int height) {
@@ -1374,6 +1442,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 return false;
             }
 
+            if (mMainHandle != null) {
+                mMainHandle.sendEmptyMessage(MSG_HIDE_SCAMBLEDTEXT);
+            }
+
             if (mHandlerThreadHandle != null) {
                 mHandlerThreadHandle.removeMessages(MSG_ON_TUNE);
                 Message mess = mHandlerThreadHandle.obtainMessage(MSG_ON_TUNE, 0, 0, channelUri);
@@ -2152,6 +2224,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                               Log.i(TAG, "mheg failed to start");
                            }
                            break;
+                        case "scambled":
+                            /*notify scambled*/
+                            Log.i(TAG, "** scambled **");
+                            if (mMainHandle != null) {
+                                mMainHandle.sendEmptyMessage(MSG_SHOW_SCAMBLEDTEXT);
+                            } else {
+                                Log.d(TAG, "mMainHandle is null");
+                            }
+                            break;
                         default:
                             Log.i(TAG, "Unhandled state: " + state);
                             break;
@@ -2360,6 +2441,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         protected static final int MSG_GET_SIGNAL_STRENGTH_PERIOD = 1000;//MS
 
         protected static final int MSG_MAIN_HANDLE_DESTROY_OVERLAY = 1;
+        protected static final int MSG_SHOW_SCAMBLEDTEXT = 2;
+        protected static final int MSG_HIDE_SCAMBLEDTEXT = 3;
 
         protected void initWorkThread() {
             Log.d(TAG, "initWorkThread");
@@ -2657,6 +2740,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                         doDestroyOverlay();
                         if (mHandlerThreadHandle != null) {
                             mHandlerThreadHandle.sendEmptyMessage(MSG_RELEASE_WORK_THREAD);
+                        }
+                        break;
+                    case MSG_SHOW_SCAMBLEDTEXT:
+                        if (mView != null) {
+                            mView.showScrambledText("Scambled");
+                        }
+                        break;
+                    case MSG_HIDE_SCAMBLEDTEXT:
+                        if (mView != null) {
+                            mView.hideScrambledText();
                         }
                         break;
                     default:
