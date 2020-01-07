@@ -1103,8 +1103,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             if (!mIsMain) {
                 if (null != mSysSettingManager)
                     mSysSettingManager.writeSysFs("/sys/class/video/disable_video", "1");
-                if (null != mView)
-                    layoutSurface(0, 0, mView.w, mView.h);
+                //if (null != mView)
+                    //layoutSurface(0, 0, mView.w, mView.h);
             } else {
                 if (null != mSysSettingManager)
                     mSysSettingManager.writeSysFs("/sys/class/video/video_inuse", "1");
@@ -2157,6 +2157,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                                SysContManager.writeSysFs("/sys/class/video/crop", crop);
                            }
                        layoutSurface(left,top,right,bottom);
+                       if (mHandlerThreadHandle != null) {
+                          mHandlerThreadHandle.removeMessages(MSG_ENABLE_VIDEO);
+                          mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_ENABLE_VIDEO, 40);
+                       }
                    }
                 }
                 else if (signal.equals("ServiceRetuned"))
@@ -2216,6 +2220,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         protected static final int MSG_RELEASE_WORK_THREAD = 7;
         protected static final int MSG_GET_SIGNAL_STRENGTH = 8;
         protected static final int MSG_UPDATE_TRACKINFO = 9;
+        protected static final int MSG_ENABLE_VIDEO = 10;
 
         //audio ad
         public static final int MSG_MIX_AD_DUAL_SUPPORT = 20;
@@ -2286,6 +2291,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                                     mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_UPDATE_TRACKINFO, MSG_UPDATE_TRACKINFO_DELAY);
                                 }
                             }
+                            break;
+                        case MSG_ENABLE_VIDEO:
+                            if (null != mSysSettingManager)
+                                mSysSettingManager.writeSysFs("/sys/class/video/video_global_output", "1");
                             break;
                         default:
                             Log.d(TAG, "mHandlerThreadHandle initWorkThread default");
@@ -2541,6 +2550,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             } else {
                 mhegStop();
             }
+
+            if (null != mSysSettingManager)
+                mSysSettingManager.writeSysFs("/sys/class/video/video_global_output", "0");
 
             notifyVideoUnavailable(TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING);
             playerStopTeletext();//no need to save teletext select status
