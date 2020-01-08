@@ -831,7 +831,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 InternalProviderData data = null;
                 Program program = getProgram(mProgram);
                 Channel channel = getChannel(mChannel);
-                //program = getCurrentProgram(mChannel);
+                if (program == null) {
+                    program = getCurrentStreamProgram(mChannel, PropSettingManager.getCurrentStreamTime(true));
+                }
                 if (insert) {
                     if (program == null) {
                         long id = -1;
@@ -1032,6 +1034,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
 
         private Program getCurrentProgram(Uri channelUri) {
             return TvContractUtils.getCurrentProgram(mContext.getContentResolver(), channelUri);
+        }
+
+        private Program getCurrentStreamProgram(Uri channelUri, long streamTime) {
+            return TvContractUtils.getCurrentProgramExt(mContext.getContentResolver(), channelUri, streamTime);
         }
 
         private final DtvkitGlueClient.SignalHandler mRecordingHandler = new DtvkitGlueClient.SignalHandler() {
@@ -1720,6 +1726,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
                 if (playerPlay(recordedProgram.getRecordingDataUri()).equals("ok"))
                 {
+                    if (mHandlerThreadHandle != null) {
+                        mHandlerThreadHandle.removeMessages(MSG_CHECK_PARENTAL_CONTROL);
+                        mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_PARENTAL_CONTROL, MSG_CHECK_PARENTAL_CONTROL_PERIOD);
+                    }
                     DtvkitGlueClient.getInstance().setAudioHandler(AHandler);
                 }
                 else
@@ -2449,6 +2459,34 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             return age;
         }
 
+        private int getContentRatingsOfCurrentPlayingRecordedProgram() {
+            int age = 0;
+            String pc_rating;
+            String rating_system;
+            long currentStreamTime = 0;
+            TvContentRating[] ratings;
+
+            Log.d(TAG, "getContentRatingsOfCurrentPlayingRecordedProgram = " + recordedProgram);
+
+            ratings = recordedProgram == null ? null : recordedProgram.getContentRatings();
+            if (ratings != null)
+            {
+               Log.d(TAG, "ratings:["+ratings[0].flattenToString()+"]");
+               pc_rating = ratings[0].getMainRating();
+               rating_system = ratings[0].getRatingSystem();
+               if (rating_system.equals("DVB"))
+               {
+                   String[] ageArry = pc_rating.split("_", 2);
+                   if (ageArry[0].equals("DVB"))
+                   {
+                       age = Integer.valueOf(ageArry[1]);
+                   }
+               }
+            }
+
+            return age;
+        }
+
         private void updateParentalControlExt() {
             int age = 0;
             int rating;
@@ -2457,7 +2495,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 try {
                     JSONArray args = new JSONArray();
                     rating = getCurrentMinAgeByBlockedRatings();
-                    age = getContentRatingsOfCurrentProgram();
+                    age = recordedProgram == null ? getContentRatingsOfCurrentProgram() : getContentRatingsOfCurrentPlayingRecordedProgram();
                     Log.e(TAG, "updateParentalControlExt current program age["+ age +"] setting_rating[" +rating+ "]");
                     if ((rating < 4 || rating > 18 || age < rating) && mBlocked)
                     {
@@ -2499,7 +2537,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                     //age = DtvkitGlueClient.getInstance().request("Player.getCurrentProgramRatingAge", args).getInt("data");
                     rating = getCurrentMinAgeByBlockedRatings();
                     pc_age = getParentalControlAge();
-                    age = getContentRatingsOfCurrentProgram();
+                    age = recordedProgram == null ? getContentRatingsOfCurrentProgram() : getContentRatingsOfCurrentPlayingRecordedProgram();
                     Log.e(TAG, "updateParentalControl current program age["+ age +"] setting_rating[" +rating+ "] pc_age[" +pc_age+ "]");
                     if (getParentalControlOn()) {
                         if (rating < 4 || rating > 18 || age == 0) {
