@@ -473,6 +473,35 @@ public class TvContractUtils {
     }
 
     /**
+     * Returns the {@link Channel} with specified displayName.
+     * @param resolver {@link ContentResolver} used to query database.
+     * @param displayName of channel.
+     * @return An channel object with specified displayName.
+     */
+    public static Channel getChannelByDisplayName(ContentResolver resolver, String displayName) {
+        Cursor cursor = null;
+        String selection = TvContract.Channels.COLUMN_DISPLAY_NAME + "=?";
+        String[] selectionArgs = new String[]{displayName};
+        try {
+            cursor = resolver.query(TvContract.Channels.CONTENT_URI, Channel.PROJECTION, selection, selectionArgs, null);
+            if (cursor == null || cursor.getCount() == 0) {
+                Log.w(TAG, "getChannelByDisplayName No channel matches " + displayName);
+                return null;
+            }
+            cursor.moveToNext();
+            return Channel.fromCursor(cursor);
+        } catch (Exception e) {
+            Log.w(TAG, "displayName Unable to get the channel " + displayName, e);
+            return null;
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+
+            }
+        }
+    }
+
+    /**
      * Returns the current list of programs on a given channel.
      *
      * @param resolver Application's ContentResolver.

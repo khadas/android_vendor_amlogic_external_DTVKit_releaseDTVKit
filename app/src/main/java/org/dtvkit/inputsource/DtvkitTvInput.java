@@ -64,6 +64,10 @@ import android.view.accessibility.CaptioningManager;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.os.ServiceManager;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.view.WindowManager;
+import android.widget.Button;
 
 import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.dtvkit.companionlibrary.model.Channel;
@@ -98,6 +102,8 @@ import java.util.Arrays;
 import java.util.Objects;
 
 import android.media.MediaCodec;
+import android.widget.TextView;
+import android.util.TypedValue;
 
 
 public class DtvkitTvInput extends TvInputService implements SystemControlManager.DisplayModeListener  {
@@ -126,6 +132,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
     /*associate audio*/
     protected boolean mAudioADAutoStart = false;
     protected int mAudioADMixingLevel = 50;
+
+    private boolean mDvbNetworkChangeSearchStatus = false;
 
     private enum PlayerState {
         STOPPED, PLAYING
@@ -1905,7 +1913,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                     used = super.onKeyUp(keyCode, event);
                 }
             }
-
             return used;
         }
 
@@ -2194,6 +2201,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                     Log.i(TAG, "DvbUpdatedChannel");
                     ComponentName sync = new ComponentName(mContext, DtvkitEpgSync.class);
                     EpgSyncJobService.requestImmediateSync(mContext, mInputId, false, true, sync);
+                }
+                else if (signal.equals("DvbNetworkChange") || signal.equals("DvbUpdatedService"))
+                {
+                    Log.i(TAG, "DvbNetworkChange or DvbUpdatedService");
+                    if (mMainHandle != null && !mDvbNetworkChangeSearchStatus) {
+                        mDvbNetworkChangeSearchStatus = true;
+                        sendDoReleaseMessage();
+                        mMainHandle.postDelayed(new Runnable() {
+                            public void run() {
+                                showSearchConfirmDialog(DtvkitTvInput.this, mTunedChannel);
+                            }
+                        }, 1000);
+                    }
                 }
                 else if (signal.equals("DvbUpdatedChannelData"))
                 {
@@ -2709,6 +2729,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             setParentalControlOn(false);
             playerResetAssociateDualSupport();
             mKeyUnlocked = false;
+            mDvbNetworkChangeSearchStatus = false;
             if (mBlocked)
             {
                 notifyContentAllowed();
@@ -4566,5 +4587,116 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
            }
         }
     };
+
+    private void showSearchConfirmDialog(final Context context, final Channel channel) {
+        if (context == null || channel == null) {
+            Log.d(TAG, "showSearchConfirmDialog null context or input");
+            return;
+        }
+
+        final AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        final AlertDialog alert = builder.create();
+        final View dialogView = View.inflate(context, R.layout.confirm_search, null);
+        final TextView title = (TextView) dialogView.findViewById(R.id.dialog_title);
+        final Button confirm = (Button) dialogView.findViewById(R.id.confirm);
+        final Button cancel = (Button) dialogView.findViewById(R.id.cancel);
+        final DtvkitSingleFrequencySetup.SingleFrequencyCallback callback = new DtvkitSingleFrequencySetup.SingleFrequencyCallback() {
+            @Override
+            public void onMessageCallback(JSONObject mess) {
+                if (mess != null) {
+                    Log.d(TAG, "onMessageCallback " + mess.toString());
+                    String status = null;
+                    try {
+                        status = mess.getString(DtvkitSingleFrequencySetup.SINGLE_FREQUENCY_STATUS_ITEM);
+                    } catch (Exception e) {
+                        Log.i(TAG, "onMessageCallback SINGLE_FREQUENCY_STATUS_ITEM Exception " + e.getMessage());
+                    }
+                    switch (status) {
+                        case DtvkitSingleFrequencySetup.SINGLE_FREQUENCY_STATUS_SAVE_FINISH: {
+                            if (alert != null) {
+                                alert.dismiss();
+                            }
+                            if (mSession != null) {
+                                Channel newChannel = null;
+                                Uri channelUri = null;
+                                String serviceName = null;
+                                try {
+                                    serviceName = mess.getString(DtvkitSingleFrequencySetup.SINGLE_FREQUENCY_CHANNEL_NAME);
+                                } catch (Exception e) {
+                                    Log.i(TAG, "onMessageCallback SINGLE_FREQUENCY_CHANNEL_NAME Exception " + e.getMessage());
+                                }
+                                if (!TextUtils.isEmpty(serviceName)) {
+                                    newChannel = TvContractUtils.getChannelByDisplayName(context.getContentResolver(), serviceName);
+                                }
+                                if (newChannel != null) {
+                                    channelUri = TvContract.buildChannelUri(newChannel.getId());
+                                }
+                                if (channelUri != null) {
+                                    mSession.onTune(channelUri);
+                                    mSession.notifyChannelRetuned(channelUri);
+                                    Log.d(TAG, "onMessageCallback notifyChannelRetuned " + channelUri);
+                                } else {
+                                    Log.d(TAG, "onMessageCallback none channels");
+                                }
+                            }
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                }
+            }
+        };
+        String channelSignalType = null;
+        int frequency = -1;
+        boolean isDvbc = false;
+        try {
+            channelSignalType = channel.getInternalProviderData().get("channel_signal_type").toString();
+            frequency = Integer.valueOf(channel.getInternalProviderData().get("frequency").toString());
+            isDvbc = TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBC) ? true : false;
+        } catch (Exception e) {
+            Log.i(TAG, "onMessageCallback channelSignalType Exception " + e.getMessage());
+        }
+        if (!TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBC) && !TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBT) && !TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBT2)) {
+            Log.d(TAG, "showSearchConfirmDialog not dvbc or dvbt and is " + channelSignalType);
+            return;
+        }
+        final DtvkitSingleFrequencySetup setup = new DtvkitSingleFrequencySetup(context, !isDvbc, frequency, channel.getInputId(), callback);
+        setup.startSearch();
+        title.setText(R.string.dvb_network_change);
+        confirm.setVisibility(View.GONE);
+        cancel.setVisibility(View.GONE);
+        /*confirm.requestFocus();
+        cancel.setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                alert.dismiss();
+            }
+        });
+        confirm.setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                alert.dismiss();
+                Intent setupIntent = input.createSetupIntent();
+                setupIntent.putExtra(TvInputInfo.EXTRA_INPUT_ID, input.getId());
+                setupIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(setupIntent);
+            }
+        });*/
+        alert.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                Log.d(TAG, "showSearchConfirmDialog onDismiss");
+            }
+        });
+        alert.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
+        alert.setView(dialogView);
+        alert.show();
+        WindowManager.LayoutParams params = alert.getWindow().getAttributes();
+        params.width = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 500, context.getResources().getDisplayMetrics());
+        params.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        alert.getWindow().setAttributes(params);
+        alert.getWindow().setBackgroundDrawableResource(R.drawable.dialog_background);
+  }
 
 }

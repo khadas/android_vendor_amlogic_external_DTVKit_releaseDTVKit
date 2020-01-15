@@ -83,6 +83,9 @@
     <string name="public_search_channel_name">Channel Name:</string>
     <string name="public_dvb_search">DVB SEARCH</string>
     <string name="sync_tv_provider">Updating provider, please wait!</string>
+    <string name="dvb_network_change">Dvb channels has changed, searching new channels !</string>
+    <string name="dvb_network_change_confirm">Search</string>
+    <string name="dvb_network_change_cancel">Cancel</string>
 
     <!-- pvr record delete -->
     <string name="pvr_record_confirm_delete_schedule">Please delete pvr schedules files firstly!</string>

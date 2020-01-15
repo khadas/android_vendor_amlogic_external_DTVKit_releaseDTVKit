@@ -23,6 +23,7 @@
     <uses-permission android:name="android.permission.TV_INPUT_HARDWARE" />
     <uses-permission android:name="android.permission.WRITE_MEDIA_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -74,6 +75,11 @@
             </intent-filter>
         </activity>
         <activity android:name="com.droidlogic.fragment.ScanMainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+        <activity android:name="com.droidlogic.readdbfile.ReadDbActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
