@@ -63,6 +63,7 @@ public class DtvkitEpgSync extends EpgSyncJobService {
                 data.put("video_pid", service.getInt("video_pid"));
                 data.put("video_codec", service.getString("video_codec"));
                 data.put("is_data", service.getBoolean("is_data"));
+                data.put("channel_signal_type", service.getString("sig_name"));
                 channels.add(new Channel.Builder()
                         .setDisplayName(service.getString("name"))
                         .setDisplayNumber(String.format(Locale.ENGLISH, "%d", service.getInt("lcn")))
