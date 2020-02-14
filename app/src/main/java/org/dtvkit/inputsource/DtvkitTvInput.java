@@ -1983,6 +1983,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 if (actiondown) {
                     playerNotifyTeletextEvent(28);
                 }
+            } else if ("clock".equals(action) && data != null) {
+                boolean actiondown = data.getBoolean("clock", false);
+                Log.d(TAG, "do private cmd: clock: "+ actiondown);
+                if (actiondown) {
+                    playerNotifyTeletextEvent(29);
+                }
             } else if (ConstantManager.ACTION_TIF_CONTROL_OVERLAY.equals(action)) {
                 boolean show = data.getBoolean(ConstantManager.KEY_TIF_OVERLAY_SHOW_STATUS, false);
                 Log.d(TAG, "do private cmd:"+ ConstantManager.ACTION_TIF_CONTROL_OVERLAY + ", show:" + show);
