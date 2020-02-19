@@ -1524,12 +1524,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         @Override
         public void onUnblockContent(TvContentRating unblockedRating) {
             super.onUnblockContent(unblockedRating);
-            Log.i(TAG, "onUnblockContent " + unblockedRating);
-            setParentalControlOn(false);
-            notifyContentAllowed();
-            setBlockMute(false);
-            mKeyUnlocked = true;
-            mBlocked = false;
+            if (mHandlerThreadHandle != null) {
+                mHandlerThreadHandle.removeMessages(MSG_SET_UNBLOCK);
+                Message mess = mHandlerThreadHandle.obtainMessage(MSG_SET_UNBLOCK,unblockedRating);
+                boolean result = mHandlerThreadHandle.sendMessage(mess);
+                Log.d(TAG, "onUnblockContent sendMessage result " + result);
+            }
         }
 
         @Override
@@ -2324,6 +2324,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         protected static final int MSG_GET_SIGNAL_STRENGTH = 8;
         protected static final int MSG_UPDATE_TRACKINFO = 9;
         protected static final int MSG_ENABLE_VIDEO = 10;
+        protected static final int MSG_SET_UNBLOCK = 11;
 
         //audio ad
         public static final int MSG_MIX_AD_DUAL_SUPPORT = 20;
@@ -2398,6 +2399,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                         case MSG_ENABLE_VIDEO:
                             if (null != mSysSettingManager)
                                 mSysSettingManager.writeSysFs("/sys/class/video/video_global_output", "1");
+                            break;
+                        case MSG_SET_UNBLOCK:
+                            if (msg.obj != null && msg.obj instanceof TvContentRating) {
+                                setUnBlock((TvContentRating)msg.obj);
+                            }
                             break;
                         default:
                             Log.d(TAG, "mHandlerThreadHandle initWorkThread default");
@@ -2491,6 +2497,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             int age = 0;
             int rating;
             boolean isParentControlEnabled = mTvInputManager.isParentalControlsEnabled();
+            Log.d(TAG, "updateParentalControlExt isParentControlEnabled = " + isParentControlEnabled + ", mKeyUnlocked = " + mKeyUnlocked);
             if (isParentControlEnabled && !mKeyUnlocked) {
                 try {
                     JSONArray args = new JSONArray();
@@ -2578,6 +2585,15 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             } else {
                 Log.i(TAG, "setBlockMute can't get audioManager");
             }
+        }
+
+        private void setUnBlock(TvContentRating unblockedRating) {
+            Log.i(TAG, "setUnBlock " + unblockedRating);
+            mKeyUnlocked = true;
+            mBlocked = false;
+            setParentalControlOn(false);
+            notifyContentAllowed();
+            setBlockMute(false);
         }
 
         private boolean playerInitAssociateDualSupport() {
