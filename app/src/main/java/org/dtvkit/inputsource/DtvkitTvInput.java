@@ -1477,34 +1477,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 @Override
                 public void run() {
                     Log.i(TAG, "timeshiftRecordRunnable running");
-                    if (timeshiftAvailable) {
-                        if (timeshiftRecorderState == RecorderState.STOPPED) {
-                            if (playerStartTimeshiftRecording()) {
-                                /*
-                                  The onSignal callback may be triggerd before here,
-                                  and changes the state to a further value.
-                                  so check the state first, in order to prevent getting it reset.
-                                */
-                                if (timeshiftRecorderState != RecorderState.RECORDING) {
-                                    timeshiftRecorderState = RecorderState.STARTING;
-                                }
-                            } else {
-                                notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
-                            }
-                        }
-                    }
+                    resetRecordingPath();
+                    tryStartTimeshifting();
                 }
             };
 
             playerSetTimeshiftBufferSize(timeshiftBufferSizeMins);
-            String newPath = mDataMananer.getStringParameters(DataMananer.KEY_PVR_RECORD_PATH);
-            if (!SysSettingManager.isDeviceExist(newPath)) {
-                Log.d(TAG, "removable device has been moved and use default path");
-                newPath = "/data/data/org.dtvkit.inputsource";
-                mDataMananer.saveStringParameters(DataMananer.KEY_PVR_RECORD_PATH, newPath);
-            }
-            recordingAddDiskPath(newPath);
-            recordingSetDefaultDisk(newPath);
+            resetRecordingPath();
             mDtvkitTvInputSessionCount++;
             mCurrentDtvkitTvInputSessionIndex = mDtvkitTvInputSessionCount;
             initWorkThread();
@@ -2478,28 +2457,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                                 notifyTrackSelected(TvTrackInfo.TYPE_AUDIO, Integer.toString(playerGetSelectedAudioTrack()));
                                 initSubtitleOrTeletextIfNeed();
 
-                                if (getFeatureSupportTimeshifting()) {
-                                    if (timeshiftRecorderState == RecorderState.STOPPED) {
-                                        numActiveRecordings = recordingGetNumActiveRecordings();
-                                        Log.i(TAG, "numActiveRecordings: " + numActiveRecordings);
-                                        if (numActiveRecordings < numRecorders) {
-                                            timeshiftAvailable = true;
-                                        } else {
-                                            timeshiftAvailable = false;
-                                        }
-                                    }
-                                    Log.i(TAG, "timeshiftAvailable: " + timeshiftAvailable);
-                                    Log.i(TAG, "timeshiftRecorderState: " + timeshiftRecorderState);
-                                    if (timeshiftAvailable) {
-                                        if (timeshiftRecorderState == RecorderState.STOPPED) {
-                                            if (playerStartTimeshiftRecording()) {
-                                                timeshiftRecorderState = RecorderState.STARTING;
-                                            } else {
-                                                notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
-                                            }
-                                        }
-                                    }
-                                }
+                                resetRecordingPath();
+                                tryStartTimeshifting();
+                                monitorRecordingPath(true);
                             }
                             else if (type.equals("dvbrecording")) {
                                 startPosition = originalStartPosition = 0; // start position is always 0 when playing back recorded program
@@ -2584,6 +2544,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                         case "off":
                             timeshiftRecorderState = RecorderState.STOPPED;
                             startPosition = originalStartPosition = TvInputManager.TIME_SHIFT_INVALID_TIME;
+                            timeshifting = false;
                             notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
                             break;
                     }
@@ -2592,7 +2553,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                     if (activeRecordings != null && activeRecordings.length() < numRecorders &&
                             timeshiftRecorderState == RecorderState.STOPPED && scheduleTimeshiftRecording) {
                         timeshiftAvailable = true;
-                        scheduleTimeshiftRecordingTask();
+                        /*no scheduling, taken over by MSG_CHECK_REC_PATH*/
+                        //scheduleTimeshiftRecordingTask();
                     }
                 }
                 else if (signal.equals("DvbUpdatedEventPeriods"))
@@ -2775,6 +2737,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         protected static final int MSG_SET_UNBLOCK = 11;
         protected static final int MSG_SET_TELETEXT_MIX_NORMAL = 12;
         protected static final int MSG_SET_TELETEXT_MIX_SEPARATE = 13;
+        protected static final int MSG_CHECK_REC_PATH = 14;
 
         //audio ad
         public static final int MSG_MIX_AD_DUAL_SUPPORT = 20;
@@ -2788,6 +2751,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         protected static final int MSG_CHECK_PARENTAL_CONTROL_PERIOD = 2000;//MS
         protected static final int MSG_BLOCK_MUTE_OR_UNMUTE_PERIOD = 100;//MS
         protected static final int MSG_GET_SIGNAL_STRENGTH_PERIOD = 1000;//MS
+        protected static final int MSG_CHECK_REC_PATH_PERIOD = 1000;//MS
 
         protected static final int MSG_MAIN_HANDLE_DESTROY_OVERLAY = 1;
         protected static final int MSG_SHOW_SCAMBLEDTEXT = 2;
@@ -2864,6 +2828,16 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                         case MSG_SET_TELETEXT_MIX_SEPARATE:
                             mView.setTeletextMix(true);
                             layoutSurface(m_surface_left,m_surface_top,m_surface_right/2,m_surface_bottom);
+                            break;
+                        case MSG_CHECK_REC_PATH:
+                            if (resetRecordingPath()) {
+                                /* path changed */
+                                tryStartTimeshifting();
+                            }
+                            if (mHandlerThreadHandle != null) {
+                                mHandlerThreadHandle.removeMessages(MSG_CHECK_REC_PATH);
+                                mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_REC_PATH, MSG_CHECK_REC_PATH_PERIOD);
+                            }
                             break;
                         default:
                             Log.d(TAG, "mHandlerThreadHandle initWorkThread default");
@@ -3368,6 +3342,61 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             }
             return result;
         }
+
+        private void tryStartTimeshifting() {
+            if (getFeatureSupportTimeshifting()) {
+                if (timeshiftRecorderState == RecorderState.STOPPED) {
+                    numActiveRecordings = recordingGetNumActiveRecordings();
+                    Log.i(TAG, "numActiveRecordings: " + numActiveRecordings);
+                    if (numActiveRecordings < numRecorders) {
+                        timeshiftAvailable = true;
+                    } else {
+                        timeshiftAvailable = false;
+                    }
+                }
+                Log.i(TAG, "timeshiftAvailable: " + timeshiftAvailable);
+                Log.i(TAG, "timeshiftRecorderState: " + timeshiftRecorderState);
+                if (timeshiftAvailable) {
+                    if (timeshiftRecorderState == RecorderState.STOPPED) {
+                        if (playerStartTimeshiftRecording()) {
+                            /*
+                              The onSignal callback may be triggerd before here,
+                              and changes the state to a further value.
+                              so check the state first, in order to prevent getting it reset.
+                            */
+                            if (timeshiftRecorderState != RecorderState.RECORDING) {
+                                timeshiftRecorderState = RecorderState.STARTING;
+                            }
+                        } else {
+                            notifyTimeShiftStatusChanged(TvInputManager.TIME_SHIFT_STATUS_UNAVAILABLE);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void monitorRecordingPath(boolean on) {
+            /*monitor the rec path*/
+            if (mHandlerThreadHandle != null) {
+                mHandlerThreadHandle.removeMessages(MSG_CHECK_REC_PATH);
+                if (on)
+                    mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_REC_PATH, MSG_CHECK_REC_PATH_PERIOD);
+            }
+        }
+    }
+
+    private boolean resetRecordingPath() {
+        String newPath = mDataMananer.getStringParameters(DataMananer.KEY_PVR_RECORD_PATH);
+        boolean changed = false;
+        if (!SysSettingManager.isDeviceExist(newPath)) {
+            Log.d(TAG, "removable device has been moved and use default path");
+            newPath = DataMananer.PVR_DEFAULT_PATH;
+            mDataMananer.saveStringParameters(DataMananer.KEY_PVR_RECORD_PATH, newPath);
+            changed = true;
+        }
+        recordingAddDiskPath(newPath);
+        recordingSetDefaultDisk(newPath);
+        return changed;
     }
 
     private void onChannelsChanged() {
