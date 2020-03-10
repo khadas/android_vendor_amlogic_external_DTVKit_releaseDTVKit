@@ -8,10 +8,12 @@ import android.content.Context;
 import android.database.ContentObserver;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.PorterDuff;
 import android.graphics.Paint;
 import android.database.Cursor;
+import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.media.PlaybackParams;
 import android.media.tv.TvContentRating;
@@ -529,6 +531,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
 
             Log.i(TAG, "onCreateDtvkitOverlayView");
             Textview = new TextureView(getContext());
+
             ciOverlayView = new CiMenuView(getContext());
             Textview.setSurfaceTextureListener(new OverlayTextureListener());
             this.addView(Textview);
@@ -601,6 +604,32 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             } else {
                 Log.d(TAG, "initRelativeLayout already");
             }
+        }
+
+        public void setTeletextMix(boolean status){
+            RectF srcRect, dstRect;
+            float scalex, scaley, px, py;
+        if (status) {
+            srcRect = new RectF(0, 0, 1920, 1080);
+            dstRect = new RectF(960, 0, 1920, 1080);
+            scalex = 0.5f;
+            scaley = 1.0f;
+            px = 1920;
+            py = 1080;
+        } else {
+            srcRect = new RectF(0, 0, 1920, 1080);
+            dstRect = new RectF(0, 0, 1920, 1080);
+            scalex = 1.0f;
+            scaley = 1.0f;
+            px = 0;
+            py = 0;
+        }
+            Matrix matrix = new Matrix();
+
+            matrix.setRectToRect(srcRect, dstRect, Matrix.ScaleToFit.CENTER);
+            matrix.setScale(scalex, scaley, px, py);
+
+            Textview.setTransform(matrix);
         }
 
         public void showScrambledText(String text) {
@@ -1417,6 +1446,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         private boolean mBlocked = false;
         private int mSignalStrength = 0;
         private int mSignalQuality = 0;
+
+        private int m_surface_left = 0;
+        private int m_surface_right = 0;
+        private int m_surface_top = 0;
+        private int m_surface_bottom = 0;
+
 
         DtvkitTvInputSession(Context context) {
             super(context);
@@ -2661,6 +2696,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                                SysContManager.writeSysFs("/sys/class/video/crop", crop);
                            }
                        layoutSurface(left,top,right,bottom);
+                       m_surface_left = left;
+                       m_surface_right = right;
+                       m_surface_top = top;
+                       m_surface_bottom = bottom;
                        if (mHandlerThreadHandle != null) {
                           mHandlerThreadHandle.removeMessages(MSG_ENABLE_VIDEO);
                           mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_ENABLE_VIDEO, 40);
@@ -2712,6 +2751,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 {
                     /*free disk space excceds the property's setting*/
                 }
+                else if (signal.equals("tt_mix_separate"))
+                {
+                    mHandlerThreadHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_SEPARATE);
+                }
+                else if (signal.equals("tt_mix_normal"))
+                {
+                    mHandlerThreadHandle.sendEmptyMessage(MSG_SET_TELETEXT_MIX_NORMAL);
+                }
             }
         };
 
@@ -2726,6 +2773,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         protected static final int MSG_UPDATE_TRACKINFO = 9;
         protected static final int MSG_ENABLE_VIDEO = 10;
         protected static final int MSG_SET_UNBLOCK = 11;
+        protected static final int MSG_SET_TELETEXT_MIX_NORMAL = 12;
+        protected static final int MSG_SET_TELETEXT_MIX_SEPARATE = 13;
 
         //audio ad
         public static final int MSG_MIX_AD_DUAL_SUPPORT = 20;
@@ -2807,6 +2856,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                             if (msg.obj != null && msg.obj instanceof TvContentRating) {
                                 setUnBlock((TvContentRating)msg.obj);
                             }
+                            break;
+                        case MSG_SET_TELETEXT_MIX_NORMAL:
+                            mView.setTeletextMix(false);
+                            layoutSurface(m_surface_left,m_surface_top,m_surface_right,m_surface_bottom);
+                            break;
+                        case MSG_SET_TELETEXT_MIX_SEPARATE:
+                            mView.setTeletextMix(true);
+                            layoutSurface(m_surface_left,m_surface_top,m_surface_right/2,m_surface_bottom);
                             break;
                         default:
                             Log.d(TAG, "mHandlerThreadHandle initWorkThread default");
