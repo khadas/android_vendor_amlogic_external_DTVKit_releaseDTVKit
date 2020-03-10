@@ -35,8 +35,9 @@ public:
     }
     void dispatchDraw(int32_t src_width, int32_t src_height, int32_t dst_x, int32_t dst_y, int32_t dst_width, int32_t dst_height, const uint8_t *data);
     void dispatchSignal(const std::string &signal, const std::string &data);
-    void dispatchOverlayCreate(int id, uint32_t width, uint32_t height);
+    void dispatchOverlayCreate(int id, bool scale, uint32_t startx, uint32_t starty, uint32_t width, uint32_t height);
     void OverlayDisplay();
+    void updateOverlayPosition(bool scaling, int width, int height, int x_offset, int y_offset);
     void OverlayUpdate(int id, int32_t dst_x, int32_t dst_y, int32_t dst_width, int32_t dst_height, const uint8_t *data);
 
 private:
@@ -44,8 +45,11 @@ private:
     android::sp<android::Surface> m_overlayproducersurface;
     ANativeWindow_Buffer m_buffer;
     ANativeWindow *m_window;
-    uint32_t m_screen_width;
-    uint32_t m_screen_height;
+    bool m_scale;
+    int m_screen_start_x;
+    int m_screen_start_y;
+    int m_screen_width;
+    int m_screen_height;
     EGLDisplay m_display;
     EGLContext m_eglContext;
     EGLSurface m_eglSurface;
