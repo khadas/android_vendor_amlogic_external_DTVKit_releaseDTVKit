@@ -24,7 +24,6 @@ LOCAL_AIDL_INCLUDES := $(LOCAL_PATH)/aidl
 #    vendor.amlogic.hardware.dtvkitserver-V1.0-java
 
 LOCAL_SRC_FILES := $(call all-subdir-java-files) $(call all-subdir-Iaidl-files)
-LOCAL_SRC_FILES += $(LOCAL_PATH)/droidlogic/java
 
 #TARGET_BUILD_APPS := inputsource # for normal app (embedded ndk jni)
 LOCAL_JNI_SHARED_LIBRARIES := libplatform

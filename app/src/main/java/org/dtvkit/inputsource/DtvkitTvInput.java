@@ -35,6 +35,8 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
 import android.content.ContentProviderClient;
+import android.content.ContentProviderOperation;
+import android.content.ContentValues;
 import android.media.tv.TvInputHardwareInfo;
 import android.media.tv.TvInputManager.Hardware;
 import android.media.tv.TvInputManager.HardwareCallback;
@@ -110,8 +112,6 @@ import java.util.Arrays;
 import java.util.Objects;
 
 import android.media.MediaCodec;
-import android.widget.TextView;
-import android.util.TypedValue;
 
 
 public class DtvkitTvInput extends TvInputService implements SystemControlManager.DisplayModeListener  {
@@ -136,10 +136,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
     private SysSettingManager mSysSettingManager = null;
     private DtvkitTvInputSession mSession;
     protected HandlerThread mHandlerThread = null;
+    protected Handler mInputThreadHandler = null;
 
     /*associate audio*/
     protected boolean mAudioADAutoStart = false;
     protected int mAudioADMixingLevel = 50;
+    private boolean mMediaCodecPlay = false;
 
     private boolean mDvbNetworkChangeSearchStatus = false;
 
@@ -265,6 +267,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         intentFilter1.addAction(Intent.ACTION_LOCKED_BOOT_COMPLETED);
         intentFilter1.addAction(Intent.ACTION_BOOT_COMPLETED);
         registerReceiver(mBootBroadcastReceiver, intentFilter1);
+
+        mMediaCodecPlay = PropSettingManager.getBoolean("tv.tf.dtv.mediaCodecPlay", false);
+
         /*for AudioRoutes change*/
         IBinder b = ServiceManager.getService(Context.AUDIO_SERVICE);
         mAudioService = IAudioService.Stub.asInterface(b);
@@ -334,8 +339,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         mSystemControlManager = SystemControlManager.getInstance();
         mSystemControlManager.setDisplayModeListener(this);
         DtvkitGlueClient.getInstance().setSystemControlHandler(mSysControlHandler);
+        DtvkitGlueClient.getInstance().registerSignalHandler(mRecordingManagerHandler);
         mParameterMananer = new ParameterMananer(this, DtvkitGlueClient.getInstance());
         checkDtvkitSatelliteUpdateStatusInThread();
+        initInputThreadHandler();
         Log.d(TAG, "init end");
         mIsInited = true;
     }
@@ -399,6 +406,29 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         }).start();
     }
 
+    //input work handler define
+    protected static final int MSG_UPDATE_RECORDING_PROGRAM = 1;
+    protected static final int MSG_UPDATE_RECORDING_PROGRAM_DELAY = 200;//200ms
+
+    private void initInputThreadHandler() {
+        mInputThreadHandler = new Handler(mHandlerThread.getLooper(), new Handler.Callback() {
+            @Override
+            public boolean handleMessage(Message msg) {
+                Log.d(TAG, "mInputThreadHandler handleMessage " + msg.what + " start");
+                switch (msg.what) {
+                    case MSG_UPDATE_RECORDING_PROGRAM:{
+                        syncRecordingProgramsWithDtvkit((JSONObject)msg.obj);
+                        break;
+                    }
+                    default:
+                        break;
+                }
+                Log.d(TAG, "mInputThreadHandler handleMessage " + msg.what + " over");
+                return true;
+            }
+        });
+    }
+
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -407,10 +437,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         unregisterReceiver(mBootBroadcastReceiver);
         mContentResolver.unregisterContentObserver(mContentObserver);
         mContentResolver.unregisterContentObserver(mRecordingsContentObserver);
+        DtvkitGlueClient.getInstance().unregisterSignalHandler(mRecordingManagerHandler);
         DtvkitGlueClient.getInstance().disConnectDtvkitClient();
         DtvkitGlueClient.getInstance().setSystemControlHandler(null);
         mHandlerThread.getLooper().quitSafely();
         mHandlerThread = null;
+        mInputThreadHandler.removeCallbacksAndMessages(null);
+        mInputThreadHandler = null;
     }
 
     private boolean setTVAspectMode(int mode) {
@@ -605,6 +638,108 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 Log.e(TAG, e.getMessage());
             }
             return used;
+        }
+    }
+
+    private boolean checkDtvkitRecordingsExists(String uri, JSONArray recordings) {
+        boolean exists = false;
+        if (recordings != null) {
+            for (int i = 0; i < recordings.length(); i++) {
+                try {
+                    String u = recordings.getJSONObject(i).getString("uri");
+                    if (uri.equals(u)) {
+                        exists = true;
+                        break;
+                    }
+                } catch (JSONException e) {
+                    Log.e("TAG", "checkDtvkitRecordingsExists JSONException " + e.getMessage());
+                }
+            }
+        }
+        return exists;
+    }
+
+    private final DtvkitGlueClient.SignalHandler mRecordingManagerHandler = new DtvkitGlueClient.SignalHandler() {
+        @RequiresApi(api = Build.VERSION_CODES.M)
+        @Override
+        public void onSignal(String signal, JSONObject data) {
+            if (signal.equals("RecordingsChanged")) {
+                Log.i(TAG, "mRecordingManagerHandler onSignal: " + signal + " : " + data.toString());
+                if (mInputThreadHandler != null) {
+                    mInputThreadHandler.removeMessages(MSG_UPDATE_RECORDING_PROGRAM);
+                    Message mess = mInputThreadHandler.obtainMessage(MSG_UPDATE_RECORDING_PROGRAM, 0, 0, data);
+                    boolean info = mInputThreadHandler.sendMessageDelayed(mess, MSG_UPDATE_RECORDING_PROGRAM_DELAY);
+                    Log.d(TAG, "sendMessage MSG_UPDATE_RECORDING_PROGRAM " + info);
+                }
+            }
+        }
+    };
+
+    private void syncRecordingProgramsWithDtvkit(JSONObject data) {
+        ArrayList<RecordedProgram> recordingsInDB = new ArrayList();
+        ArrayList<RecordedProgram> recordingsResetInvalidInDB = new ArrayList();
+        ArrayList<RecordedProgram> recordingsResetValidInDB = new ArrayList();
+
+        Cursor cursor = mContentResolver.query(TvContract.RecordedPrograms.CONTENT_URI, RecordedProgram.PROJECTION, null, null, TvContract.RecordedPrograms._ID + " DESC");
+        if (cursor != null) {
+            while (cursor.moveToNext()) {
+                recordingsInDB.add(RecordedProgram.fromCursor(cursor));
+            }
+        }
+        JSONArray recordings = recordingGetListOfRecordings();
+
+        Log.d(TAG, "recordings: db[" + recordingsInDB.size() + "] dtvkit[" + recordings.length() + "]");
+        for (RecordedProgram rec : recordingsInDB) {
+            Log.d(TAG, "db: " + rec.getRecordingDataUri());
+        }
+        for (int i = 0; i < recordings.length(); i++) {
+            try {
+                Log.d(TAG, "dtvkit: " + recordings.getJSONObject(i).getString("uri"));
+            } catch (JSONException e) {
+                Log.d(TAG, e.getMessage());
+            }
+        }
+
+        if (recordingsInDB.size() != 0) {
+            for (RecordedProgram recording : recordingsInDB) {
+                String uri = recording.getRecordingDataUri();
+                if (checkDtvkitRecordingsExists(uri, recordings)) {
+                    if (recording.getRecordingDataBytes() <= 0) {
+                        Log.d(TAG, "make recording valid: "+uri);
+                        recordingsResetValidInDB.add(recording);
+                    }
+                } else {
+                    if (recording.getRecordingDataBytes() > 0) {
+                        Log.d(TAG, "make recording invalid: "+uri);
+                        recordingsResetInvalidInDB.add(recording);
+                    }
+                }
+            }
+
+            ArrayList<ContentProviderOperation> ops = new ArrayList();
+            for (RecordedProgram recording : recordingsResetInvalidInDB) {
+                Uri uri = TvContract.buildRecordedProgramUri(recording.getId());
+                String dataUri = recording.getRecordingDataUri();
+                ContentValues update = new ContentValues();
+                update.put(TvContract.RecordedPrograms.COLUMN_RECORDING_DATA_BYTES, 0l);
+                ops.add(ContentProviderOperation.newUpdate(uri)
+                    .withValues(update)
+                    .build());
+            }
+            for (RecordedProgram recording : recordingsResetValidInDB) {
+                Uri uri = TvContract.buildRecordedProgramUri(recording.getId());
+                String dataUri = recording.getRecordingDataUri();
+                ContentValues update = new ContentValues();
+                update.put(TvContract.RecordedPrograms.COLUMN_RECORDING_DATA_BYTES, 1024 * 1024l);
+                ops.add(ContentProviderOperation.newUpdate(uri)
+                    .withValues(update)
+                    .build());
+            }
+            try {
+                mContentResolver.applyBatch(TvContract.AUTHORITY, ops);
+            } catch (Exception e) {
+                Log.e(TAG, "recordings DB update failed.");
+            }
         }
     }
 
@@ -943,6 +1078,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                     Log.i(TAG, "updateRecordingToDb insert");
                     RecordedProgram recording = builder.setInputId(mInputId)
                             .setRecordingDataUri(recordingUri)
+                            .setRecordingDataBytes(1024 * 1024l)
                             .setRecordingDurationMillis(recordingDurationMillis > 0 ? recordingDurationMillis : -1)
                             .setInternalProviderData(data)
                             .build();
@@ -968,6 +1104,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                         Log.i(TAG, "updateRecordingToDb update mRecordedProgramUri null");
                     }
                 }
+
                 //recordingUri = null;
                 if (!check) {
                     Log.i(TAG, "updateRecordingToDb notifystop mRecordedProgramUri = " + mRecordedProgramUri + " index = " + mCurrentRecordIndex);
@@ -1209,6 +1346,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         private int mSignalStrength = 0;
         private int mSignalQuality = 0;
 
+
         DtvkitTvInputSession(Context context) {
             super(context);
             mContext = context;
@@ -1280,7 +1418,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 //if (null != mView)
                     //layoutSurface(0, 0, mView.w, mView.h);
             } else {
-                if (null != mSysSettingManager)
+                if ((null != mSysSettingManager) && (!mMediaCodecPlay))
                     mSysSettingManager.writeSysFs("/sys/class/video/video_inuse", "1");
             }
         }
@@ -1384,7 +1522,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                         mSurface = null;
                         //doRelease();
                         sendDoReleaseMessage();
-                        if (null != mSysSettingManager)
+                        if (null != mSysSettingManager && mMediaCodecPlay == false)
                             mSysSettingManager.writeSysFs("/sys/class/video/video_inuse", "0");
                     }
                 } else {
@@ -1396,14 +1534,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                         sendSetSurfaceMessage(null, null);
                     }
                     //mHardware.setSurface(surface, mConfigs[0]);
-                    createDecoder();
-                    decoderRelease();
+                    if (!mMediaCodecPlay) {
+                        createDecoder();
+                        decoderRelease();
+                    }
                     sendSetSurfaceMessage(surface, mConfigs[0]);
                     mSurface = surface;
                 }
             }
             //set surface to mediaplayer
-            //DtvkitGlueClient.getInstance().setDisplay(surface);
+            if (mMediaCodecPlay)
+                DtvkitGlueClient.getInstance().SetSurfaceToPlayer(surface);
             return true;
         }
 

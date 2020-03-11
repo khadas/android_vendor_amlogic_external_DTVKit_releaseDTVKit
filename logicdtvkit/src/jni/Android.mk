@@ -7,7 +7,6 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := \
     org_droidlogic_dtvkit_DtvkitGlueClient.cpp
 
-$(warning $(JNI_H_INCLUDE))
 LOCAL_C_INCLUDES += $(JNI_H_INCLUDE) \
                     libnativehelper/include/nativehelper \
                     frameworks/base/core/jni/include \
