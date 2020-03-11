@@ -2211,7 +2211,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                     keyCode == KeyEvent.KEYCODE_PROG_RED ||
                     keyCode == KeyEvent.KEYCODE_PROG_GREEN ||
                     keyCode == KeyEvent.KEYCODE_PROG_YELLOW ||
-                    keyCode == KeyEvent.KEYCODE_PROG_BLUE;
+                    keyCode == KeyEvent.KEYCODE_PROG_BLUE ||
+                    keyCode == KeyEvent.KEYCODE_CHANNEL_UP ||
+                    keyCode == KeyEvent.KEYCODE_DPAD_UP ||
+                    keyCode == KeyEvent.KEYCODE_CHANNEL_DOWN ||
+                    keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
+                    keyCode == KeyEvent.KEYCODE_0 ||
+                    keyCode == KeyEvent.KEYCODE_1 ||
+                    keyCode == KeyEvent.KEYCODE_2 ||
+                    keyCode == KeyEvent.KEYCODE_3 ||
+                    keyCode == KeyEvent.KEYCODE_4 ||
+                    keyCode == KeyEvent.KEYCODE_5 ||
+                    keyCode == KeyEvent.KEYCODE_6 ||
+                    keyCode == KeyEvent.KEYCODE_7 ||
+                    keyCode == KeyEvent.KEYCODE_8 ||
+                    keyCode == KeyEvent.KEYCODE_9;
         }
 
         private void dealTeletextKeyCode(int keyCode) {
@@ -2237,6 +2251,32 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                     Log.d(TAG, "dealTeletextKeyCode quick_navigate_4");
                     playerNotifyTeletextEvent(3);
                     break;
+                case KeyEvent.KEYCODE_CHANNEL_UP:
+                case KeyEvent.KEYCODE_DPAD_UP:
+                    Log.d(TAG, "dealTeletextKeyCode previous_page");
+                    playerNotifyTeletextEvent(16);
+                    break;
+                case KeyEvent.KEYCODE_CHANNEL_DOWN:
+                case KeyEvent.KEYCODE_DPAD_DOWN:
+                    Log.d(TAG, "dealTeletextKeyCode next_page");
+                    playerNotifyTeletextEvent(15);
+                    break;
+                case KeyEvent.KEYCODE_0:
+                case KeyEvent.KEYCODE_1:
+                case KeyEvent.KEYCODE_2:
+                case KeyEvent.KEYCODE_3:
+                case KeyEvent.KEYCODE_4:
+                case KeyEvent.KEYCODE_5:
+                case KeyEvent.KEYCODE_6:
+                case KeyEvent.KEYCODE_7:
+                case KeyEvent.KEYCODE_8:
+                case KeyEvent.KEYCODE_9: {
+                    final int TT_EVENT_0 = 4;
+                    int number = keyCode - KeyEvent.KEYCODE_0;
+                    Log.d(TAG, "dealTeletextKeyCode number = " + number);
+                    playerNotifyTeletextEvent(number + TT_EVENT_0);
+                    break;
+                }
                 default:
                     break;
             }
@@ -3272,7 +3312,11 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
     }
 
     private Channel getChannel(Uri channelUri) {
-        return mChannels.get(ContentUris.parseId(channelUri));
+        if (mChannels != null) {
+            return mChannels.get(ContentUris.parseId(channelUri));
+        } else {
+            return null;
+        }
     }
 
     private String getChannelInternalDvbUri(Channel channel) {
