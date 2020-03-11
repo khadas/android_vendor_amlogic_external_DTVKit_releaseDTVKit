@@ -27,7 +27,6 @@ public class DtvkitGlueClient {
     private native void nativeconnectdtvkit(DtvkitGlueClient client);
     private native void nativedisconnectdtvkit();
     private native void nativeSetSurface(Surface surface);
-    private native void nativeSetSurfaceToPlayer(Surface surface);
     private native String nativerequest(String resource, String json);
     private native void nativesetGraphicBufferProducer(SurfaceTexture surface);
 
@@ -58,10 +57,6 @@ public class DtvkitGlueClient {
 
     public void setDisplay(Surface sh) {
         nativeSetSurface(sh);
-   }
-
-   public void SetSurfaceToPlayer(Surface sh) {
-        nativeSetSurfaceToPlayer(sh);
     }
 
     public void setGraphicBufferProducer(SurfaceTexture surface) {

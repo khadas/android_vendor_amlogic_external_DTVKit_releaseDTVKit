@@ -40,8 +40,6 @@ sp<NativeHandle> mSourceHandle;
 
 native_handle_t *pTvStream = nullptr;
 
-sp<IGraphicBufferProducer> new_st = NULL;
-
 static JNIEnv* getJniEnv(bool *needDetach) {
     int ret = -1;
     JNIEnv *env = NULL;
@@ -259,28 +257,6 @@ static void SetSurface(JNIEnv *env, jclass thiz __unused, jobject jsurface) {
     return;
 }
 
-static void SetSurfaceToPlayer(JNIEnv *env, jclass thiz __unused, jobject jsurface) {
-
-    ALOGD("SetSurfaceToPlayer");
-    sp<Surface> surface;
-    if (jsurface) {
-        //sp<Surface> surface(android_view_Surface_getSurface(env, jsurface));
-        surface = android_view_Surface_getSurface(env, jsurface);
-        if (surface == NULL) {
-            jniThrowException(env, "java/lang/IllegalArgumentException",
-                              "The surface has been released");
-            return;
-        }
-        new_st = surface->getIGraphicBufferProducer();
-    }
-    //set new_st to dtvplayer and rendor video.
-
-    ALOGI("set native window surface");
-    Glue_client::getInstance()->SetSurface(0/*path*/, (void *)new_st.get());
-    return;
-}
-
-
 static JNINativeMethod gMethods[] = {
 {
     "nativeconnectdtvkit", "(Lorg/droidlogic/dtvkit/DtvkitGlueClient;)V",
@@ -293,10 +269,6 @@ static JNINativeMethod gMethods[] = {
 {
     "nativeSetSurface", "(Landroid/view/Surface;)V",
     (void *) SetSurface
-},
-{
-    "nativeSetSurfaceToPlayer", "(Landroid/view/Surface;)V",
-    (void *) SetSurfaceToPlayer
 },
 {
     "nativerequest", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
