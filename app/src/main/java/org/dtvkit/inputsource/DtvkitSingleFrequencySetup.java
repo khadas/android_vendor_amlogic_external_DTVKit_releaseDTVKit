@@ -44,6 +44,7 @@ import java.util.List;
 import com.droidlogic.fragment.ParameterMananer;
 import com.droidlogic.settings.ConstantManager;
 import org.droidlogic.dtvkit.DtvkitGlueClient;
+import org.dtvkit.companionlibrary.model.Channel;
 
 public class DtvkitSingleFrequencySetup {
     private static final String TAG = "DtvkitSingleFrequencySetup";
@@ -57,6 +58,7 @@ public class DtvkitSingleFrequencySetup {
 
     private Context mContext;
     private boolean mIsDvbt = false;
+    private boolean mIsDvbt2 = false;
     private int mFrequency = -1;//hz
     private String mInputId;
     private SingleFrequencyCallback mSingleFrequencyCallback;
@@ -94,9 +96,10 @@ public class DtvkitSingleFrequencySetup {
         }
     };
 
-    public DtvkitSingleFrequencySetup(Context context, boolean isDvbt, int frequency, String inputId, SingleFrequencyCallback callback) {
+    public DtvkitSingleFrequencySetup(Context context, String channelSignalType, int frequency, String inputId, SingleFrequencyCallback callback) {
         mContext = context;
-        mIsDvbt = isDvbt;
+        mIsDvbt = !TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBC);
+        mIsDvbt2 = TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBT2);
         mFrequency = frequency;
         mInputId = inputId;
         mSingleFrequencyCallback = callback;
@@ -112,7 +115,7 @@ public class DtvkitSingleFrequencySetup {
                 args.put(mFrequency);//hz
                 args.put(DataMananer.VALUE_DVBT_BANDWIDTH_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_BANDWIDTH)]);
                 args.put(DataMananer.VALUE_DVBT_MODE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_MODE)]);
-                args.put(DataMananer.VALUE_DVBT_TYPE_LIST[mDataMananer.getIntParameters(DataMananer.KEY_DVBT_TYPE)]);
+                args.put(mIsDvbt2 ? DataMananer.VALUE_DVBT_TYPE_LIST[1] : DataMananer.VALUE_DVBT_TYPE_LIST[0]);
             } else {
                 args.put(false);//nit
                 args.put(mFrequency);//hz

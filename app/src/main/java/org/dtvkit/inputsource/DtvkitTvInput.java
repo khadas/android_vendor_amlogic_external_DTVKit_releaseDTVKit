@@ -1627,20 +1627,17 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             if (mView == null) {
                 mView = new DtvkitOverlayView(mContext);
             }
-            int[] position = new int[2];
-            mView.getLocationOnScreen(position);
-            Log.d(TAG, "onCreateOverlayView x = " + position[0] + ", y = " + position[1] + ", w = " + mView.getWidth() + ", h = " + mView.getHeight());
             return mView;
         }
 
         @Override
         public void onOverlayViewSizeChanged(int width, int height) {
-            Log.i(TAG, "onOverlayViewSizeChanged " + width + ", " + height + ", index = " + mCurrentDtvkitTvInputSessionIndex);
             if (mView == null) {
                 mView = new DtvkitOverlayView(mContext);
             }
             Platform platform = new Platform();
             playerSetRectangle(platform.getSurfaceX(), platform.getSurfaceY(), width, height);
+            Log.i(TAG, "onOverlayViewSizeChanged getSurfaceX = " + platform.getSurfaceX() + ", getSurfaceY = " + platform.getSurfaceY() + ", width = " + width + ", height = " + height + ", index = " + mCurrentDtvkitTvInputSessionIndex);
         }
 
         @RequiresApi(api = Build.VERSION_CODES.M)
@@ -2162,7 +2159,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             boolean used;
 
             Log.i(TAG, "onKeyDown " + event);
-
+            if (mDvbNetworkChangeSearchStatus) {
+                Log.i(TAG, "onKeyDown skip as search action is raised");
+                return true;
+            }
             /* It's possible for a keypress to be registered before the overlay is created */
             if (mView == null) {
                 used = super.onKeyDown(keyCode, event);
@@ -2185,7 +2185,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             boolean used;
 
             Log.i(TAG, "onKeyUp " + event);
-
+            if (mDvbNetworkChangeSearchStatus) {
+                Log.i(TAG, "onKeyUp skip as search action is raised");
+                return true;
+            }
             /* It's possible for a keypress to be registered before the overlay is created */
             if (mView == null) {
                 used = super.onKeyUp(keyCode, event);
@@ -4993,11 +4996,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         };
         String channelSignalType = null;
         int frequency = -1;
-        boolean isDvbc = false;
         try {
             channelSignalType = channel.getInternalProviderData().get("channel_signal_type").toString();
             frequency = Integer.valueOf(channel.getInternalProviderData().get("frequency").toString());
-            isDvbc = TextUtils.equals(channelSignalType, Channel.FIXED_SIGNAL_TYPE_DVBC) ? true : false;
         } catch (Exception e) {
             Log.i(TAG, "onMessageCallback channelSignalType Exception " + e.getMessage());
         }
@@ -5005,7 +5006,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             Log.d(TAG, "showSearchConfirmDialog not dvbc or dvbt and is " + channelSignalType);
             return;
         }
-        final DtvkitSingleFrequencySetup setup = new DtvkitSingleFrequencySetup(context, !isDvbc, frequency, channel.getInputId(), callback);
+        final DtvkitSingleFrequencySetup setup = new DtvkitSingleFrequencySetup(context, channelSignalType, frequency, channel.getInputId(), callback);
         setup.startSearch();
         title.setText(R.string.dvb_network_change);
         confirm.setVisibility(View.GONE);
