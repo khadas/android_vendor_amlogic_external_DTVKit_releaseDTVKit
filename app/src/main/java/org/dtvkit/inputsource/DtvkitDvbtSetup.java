@@ -30,6 +30,9 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.view.WindowManager;
 import android.util.TypedValue;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Message;
 
 import org.dtvkit.companionlibrary.EpgSyncJobService;
 import org.json.JSONArray;
@@ -39,6 +42,8 @@ import org.json.JSONObject;
 import java.util.Locale;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 import com.droidlogic.fragment.ParameterMananer;
 import com.droidlogic.settings.ConstantManager;
@@ -52,27 +57,30 @@ public class DtvkitDvbtSetup extends Activity {
     private ParameterMananer mParameterMananer = null;
     private boolean mStartSync = false;
     private boolean mStartSearch = false;
+    private boolean mFinish = false;
     private JSONArray mServiceList = null;
     private int mFoundServiceNumber = 0;
     private int mSearchManualAutoType = -1;// 0 manual 1 auto
     private int mSearchDvbcDvbtType = -1;
     private PvrStatusConfirmManager mPvrStatusConfirmManager = null;
 
+    protected HandlerThread mHandlerThread = null;
+    protected Handler mThreadHandler = null;
+
+    private final static int MSG_START_SEARCH = 1;
+    private final static int MSG_STOP_SEARCH = 2;
+    private final static int MSG_FINISH_SEARCH = 3;
+    private final static int MSG_ON_SIGNAL = 4;
+    private final static int MSG_FINISH = 5;
+    private final static int MSG_RELEASE= 6;
+
     private final DtvkitGlueClient.SignalHandler mHandler = new DtvkitGlueClient.SignalHandler() {
         @Override
         public void onSignal(String signal, JSONObject data) {
-
-            if ((mIsDvbt && signal.equals("DvbtStatusChanged")) || (!mIsDvbt && signal.equals("DvbcStatusChanged"))) {
-                int progress = getSearchProcess(data);
-                Log.d(TAG, "onSignal progress = " + progress);
-                if (progress < 100) {
-                    int found = getFoundServiceNumber();
-                    setSearchProgress(progress);
-                    setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress), String.format(Locale.ENGLISH, "Found %d services", found));
-                } else {
-                    onSearchFinished();
-                }
-            }
+            Map<String, Object> map = new HashMap<String,Object>();
+            map.put("signal", signal);
+            map.put("data", data);
+            sendOnSignal(map);
         }
     };
 
@@ -83,7 +91,8 @@ public class DtvkitDvbtSetup extends Activity {
             if (status.equals(EpgSyncJobService.SYNC_FINISHED)) {
                 setSearchStatus("Finished", "");
                 mStartSync = false;
-                finish();
+                //finish();
+                sendFinish();
             }
         }
     };
@@ -96,12 +105,15 @@ public class DtvkitDvbtSetup extends Activity {
         }
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             if (mStartSearch) {
-                onSearchFinished();
+                //onSearchFinished();
+                sendFinishSearch();
                 return true;
             } else {
                 stopMonitoringSearch();
-                stopSearch();
-                finish();
+                //stopSearch();
+                sendStopSearch();
+                //finish();
+                sendFinish();
                 return true;
             }
         }
@@ -131,7 +143,8 @@ public class DtvkitDvbtSetup extends Activity {
                     startSearch.setEnabled(false);
                     stopSearch.setEnabled(true);
                     stopSearch.requestFocus();
-                    startSearch();
+                    //startSearch();
+                    sendStartSearch();
                 }
             }
         });
@@ -151,11 +164,13 @@ public class DtvkitDvbtSetup extends Activity {
         stopSearch.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                onSearchFinished();
+                //onSearchFinished();
+                sendFinishSearch();
             }
         });
 
         initOrUpdateView(true);
+        initHandler();
     }
 
     @Override
@@ -203,10 +218,12 @@ public class DtvkitDvbtSetup extends Activity {
         super.onStop();
         Log.d(TAG, "onStop");
         if (mStartSearch) {
-            onSearchFinished();
-        } else {
+            //onSearchFinished();
+            sendFinishSearch();
+        } else if (!mFinish) {
             stopMonitoringSearch();
-            stopSearch();
+            //stopSearch();
+            sendStopSearch();
         }
     }
 
@@ -214,8 +231,80 @@ public class DtvkitDvbtSetup extends Activity {
     public void onDestroy() {
         super.onDestroy();
         Log.d(TAG, "onDestroy");
+        releaseHandler();
         stopMonitoringSearch();
         stopMonitoringSync();
+    }
+
+    private void initHandler() {
+        Log.d(TAG, "initHandler");
+        mHandlerThread = new HandlerThread("DtvkitDvbtSetup");
+        mHandlerThread.start();
+        mThreadHandler = new Handler(mHandlerThread.getLooper(), new Handler.Callback() {
+            @Override
+            public boolean handleMessage(Message msg) {
+                Log.d(TAG, "mThreadHandler handleMessage " + msg.what + " start");
+                switch (msg.what) {
+                    case MSG_START_SEARCH: {
+                        startSearch();
+                        break;
+                    }
+                    case MSG_STOP_SEARCH: {
+                        stopSearch();
+                        break;
+                    }
+                    case MSG_FINISH_SEARCH: {
+                        onSearchFinished();
+                        break;
+                    }
+                    case MSG_ON_SIGNAL: {
+                        dealOnSignal((Map<String, Object>)msg.obj);
+                        break;
+                    }
+                    case MSG_FINISH: {
+                        finish();
+                        break;
+                    }
+                    case MSG_RELEASE: {
+                        releaseInThread();
+                        break;
+                    }
+                    default:
+                        break;
+                }
+                Log.d(TAG, "mThreadHandler handleMessage " + msg.what + " over");
+                return true;
+            }
+        });
+    }
+
+    private void sendRelease() {
+        if (mThreadHandler != null) {
+            mThreadHandler.removeMessages(MSG_RELEASE);
+            Message mess = mThreadHandler.obtainMessage(MSG_RELEASE, 0, 0, null);
+            boolean info = mThreadHandler.sendMessageDelayed(mess, 0);
+            Log.d(TAG, "sendMessage MSG_RELEASE " + info);
+        }
+    }
+
+    private void releaseInThread() {
+        Log.d(TAG, "releaseInThread");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Log.d(TAG, "releaseInThread start");
+                releaseHandler();
+                Log.d(TAG, "releaseInThread end");
+            }
+        }).start();
+    }
+
+    private void releaseHandler() {
+        Log.d(TAG, "releaseHandler");
+        mHandlerThread.getLooper().quitSafely();
+        mThreadHandler.removeCallbacksAndMessages(null);
+        mHandlerThread = null;
+        mThreadHandler = null;
     }
 
     private void initOrUpdateView(boolean init) {
@@ -548,6 +637,15 @@ public class DtvkitDvbtSetup extends Activity {
         return result;
     }
 
+    private void sendStartSearch() {
+        if (mThreadHandler != null) {
+            mThreadHandler.removeMessages(MSG_START_SEARCH);
+            Message mess = mThreadHandler.obtainMessage(MSG_START_SEARCH, 0, 0, null);
+            boolean info = mThreadHandler.sendMessageDelayed(mess, 0);
+            Log.d(TAG, "sendMessage MSG_START_SEARCH " + info);
+        }
+    }
+
     private void startSearch() {
         setSearchStatus("Searching", "");
         setSearchProgressIndeterminate(false);
@@ -601,9 +699,18 @@ public class DtvkitDvbtSetup extends Activity {
         }
     }
 
+    private void sendStopSearch() {
+        if (mThreadHandler != null) {
+            mThreadHandler.removeMessages(MSG_STOP_SEARCH);
+            Message mess = mThreadHandler.obtainMessage(MSG_STOP_SEARCH, 0, 0, null);
+            boolean info = mThreadHandler.sendMessageDelayed(mess, 0);
+            Log.d(TAG, "sendMessage MSG_STOP_SEARCH " + info);
+        }
+    }
+
     private void stopSearch() {
         mStartSearch = false;
-        findViewById(R.id.terrestrialstartsearch).setEnabled(true);
+        enableSearchButton(true);
         try {
             JSONArray args = new JSONArray();
             args.put(true); // Commit
@@ -614,9 +721,18 @@ public class DtvkitDvbtSetup extends Activity {
         }
     }
 
+    private void sendFinishSearch() {
+        if (mThreadHandler != null) {
+            mThreadHandler.removeMessages(MSG_FINISH_SEARCH);
+            Message mess = mThreadHandler.obtainMessage(MSG_FINISH_SEARCH, 0, 0, null);
+            boolean info = mThreadHandler.sendMessageDelayed(mess, 0);
+            Log.d(TAG, "sendMessage MSG_FINISH_SEARCH " + info);
+        }
+    }
+
     private void onSearchFinished() {
         mStartSearch = false;
-        disableStopSearchButton();
+        enableStopSearchButton(false);
         setSearchStatus("Finishing search", "");
         setSearchProgressIndeterminate(true);
         stopMonitoringSearch();
@@ -700,11 +816,20 @@ public class DtvkitDvbtSetup extends Activity {
         });
     }
 
-    private void disableStopSearchButton() {
+    private void enableSearchButton(final boolean enable) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                findViewById(R.id.terrestrialstopsearch).setEnabled(false);
+                findViewById(R.id.terrestrialstartsearch).setEnabled(enable);
+            }
+        });
+    }
+
+    private void enableStopSearchButton(final boolean enable) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                findViewById(R.id.terrestrialstopsearch).setEnabled(enable);
             }
         });
     }
@@ -749,5 +874,46 @@ public class DtvkitDvbtSetup extends Activity {
             Log.e(TAG, "getServiceList Exception = " + e.getMessage());
         }
         return result;
+    }
+
+    private void sendOnSignal(final Map<String, Object> map) {
+        if (mThreadHandler != null) {
+            mThreadHandler.removeMessages(MSG_ON_SIGNAL);
+            Message mess = mThreadHandler.obtainMessage(MSG_ON_SIGNAL, 0, 0, map);
+            boolean info = mThreadHandler.sendMessageDelayed(mess, 0);
+            Log.d(TAG, "sendMessage MSG_ON_SIGNAL " + info);
+        }
+    }
+
+    private void dealOnSignal(final Map<String, Object> map) {
+        Log.d(TAG, "dealOnSignal map = " + map);
+        if (map == null) {
+            Log.d(TAG, "dealOnSignal null map");
+            return;
+        }
+        String signal = (String)map.get("signal");
+        JSONObject data = (JSONObject)map.get("data");
+        if (signal != null && ((mIsDvbt && signal.equals("DvbtStatusChanged")) || (!mIsDvbt && signal.equals("DvbcStatusChanged")))) {
+            int progress = getSearchProcess(data);
+            Log.d(TAG, "onSignal progress = " + progress);
+            if (progress < 100) {
+                int found = getFoundServiceNumber();
+                setSearchProgress(progress);
+                setSearchStatus(String.format(Locale.ENGLISH, "Searching (%d%%)", progress), String.format(Locale.ENGLISH, "Found %d services", found));
+            } else {
+                //onSearchFinished();
+                sendFinishSearch();
+            }
+        }
+    }
+
+    private void sendFinish() {
+        if (mThreadHandler != null) {
+            mFinish = true;
+            mThreadHandler.removeMessages(MSG_FINISH);
+            Message mess = mThreadHandler.obtainMessage(MSG_FINISH, 0, 0, null);
+            boolean info = mThreadHandler.sendMessageDelayed(mess, 0);
+            Log.d(TAG, "sendMessage MSG_FINISH " + info);
+        }
     }
 }
