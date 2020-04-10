@@ -148,18 +148,17 @@ public class DtvkitSingleFrequencySetup {
                 DtvkitGlueClient.getInstance().request(command, args);
                 mStartSearch = true;
             } else {
-                stopMonitoringSearch();
                 stopSearch();
             }
         } catch (Exception e) {
             Log.i(TAG, "startSearch search Exception " + e.getMessage());
-            stopMonitoringSearch();
             stopSearch();
         }
     }
 
-    private void stopSearch() {
+    public void stopSearch() {
         mStartSearch = false;
+        stopMonitoringSearch();
         try {
             JSONArray args = new JSONArray();
             args.put(true); // Commit

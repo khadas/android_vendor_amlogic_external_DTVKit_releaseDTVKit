@@ -2583,14 +2583,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 else if (signal.equals("DvbNetworkChange") || signal.equals("DvbUpdatedService"))
                 {
                     Log.i(TAG, "DvbNetworkChange or DvbUpdatedService");
-                    if (mMainHandle != null && !mDvbNetworkChangeSearchStatus) {
+                    if (!mDvbNetworkChangeSearchStatus) {
                         mDvbNetworkChangeSearchStatus = true;
                         sendDoReleaseMessage();
-                        mMainHandle.postDelayed(new Runnable() {
-                            public void run() {
-                                showSearchConfirmDialog(DtvkitTvInput.this, mTunedChannel);
-                            }
-                        }, 1000);
+                        if (mHandlerThreadHandle != null) {
+                            mHandlerThreadHandle.removeMessages(MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG);
+                            mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG, MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG);
+                        }
                     }
                 }
                 else if (signal.equals("DvbUpdatedChannelData"))
@@ -2738,6 +2737,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         protected static final int MSG_SET_TELETEXT_MIX_NORMAL = 12;
         protected static final int MSG_SET_TELETEXT_MIX_SEPARATE = 13;
         protected static final int MSG_CHECK_REC_PATH = 14;
+        protected static final int MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG = 15;
 
         //audio ad
         public static final int MSG_MIX_AD_DUAL_SUPPORT = 20;
@@ -2752,10 +2752,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         protected static final int MSG_BLOCK_MUTE_OR_UNMUTE_PERIOD = 100;//MS
         protected static final int MSG_GET_SIGNAL_STRENGTH_PERIOD = 1000;//MS
         protected static final int MSG_CHECK_REC_PATH_PERIOD = 1000;//MS
+        protected static final int MSG_SHOW_STREAM_CHANGE_DELAY = 500;//MS
 
         protected static final int MSG_MAIN_HANDLE_DESTROY_OVERLAY = 1;
         protected static final int MSG_SHOW_SCAMBLEDTEXT = 2;
         protected static final int MSG_HIDE_SCAMBLEDTEXT = 3;
+        protected static final int MSG_DISPLAY_STREAM_CHANGE_DIALOG = 4;
 
         protected void initWorkThread() {
             Log.d(TAG, "initWorkThread");
@@ -2837,6 +2839,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                             if (mHandlerThreadHandle != null) {
                                 mHandlerThreadHandle.removeMessages(MSG_CHECK_REC_PATH);
                                 mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_REC_PATH, MSG_CHECK_REC_PATH_PERIOD);
+                            }
+                            break;
+                        case MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG:
+                            if (mMainHandle != null) {
+                                mMainHandle.removeMessages(MSG_DISPLAY_STREAM_CHANGE_DIALOG);
+                                mMainHandle.sendEmptyMessage(MSG_DISPLAY_STREAM_CHANGE_DIALOG);
                             }
                             break;
                         default:
@@ -3082,6 +3090,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                         if (mView != null) {
                             mView.hideScrambledText();
                         }
+                        break;
+                    case MSG_DISPLAY_STREAM_CHANGE_DIALOG:
+                        showSearchConfirmDialog(DtvkitTvInput.this, mTunedChannel);
                         break;
                     default:
                         Log.d(TAG, "MainHandler default");
@@ -5083,6 +5094,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         final TextView title = (TextView) dialogView.findViewById(R.id.dialog_title);
         final Button confirm = (Button) dialogView.findViewById(R.id.confirm);
         final Button cancel = (Button) dialogView.findViewById(R.id.cancel);
+        final int[] tempStatus = new int[1];//0 for flag that exit is pressed by user, 1 for exit by search over
         final DtvkitSingleFrequencySetup.SingleFrequencyCallback callback = new DtvkitSingleFrequencySetup.SingleFrequencyCallback() {
             @Override
             public void onMessageCallback(JSONObject mess) {
@@ -5096,6 +5108,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                     }
                     switch (status) {
                         case DtvkitSingleFrequencySetup.SINGLE_FREQUENCY_STATUS_SAVE_FINISH: {
+                            tempStatus[0] = 1;
                             if (alert != null) {
                                 alert.dismiss();
                             }
@@ -5168,6 +5181,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             @Override
             public void onDismiss(DialogInterface dialog) {
                 Log.d(TAG, "showSearchConfirmDialog onDismiss");
+                if (tempStatus[0] != 1 && setup != null) {
+                    Log.d(TAG, "showSearchConfirmDialog need to stop search");
+                    setup.stopSearch();
+                }
             }
         });
         alert.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
