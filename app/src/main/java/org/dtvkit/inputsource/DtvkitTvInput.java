@@ -2827,7 +2827,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                             break;
                         case MSG_SET_TELETEXT_MIX_SEPARATE:
                             mView.setTeletextMix(true);
-                            layoutSurface(m_surface_left,m_surface_top,m_surface_right/2,m_surface_bottom);
+                            layoutSurface(m_surface_left,m_surface_bottom/3,m_surface_right/2,m_surface_bottom/3*2);
                             break;
                         case MSG_CHECK_REC_PATH:
                             if (resetRecordingPath()) {
