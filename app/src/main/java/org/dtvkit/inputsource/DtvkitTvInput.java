@@ -173,6 +173,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
     private final int SYSFS = 0;
     private final int PROP = 1;
 
+    private boolean recordingPending = false;
+
     private IAudioService mAudioService;
     private AudioRoutesInfo mCurAudioRoutesInfo;
     private Runnable mHandleTvAudioRunnable;
@@ -951,9 +953,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             removeScheduleTimeshiftRecordingTask();
             numActiveRecordings = recordingGetNumActiveRecordings();
             Log.i(TAG, "numActiveRecordings: " + numActiveRecordings);
-            if (numActiveRecordings >= numRecorders) {
+
+            /*want of resource*/
+            if (numActiveRecordings >= numRecorders
+                || numActiveRecordings >= getNumRecordersLimit()) {
                 if (getFeatureSupportTimeshifting()
-                        && timeshiftRecorderState != RecorderState.STOPPED) {
+                        && timeshiftRecorderState != RecorderState.STOPPED
+                        && getFeatureTimeshiftingPriorityHigh()) {
                     Log.i(TAG, "No recording path available, no recorder");
                     Bundle event = new Bundle();
                     event.putString(ConstantManager.KEY_INFO, "No recording path available, no recorder");
@@ -961,6 +967,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                     notifyError(TvInputManager.RECORDING_ERROR_RESOURCE_BUSY);
                     return;
                 } else {
+                    recordingPending = true;
+
                     boolean returnToLive = timeshifting;
                     Log.i(TAG, "stopping timeshift [return live:"+returnToLive+"]");
                     timeshiftRecorderState = RecorderState.STOPPED;
@@ -1053,6 +1061,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 Log.i(TAG, "Recording started:"+recordingUri);
                 updateRecordProgramInfo(recordingUri);
             }
+            recordingPending = false;
         }
 
         private void doStopRecording() {
@@ -1071,6 +1080,14 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 }
             }
             mStarted = false;
+            recordingPending = false;
+
+            /*if there's a live play,
+              should lock here, may run into a race condition*/
+            if ((mSession != null && mSession.mTunedChannel != null &&
+                     mSession.mHandlerThreadHandle != null)) {
+               mSession.sendMsgTryStartTimeshift();
+            }
         }
 
         private void updateRecordingToDb(boolean insert, boolean check) {
@@ -1167,6 +1184,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
 
         private void doRelease() {
             Log.i(TAG, "doRelease");
+
+            recordingPending = false;
 
             String uri = "";
             if (mProgram != null) {
@@ -2695,6 +2714,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         protected static final int MSG_SET_TELETEXT_MIX_SEPARATE = 13;
         protected static final int MSG_CHECK_REC_PATH = 14;
         protected static final int MSG_SEND_DISPLAY_STREAM_CHANGE_DIALOG = 15;
+        protected static final int MSG_TRY_START_TIMESHIFT = 16;
 
         //audio ad
         public static final int MSG_MIX_AD_DUAL_SUPPORT = 20;
@@ -2803,6 +2823,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                                 mMainHandle.removeMessages(MSG_DISPLAY_STREAM_CHANGE_DIALOG);
                                 mMainHandle.sendEmptyMessage(MSG_DISPLAY_STREAM_CHANGE_DIALOG);
                             }
+                            break;
+                        case MSG_TRY_START_TIMESHIFT:
+                            tryStartTimeshifting();
                             break;
                         default:
                             Log.d(TAG, "mHandlerThreadHandle initWorkThread default");
@@ -3321,7 +3344,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 if (timeshiftRecorderState == RecorderState.STOPPED) {
                     numActiveRecordings = recordingGetNumActiveRecordings();
                     Log.i(TAG, "numActiveRecordings: " + numActiveRecordings);
-                    if (numActiveRecordings < numRecorders) {
+                    if (recordingPending) {
+                        numActiveRecordings += 1;
+                        Log.i(TAG, "recordingPending: +1");
+                    }
+                    if (numActiveRecordings < numRecorders
+                        && numActiveRecordings < getNumRecordersLimit()) {
                         timeshiftAvailable = true;
                     } else {
                         timeshiftAvailable = false;
@@ -3356,6 +3384,13 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 mHandlerThreadHandle.removeMessages(MSG_CHECK_REC_PATH);
                 if (on)
                     mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_REC_PATH, MSG_CHECK_REC_PATH_PERIOD);
+            }
+        }
+
+        public void sendMsgTryStartTimeshift() {
+            if (mHandlerThreadHandle != null) {
+                mHandlerThreadHandle.removeMessages(MSG_TRY_START_TIMESHIFT);
+                mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_TRY_START_TIMESHIFT, 1000);
             }
         }
     }
@@ -4943,6 +4978,32 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
 
     private boolean getFeatureSupportTimeshifting() {
         return !PropSettingManager.getBoolean(PropSettingManager.TIMESHIFT_DISABLE, false);
+    }
+
+    private boolean getFeatureCasReady() {
+        return PropSettingManager.getBoolean("vendor.tv.dtv.cas.ready", false);
+    }
+
+    private boolean getFeatureDmxNoLimit() {
+        return PropSettingManager.getBoolean("vendor.tv.dtv.dmx.nolimit", false);
+    }
+
+    private boolean getFeatureCompliance() {
+        return PropSettingManager.getBoolean("vendor.tv.dtv.compiliance", true);
+    }
+
+    private boolean needForceCompliance() {
+        return !getFeatureDmxNoLimit() && (getFeatureCasReady() || getFeatureCompliance());
+    }
+
+    private int getNumRecordersLimit() {
+        if (numRecorders > 0)
+            return needForceCompliance() ? 1 : numRecorders;
+        return numRecorders;
+    }
+
+    private boolean getFeatureTimeshiftingPriorityHigh() {
+        return !needForceCompliance();
     }
 
     private boolean createDecoder() {
