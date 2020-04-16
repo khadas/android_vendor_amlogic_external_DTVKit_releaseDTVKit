@@ -1834,6 +1834,19 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         }
 
         @Override
+        public void notifyVideoAvailable() {
+            super.notifyVideoAvailable();
+            if (mMainHandle != null) {
+                mMainHandle.sendEmptyMessage(MSG_HIDE_SCAMBLEDTEXT);
+            }
+        }
+
+        @Override
+        public void notifyVideoUnavailable(final int reason) {
+            super.notifyVideoUnavailable(reason);
+        }
+
+        @Override
         public void onAppPrivateCommand(String action, Bundle data) {
             Log.i(TAG, "onAppPrivateCommand " + action + ", " + data + ", index = " + mCurrentDtvkitTvInputSessionIndex);
             if ("action_teletext_start".equals(action) && data != null) {
@@ -3094,6 +3107,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                         }
                         break;
                     case MSG_DISPLAY_STREAM_CHANGE_DIALOG:
+                        if (mHandlerThreadHandle != null) {
+                            mHandlerThreadHandle.removeCallbacksAndMessages(null);
+                        }
                         showSearchConfirmDialog(DtvkitTvInput.this, mTunedChannel);
                         break;
                     default:
