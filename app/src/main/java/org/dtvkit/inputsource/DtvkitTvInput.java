@@ -2031,8 +2031,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 playerState = PlayerState.PLAYING;
                 playerStop();
                 DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
-                mAudioADAutoStart = mDataMananer.getIntParameters(DataMananer.TV_KEY_AD_SWITCH) == 1;
-                if (playerPlay(recordedProgram.getRecordingDataUri(), mAudioADAutoStart).equals("ok"))
+                if (playerPlay(recordedProgram.getRecordingDataUri()).equals("ok"))
                 {
                     if (mHandlerThreadHandle != null) {
                         mHandlerThreadHandle.removeMessages(MSG_CHECK_PARENTAL_CONTROL);
@@ -3041,7 +3040,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
 
         private boolean playerInitAssociateDualSupport() {
             boolean result = false;
-            //mAudioADAutoStart = mDataMananer.getIntParameters(DataMananer.TV_KEY_AD_SWITCH) == 1;
+            mAudioADAutoStart = mDataMananer.getIntParameters(DataMananer.TV_KEY_AD_SWITCH) == 1;
             mAudioADMixingLevel = mDataMananer.getIntParameters(DataMananer.TV_KEY_AD_MIX);
             boolean adOn = playergetAudioDescriptionOn();
             Log.d(TAG, "playerInitAssociateDualSupport mAudioADAutoStart = " + mAudioADAutoStart + ", mAudioADMixingLevel = " + mAudioADMixingLevel);
@@ -3050,8 +3049,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 //setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 1);
                 //setAdFunction(MSG_MIX_AD_MIX_LEVEL, mAudioADMixingLevel);
                 //if (!adOn) {
-                    setAdFunction(MSG_MIX_AD_MIX_LEVEL, mAudioADMixingLevel);
-                    //setAdFunction(MSG_MIX_AD_SET_ASSOCIATE, 1);
+                    setAdFunction(MSG_MIX_AD_SET_ASSOCIATE, 1);
                 //}
             } else {
                 //setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 0);
@@ -3164,7 +3162,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             playerSetSubtitlesOn(false);
             playerSetTeletextOn(false, -1);
             setParentalControlOn(false);
-            //playerResetAssociateDualSupport();
+            playerResetAssociateDualSupport();
             mKeyUnlocked = false;
             mDvbNetworkChangeSearchStatus = false;
             if (mBlocked)
@@ -3187,8 +3185,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                     syncParentControlSetting();
                 }*/
             }
-            mAudioADAutoStart = mDataMananer.getIntParameters(DataMananer.TV_KEY_AD_SWITCH) == 1;
-            if (playerPlay(dvbUri, mAudioADAutoStart).equals("ok")) {
+
+            if (playerPlay(dvbUri).equals("ok")) {
                 if (mHandlerThreadHandle != null) {
                     mHandlerThreadHandle.removeMessages(MSG_CHECK_PARENTAL_CONTROL);
                     mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_PARENTAL_CONTROL, MSG_CHECK_PARENTAL_CONTROL_PERIOD);
@@ -3474,11 +3472,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         }
     }
 
-    private String playerPlay(String dvbUri, boolean ad_enable) {
+    private String playerPlay(String dvbUri) {
         try {
             JSONArray args = new JSONArray();
             args.put(dvbUri);
-            args.put(ad_enable);
+            AudioManager audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+            audioManager.setParameters("tuner_in=dtv");
             Log.d(TAG, "player.play: "+dvbUri);
 
             JSONObject resp = DtvkitGlueClient.getInstance().request("Player.play", args);
