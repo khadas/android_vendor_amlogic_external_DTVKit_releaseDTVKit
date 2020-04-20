@@ -180,6 +180,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
     private Runnable mHandleTvAudioRunnable;
     private int mDelayTime;
     private int mCurAudioFmt;
+    private int mCurSubAudioFmt = -2;
+    private int mCurSubAudioPid;
     final IAudioRoutesObserver.Stub mAudioRoutesObserver = new IAudioRoutesObserver.Stub() {
         @Override
         public void dispatchAudioRoutesChanged(final AudioRoutesInfo newRoutes) {
@@ -197,6 +199,21 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                         AudioSystem.setParameters("has_dtv_video=" +
                                 (mSession.mTunedChannel.getServiceType().equals("SERVICE_TYPE_AUDIO_VIDEO") ? "1" : "0"));
                         AudioSystem.setParameters("cmd=1");
+                        if (mCurSubAudioFmt != -2) {
+                            if (mAudioADAutoStart) {
+                                if (mCurSubAudioPid == 0) {
+                                    AudioSystem.setParameters("dual_decoder_support=0");
+                                    AudioSystem.setParameters("associate_audio_mixing_enable=0");
+                                } else if (mCurSubAudioPid != 0 && mCurSubAudioPid != 0x1fff) {
+                                    AudioSystem.setParameters("dual_decoder_support=1");
+                                    AudioSystem.setParameters("associate_audio_mixing_enable=1");
+                                    AudioSystem.setParameters("dual_decoder_mixing_level=" + mAudioADMixingLevel + "");
+                                }
+                            }
+                            AudioSystem.setParameters("cmd=5");
+                            AudioSystem.setParameters("subafmt="+mCurSubAudioFmt);
+                            AudioSystem.setParameters("subapid="+mCurSubAudioPid);
+                        }
                     }
                 };
                 try {
@@ -1552,6 +1569,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             playerSetSubtitlesOn(false);
             playerSetTeletextOn(false, -1);
             mCurAudioFmt = -2;
+            mCurSubAudioFmt = -2;
             Log.i(TAG, "doRelease over index = " + mCurrentDtvkitTvInputSessionIndex);
         }
 
@@ -2374,6 +2392,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                             Log.d(TAG, "AHandler setParameters ADEC_SET_DECODE_AD:cmd=" + cmd
                                     + ",subafmt=" + param1 + ",subapid=" + param2);
                             mCurAudioFmt = param1;
+                            mCurSubAudioFmt = param1;
+                            mCurSubAudioPid = param2;
                             break;
                         case ADEC_SET_VOLUME:
                             audioManager.setParameters("cmd="+cmd);
