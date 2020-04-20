@@ -3479,9 +3479,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             JSONArray args = new JSONArray();
             args.put(dvbUri);
             args.put(ad_enable);
-            AudioManager audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
-            audioManager.setParameters("tuner_in=dtv");
-            Log.d(TAG, "dtv player.play: "+dvbUri);
+            Log.d(TAG, "player.play: "+dvbUri);
 
             JSONObject resp = DtvkitGlueClient.getInstance().request("Player.play", args);
             boolean ok = resp.optBoolean("data");
