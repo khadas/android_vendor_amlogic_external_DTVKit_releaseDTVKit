@@ -3050,7 +3050,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 //setAdFunction(MSG_MIX_AD_MIX_SUPPORT, 1);
                 //setAdFunction(MSG_MIX_AD_MIX_LEVEL, mAudioADMixingLevel);
                 //if (!adOn) {
-                    setAdFunction(MSG_MIX_AD_MIX_LEVEL, mAudioADMixingLevel);
+                    //setAdFunction(MSG_MIX_AD_MIX_LEVEL, mAudioADMixingLevel);
                     //setAdFunction(MSG_MIX_AD_SET_ASSOCIATE, 1);
                 //}
             } else {
@@ -3188,12 +3188,12 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 }*/
             }
             mAudioADAutoStart = mDataMananer.getIntParameters(DataMananer.TV_KEY_AD_SWITCH) == 1;
+            DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
             if (playerPlay(dvbUri, mAudioADAutoStart).equals("ok")) {
                 if (mHandlerThreadHandle != null) {
                     mHandlerThreadHandle.removeMessages(MSG_CHECK_PARENTAL_CONTROL);
                     mHandlerThreadHandle.sendEmptyMessageDelayed(MSG_CHECK_PARENTAL_CONTROL, MSG_CHECK_PARENTAL_CONTROL_PERIOD);
                 }
-                DtvkitGlueClient.getInstance().registerSignalHandler(mHandler);
                 DtvkitGlueClient.getInstance().setAudioHandler(AHandler);
                 /*
                 if (mCaptioningManager != null && mCaptioningManager.isEnabled()) {
@@ -3210,6 +3210,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 Bundle event = new Bundle();
                 event.putString(ConstantManager.KEY_INFO, "No play path available");
                 notifySessionEvent(ConstantManager.EVENT_RESOURCE_BUSY, event);
+		DtvkitGlueClient.getInstance().unregisterSignalHandler(mHandler);
             }
             Log.i(TAG, "onTuneByHandlerThreadHandle Done");
             return mTunedChannel != null;
