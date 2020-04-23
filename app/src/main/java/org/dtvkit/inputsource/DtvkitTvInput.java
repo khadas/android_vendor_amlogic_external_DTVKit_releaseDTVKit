@@ -30,8 +30,6 @@ import android.view.ViewGroup;
 import android.widget.RelativeLayout;
 import android.util.TypedValue;
 import android.graphics.Typeface;
-import android.view.ViewTreeObserver;
-
 
 import android.content.IntentFilter;
 import android.content.BroadcastReceiver;
@@ -427,9 +425,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
 
     //input work handler define
     protected static final int MSG_UPDATE_RECORDING_PROGRAM = 1;
-    protected static final int MSG_UPDATE_OVERLAY_POSITION = 2;
     protected static final int MSG_UPDATE_RECORDING_PROGRAM_DELAY = 200;//200ms
-    protected static final int MSG_UPDATE_OVERLAY_POSITION_DELAY = 50;
 
     private void initInputThreadHandler() {
         mInputThreadHandler = new Handler(mHandlerThread.getLooper(), new Handler.Callback() {
@@ -439,10 +435,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 switch (msg.what) {
                     case MSG_UPDATE_RECORDING_PROGRAM:{
                         syncRecordingProgramsWithDtvkit((JSONObject)msg.obj);
-                        break;
-                    }
-                    case MSG_UPDATE_OVERLAY_POSITION:{
-                        updateOverlayPosition((JSONObject)msg.obj);
                         break;
                     }
                     default:
@@ -516,32 +508,10 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         private TextureView Textview;
         private TextView mText;
         private RelativeLayout mRelativeLayout;
-        private int x;
-        private int y;
         private int w;
         private int h;
 
         private boolean mhegTookKey = false;
-
-        private ViewTreeObserver.OnGlobalLayoutListener mLayoutListener = new ViewTreeObserver.OnGlobalLayoutListener() {
-            @Override
-            public void onGlobalLayout() {
-                int[] position = new int[2];
-                DtvkitOverlayView.this.getLocationOnScreen(position);
-                int position_x  = position[0];//(int)DtvkitOverlayView.this.getX();
-                int position_y  = position[1];//(int)DtvkitOverlayView.this.getY();
-                int position_w  = (int)DtvkitOverlayView.this.getWidth();
-                int position_h  = (int)DtvkitOverlayView.this.getHeight();
-                if (position_x != x || position_y != y || position_w != w || position_h != h) {
-                    Log.i(TAG, "mLayoutListener onGlobalLayout position_x = " + position_x + ", position_y = " + position_y + ", position_w = " + position_w + ", position_h = " + position_h);
-                    x = position_x;
-                    y = position_y;
-                    w = position_w;
-                    h = position_h;
-                    setSize(position_x, position_y, position_w, position_h);
-                }
-            }
-        };
 
         public DtvkitOverlayView(Context context) {
             super(context);
@@ -554,11 +524,9 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             this.addView(Textview);
             this.addView(ciOverlayView);
             initRelativeLayout();
-            getViewTreeObserver().addOnGlobalLayoutListener(mLayoutListener);
         }
 
         public void destroy() {
-            getViewTreeObserver().removeOnGlobalLayoutListener(mLayoutListener);
             Textview.setSurfaceTextureListener(null);
             removeView(Textview);
             ciOverlayView.destroy();
@@ -669,24 +637,8 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             }
         }
 
-        public void setSize(int startx, int starty, int width, int height) {
-            Log.d(TAG, "setSize startx = " + startx + ", starty = " + starty + ", width = " + width + ", height = " + height);
-            JSONObject obj = new JSONObject();
-            try {
-                obj.put("scaling", true);
-                obj.put("width", width);
-                obj.put("height", height);
-                obj.put("startx", startx);
-                obj.put("starty", starty);
-            } catch (JSONException e) {
-                Log.d(TAG, "setSize JSONException " + e.getMessage());
-            }
-            if (mInputThreadHandler != null) {
-                mInputThreadHandler.removeMessages(MSG_UPDATE_OVERLAY_POSITION);
-                Message mess = mInputThreadHandler.obtainMessage(MSG_UPDATE_OVERLAY_POSITION, 0, 0, obj);
-                boolean info = mInputThreadHandler.sendMessageDelayed(mess, MSG_UPDATE_OVERLAY_POSITION_DELAY);
-                Log.d(TAG, "sendMessage MSG_UPDATE_OVERLAY_POSITION_DELAY " + info);
-            }
+        public void setSize(int width, int height) {
+
         }
 
         public boolean handleKeyDown(int keyCode, KeyEvent event) {
@@ -730,51 +682,6 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
                 Log.e(TAG, e.getMessage());
             }
             return used;
-        }
-
-        class OverlayTextureListener implements TextureView.SurfaceTextureListener {
-           @Override
-           public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int i, int i1) {
-               Log.i(TAG, "onSurfaceTextureAvailable surfaceTexture = " + surfaceTexture + ", i" + i + ", i1 = " + i1);
-               DtvkitGlueClient.getInstance().setGraphicBufferProducer(surfaceTexture);
-           }
-           @Override
-           public void onSurfaceTextureSizeChanged(SurfaceTexture surfaceTexture, int i, int i1) {
-               Log.i(TAG, "onSurfaceTextureSizeChanged surfaceTexture = " + surfaceTexture + ", i" + i + ", i1 = " + i1);
-           }
-           @Override
-           public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
-               Log.i(TAG, "onSurfaceTextureDestroyed surfaceTexture = " + surfaceTexture);
-               return false;
-           }
-           @Override
-           public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
-               Log.i(TAG, "onSurfaceTextureUpdated surfaceTexture = " + surfaceTexture);
-           }
-        }
-    }
-
-    private void updateOverlayPosition(JSONObject obj) {
-        if (obj != null) {
-            boolean scaling = true;
-            int width = -1;
-            int height = -1;
-            int startx = -1;
-            int starty = -1;
-            try {
-                scaling = obj.getBoolean("scaling");
-                width = obj.getInt("width");
-                height = obj.getInt("height");
-                startx = obj.getInt("startx");
-                starty = obj.getInt("starty");
-            } catch (JSONException e) {
-                Log.d(TAG, "updateOverlayPosition JSONException " + e.getMessage());
-            }
-            if (width == -1 || height == -1 || startx == -1 || starty == -1) {
-                Log.d(TAG, "updateOverlayPosition position not full");
-            } else {
-                DtvkitGlueClient.getInstance().updateOverlayPosition(scaling, width, height, startx, starty);
-            }
         }
     }
 
@@ -1429,6 +1336,24 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
         };
     }
 
+    class OverlayTextureListener implements TextureView.SurfaceTextureListener {
+       @Override
+       public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int i, int i1) {
+           Log.i(TAG, "onSurfaceTextureAvailable");
+           DtvkitGlueClient.getInstance().setGraphicBufferProducer(surfaceTexture);
+       }
+       @Override
+       public void onSurfaceTextureSizeChanged(SurfaceTexture surfaceTexture, int i, int i1) {
+       }
+       @Override
+       public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
+           return false;
+       }
+       @Override
+       public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
+       }
+    }
+
     class DtvkitTvInputSession extends TvInputService.Session               {
         private static final String TAG = "DtvkitTvInputSession";
         private static final int ADEC_START_DECODE = 1;
@@ -1667,9 +1592,7 @@ public class DtvkitTvInput extends TvInputService implements SystemControlManage
             if (mView == null) {
                 mView = new DtvkitOverlayView(mContext);
             }
-            Platform platform = new Platform();
-            playerSetRectangle(platform.getSurfaceX(), platform.getSurfaceY(), width, height);
-            Log.i(TAG, "onOverlayViewSizeChanged getSurfaceX = " + platform.getSurfaceX() + ", getSurfaceY = " + platform.getSurfaceY() + ", width = " + width + ", height = " + height + ", index = " + mCurrentDtvkitTvInputSessionIndex);
+            playerSetRectangle(0, 0, width, height);
         }
 
         @RequiresApi(api = Build.VERSION_CODES.M)

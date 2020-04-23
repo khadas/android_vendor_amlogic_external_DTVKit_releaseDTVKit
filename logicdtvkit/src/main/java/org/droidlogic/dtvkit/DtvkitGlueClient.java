@@ -29,7 +29,6 @@ public class DtvkitGlueClient {
     private native void nativeSetSurface(Surface surface);
     private native String nativerequest(String resource, String json);
     private native void nativesetGraphicBufferProducer(SurfaceTexture surface);
-    private native void nativeUpdateOverlayPosition(boolean scaling, int x_offset, int y_offset, int width, int height);
 
     static {
         System.loadLibrary("dtvkit_jni");
@@ -62,10 +61,6 @@ public class DtvkitGlueClient {
 
     public void setGraphicBufferProducer(SurfaceTexture surface) {
         nativesetGraphicBufferProducer(surface);
-    }
-
-    public void updateOverlayPosition(boolean scaling, int width, int height, int x_offset, int y_offset) {
-        nativeUpdateOverlayPosition(scaling, width, height, x_offset, y_offset);
     }
 
     public void disConnectDtvkitClient() {

@@ -192,10 +192,6 @@ static void setGraphicBufferProducer(JNIEnv *env, jclass thiz, jobject surface) 
     Glue_client::getInstance()->setIGraphicBufferProducer(producer);
 }
 
-static void updateOverlayPosition(JNIEnv *env, jclass clazz __unused, jboolean scaling, jint width, jint height, jint x_offset, jint y_offset) {
-    Glue_client::getInstance()->updateOverlayPosition(scaling, width, height, x_offset, y_offset);
-}
-
 static int updateNative(sp<ANativeWindow> nativeWin) {
     ANativeWindowBuffer* buf;
 
@@ -282,11 +278,6 @@ static JNINativeMethod gMethods[] = {
     "nativesetGraphicBufferProducer", "(Landroid/graphics/SurfaceTexture;)V",
     (void *) setGraphicBufferProducer
 },
-{
-    "nativeUpdateOverlayPosition", "(ZIIII)V",
-    (void *) updateOverlayPosition
-},
-
 };
 
 
