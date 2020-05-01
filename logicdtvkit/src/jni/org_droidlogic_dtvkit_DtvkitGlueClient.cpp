@@ -23,6 +23,7 @@
 #include <gui/IGraphicBufferProducer.h>
 #include <ui/GraphicBuffer.h>
 #include "amlogic/am_gralloc_ext.h"
+#include <android_runtime/android_graphics_SurfaceTexture.h>
 
 #include "glue_client.h"
 #include "org_droidlogic_dtvkit_DtvkitGlueClient.h"
@@ -30,7 +31,6 @@
 using namespace android;
 
 static JavaVM   *gJavaVM = NULL;
-static jmethodID notifySubtitleCallback;
 static jmethodID notifyDvbCallback;
 static jmethodID gReadSysfsID;
 static jmethodID gWriteSysfsID;
@@ -59,31 +59,6 @@ static void DetachJniEnv() {
     int result = gJavaVM->DetachCurrentThread();
     if (result != JNI_OK) {
         ALOGE("thread detach failed: %#x", result);
-    }
-}
-
-
-static void sendSubtitleData(int width, int height, int dst_x, int dst_y, int dst_width, int dst_height, uint8_t* data)
-{
-    //ALOGD("callback sendSubtitleData data = %p", data);
-    bool attached = false;
-    JNIEnv *env = getJniEnv(&attached);
-
-    if (env != NULL) {
-        if (width != 0 || height != 0) {
-            ScopedLocalRef<jbyteArray> array (env, env->NewByteArray(width * height * 4));
-            if (!array.get()) {
-                ALOGE("Fail to new jbyteArray sharememory addr");
-                return;
-            }
-            env->SetByteArrayRegion(array.get(), 0, width * height * 4, (jbyte*)data);
-            env->CallVoidMethod(DtvkitObject, notifySubtitleCallback, width, height, dst_x, dst_y, dst_width, dst_height, array.get());
-        } else {
-            env->CallVoidMethod(DtvkitObject, notifySubtitleCallback, width, height, dst_x, dst_y, dst_width, dst_height, NULL);
-        }
-    }
-    if (attached) {
-        DetachJniEnv();
     }
 }
 
@@ -182,7 +157,6 @@ static void connectdtvkit(JNIEnv *env, jclass clazz __unused, jobject obj)
     Glue_client::getInstance()->RegisterRWSysfsCallback((void*)read_sysfs_cb, (void*)write_sysfs_cb);
     Glue_client::getInstance()->RegisterRWPropCallback((void*)read_prop_cb, (void*)write_prop_cb);
     Glue_client::getInstance()->setSignalCallback((SIGNAL_CB)sendDvbParam);
-    Glue_client::getInstance()->setDisPatchDrawCallback((DISPATCHDRAW_CB)sendSubtitleData);
     Glue_client::getInstance()->addInterface();
 }
 
@@ -203,6 +177,19 @@ static jstring request(JNIEnv *env, jclass clazz __unused, jstring jresource, js
     env->ReleaseStringUTFChars(jresource, resource);
     env->ReleaseStringUTFChars(jjson, json);
     return env->NewStringUTF(result.c_str());
+}
+
+static void setGraphicBufferProducer(JNIEnv *env, jclass thiz, jobject surface) {
+    android::sp<android::IGraphicBufferProducer> producer = NULL;
+    if (surface != NULL) {
+        producer = SurfaceTexture_getProducer(env, surface);
+        if (producer == NULL) {
+            jniThrowException(env, "java/lang/IllegalArgumentException",
+                    "can't get graphic buffer producer");
+            return;
+        }
+    }
+    Glue_client::getInstance()->setIGraphicBufferProducer(producer);
 }
 
 static int updateNative(sp<ANativeWindow> nativeWin) {
@@ -287,7 +274,10 @@ static JNINativeMethod gMethods[] = {
     "nativerequest", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
     (void*) request
 },
-
+{
+    "nativesetGraphicBufferProducer", "(Landroid/graphics/SurfaceTexture;)V",
+    (void *) setGraphicBufferProducer
+},
 };
 
 
@@ -318,7 +308,6 @@ int register_org_droidlogic_dtvkit_DtvkitGlueClient(JNIEnv *env)
     }
 
     GET_METHOD_ID(notifyDvbCallback, clazz, "notifyDvbCallback", "(Ljava/lang/String;Ljava/lang/String;)V");
-    GET_METHOD_ID(notifySubtitleCallback, clazz, "notifySubtitleCallback", "(IIIIII[B)V");
 
     GET_METHOD_ID(gReadSysfsID, clazz, "readBySysControl", "(ILjava/lang/String;)Ljava/lang/String;");
     GET_METHOD_ID(gWriteSysfsID, clazz, "writeBySysControl", "(ILjava/lang/String;Ljava/lang/String;)V");
